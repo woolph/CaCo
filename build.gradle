@@ -10,7 +10,6 @@ buildscript {
 	}
 	dependencies {
 		classpath group: 'at.engel.gradle.plugins', name: 'gradle-svg-renderer-plugin', version: '2.1.1'
-		classpath group: 'edu.sc.seis.gradle', name: 'launch4j', version: '2.3.0'
 		classpath group: 'org.jetbrains.kotlin', name: 'kotlin-gradle-plugin', version: '1.3.+'
 	}
 }
@@ -21,12 +20,11 @@ apply plugin: 'kotlin'
 apply plugin: 'maven'
 apply plugin: 'application'
 apply plugin: 'svg-renderer'
-apply plugin: 'edu.sc.seis.launch4j'
 
 defaultTasks 'run'
 
 project.group = 'at.woolph'
-project.archivesBaseName = 'colly'
+project.archivesBaseName = 'caco'
 project.version = new File('version').text.tokenize('.-').dropRight(1).join('.')
 
 repositories {
@@ -53,7 +51,7 @@ test {
 	useJUnitPlatform()
 }
 
-project.mainClassName = 'at.woolph.colly.MainKt'
+project.mainClassName = 'at.woolph.caco.MainKt'
 
 sourceCompatibility = '1.8'
 compileKotlin.kotlinOptions.jvmTarget = sourceCompatibility
@@ -93,78 +91,4 @@ run {
 	//args '--showNeeded'
 	//args '--importBase=grn,m19,dom,rix,xln', '--importInventory=C:\\Users\\001121673\\Downloads\\Inventory.csv', '--showNeeded'
 	args '--showNeededDeck'
-}
-
-launch4j {
-	bundledJrePath = 'C:/c2ktools/jre1.8.0_101_32bit'
-	copyright = 'Wolfgang Mayer/CSD-SCS'
-	version = project.version
-	textVersion = project.version
-	libraryDir = "../tmp/l4jlib"
-	icon = renderSvg.results['appIcon']
-	jar = project.tasks.jar.outputs.files.singleFile
-	jvmOptions = applicationDefaultJvmArgs
-}
-
-createExe {
-	dependsOn build
-}
-
-distributions {
-	exe {
-		contents {
-			from { "${buildDir}/${launch4j.outputDir}" }
-		}
-	}
-}
-
-task deployLocal() {
-	group 'Deployment'
-	description 'Updates the version-info file which provides the current version to the applications resources.'
-
-	dependsOn createExe
-
-	def sourceFile = fileTree(dir: "${buildDir}/${launch4j.outputDir}", include: ['*.exe', 'lib/*.jar', 'img/*.gif', 'img/*.jpg', 'img/*.png', ])
-	def targets = files(
-		'file://C:/c2ktools/'+rootProject.name,
-		)
-
-	inputs.file sourceFile
-	outputs.files targets
-
-	doLast {
-		targets.each { target ->
-			copy {
-				from sourceFile
-				into target
-			}
-		}
-	}
-}
-
-task deploy() {
-	group 'Deployment'
-	description 'Updates the version-info file which provides the current version to the applications resources.'
-
-	dependsOn createExe
-
-	//finalizedBy triggerToolsUpdate
-
-	def sourceFile = files("${createExe.outputs.files.singleFile}/${launch4j.outfile}")
-	def targets = files(
-		'file://emsfile1.engel.int/vol2/SOFTWARE/TOOLS/'+rootProject.name,
-		'file://emsstartup.engel.int/ems_machines/Tools/CC200/c2ktools/'+rootProject.name,
-		)
-
-	inputs.file sourceFile
-	outputs.files targets
-
-	doLast {
-		targets.each { target ->
-			copy {
-				from sourceFile
-				into target
-			}
-		}
-	}
 }
