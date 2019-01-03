@@ -5,11 +5,9 @@
 
 buildscript {
 	repositories {
-		maven { url 'file://emsfile1.engel.int/vol2/SOFTWARE/TOOLS/.m2' }
 		mavenCentral()
 	}
 	dependencies {
-		classpath group: 'at.engel.gradle.plugins', name: 'gradle-svg-renderer-plugin', version: '2.1.1'
 		classpath group: 'org.jetbrains.kotlin', name: 'kotlin-gradle-plugin', version: '1.3.+'
 	}
 }
@@ -19,7 +17,6 @@ apply plugin: 'eclipse'
 apply plugin: 'kotlin'
 apply plugin: 'maven'
 apply plugin: 'application'
-apply plugin: 'svg-renderer'
 
 defaultTasks 'run'
 
@@ -28,7 +25,6 @@ project.archivesBaseName = 'caco'
 project.version = new File('version').text.tokenize('.-').dropRight(1).join('.')
 
 repositories {
-	maven { url 'file://emsfile1.engel.int/vol2/SOFTWARE/TOOLS/.m2' }
 	maven {url 'https://dl.bintray.com/kotlin/exposed/' }
 	mavenCentral()
 }
@@ -36,13 +32,12 @@ repositories {
 dependencies {
 	compileOnly group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib', version: '1.3.+'
 
-	compile group: 'at.charlemagne.libs', name: 'core', version: '0.1.+'
-	compile group: 'at.charlemagne.libs', name: 'file', version: '0.1.+'
-
 	compile group: 'org.jetbrains.exposed', name: 'exposed', version: '0.11.2'
-	runtime group: 'com.h2database', name: 'h2', version: '1.4.197'
 	compile 'org.json:json:20180813'
 	compile group: 'com.opencsv', name: 'opencsv', version: '4.4'
+	compile group: 'no.tornado', name: 'tornadofx', version: '1.7.18'
+
+	runtime group: 'com.h2database', name: 'h2', version: '1.4.197'
 
 	testCompileOnly group: 'junit', name: 'junit', version: '4.12'
 }
@@ -58,19 +53,10 @@ compileKotlin.kotlinOptions.jvmTarget = sourceCompatibility
 compileTestKotlin.kotlinOptions.jvmTarget = sourceCompatibility
 compileJava.options.encoding = 'UTF-8'
 
-svgRenderer {
-	def svgIcon = new File(sourceSets.main.resources.srcDirs.iterator()[0], 'icon.svg')
-
-	icon 'appIcon', [ svgSourceFile: svgIcon, outputFile: new File(buildDir, 'tmp/icon.ico'), resolutions: [16,32,64,128,256] ]
-	image 'splashScreen', [ svgSourceFile: svgIcon, outputFile: new File(sourceSets.main.output.resourcesDir, 'splash-screen.png'), width: 256 ]
-
-	image svgSourceFile: svgIcon, outputFile: new File(sourceSets.main.output.resourcesDir, 'at/engel/tools/%PROJECT_NAME%/icon.png'), width: 64
-}
-
 jar {
 	manifest {
 		attributes 'Main-Class': project.mainClassName
-		attributes 'SplashScreen-Image': renderSvg.resourceImage['splashScreen']
+		//attributes 'SplashScreen-Image': renderSvg.resourceImage['splashScreen']
 	}
  
 	from {
@@ -88,7 +74,9 @@ run {
 	//args 'opc.tcp://192.168.110.1:4840/'
 	//args 'C:\\c2k\\localstartup\\215310\\1\\backup'
 	//args '--debug'
-	//args '--showNeeded'
-	//args '--importBase=grn,m19,dom,rix,xln', '--importInventory=C:\\Users\\001121673\\Downloads\\Inventory.csv', '--showNeeded'
-	args '--showNeededDeck'
+	//args '--showNeededCollection=usg'
+	//args '--importBase=AER,AKH,APC,AVR,BFZ,BBD,CHK,6ED,C18,CM2,CN2,M19,DKA,DOM,EMN,EMA,EXO,FRF,5ED,V16,GTC,GPT,GK1,HOU,IMA,ISD,INV,XLN,JOU,KLD,KTK,M11,M13,M14,M15,ORI,MMQ,MIR,MM2,MM3,NEM,OGW,ODY,PLS,PCY,RTR,RIX,SOM,SOI,STH,TMP,UDS,ULG,USG'
+	//args '--importBase=grn,m19,dom,rix,xln,usg,ulg,uds', '--importInventory=C:\\Users\\001121673\\Downloads\\Inventory.csv', '--showNeededCollection'
+	args '--importInventory=D:\\woolph\\Downloads\\Inventory.csv'
+	//args '--showNeededDeck'
 }

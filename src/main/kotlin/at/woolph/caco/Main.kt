@@ -1,6 +1,5 @@
 package at.woolph.caco
 
-import at.charlemagne.libs.log.logger
 import com.opencsv.CSVReaderHeaderAware
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -9,7 +8,6 @@ import org.joda.time.Duration
 import org.joda.time.format.DateTimeFormat
 import kotlin.system.exitProcess
 import java.net.MalformedURLException
-import jdk.nashorn.internal.runtime.ScriptingFunctions.readLine
 import java.io.*
 import java.net.HttpURLConnection
 import java.net.URI
@@ -22,8 +20,6 @@ import com.opencsv.CSVReader
 import kotlin.math.max
 
 
-private val logger by logger("main")
-
 public inline fun <R> InputStream.useJsonReader(block: (JsonReader) -> R): R {
 	this.use {
 		return javax.json.Json.createReader(it).use(block)
@@ -34,7 +30,8 @@ public fun JsonObject.getJsonObjectArray(name: String) = this.getJsonArray(name)
 
 const val IMPORT_SET = "--importBase="
 const val IMPORT_INVENTORY = "--importInventory="
-const val SHOW_NEEDED_PLAYSET = "--showNeededCollection"
+const val SHOW_NEEDED_PLAYSET_ALL = "--showNeededCollection"
+const val SHOW_NEEDED_PLAYSET = "--showNeededCollection="
 const val SHOW_NEEDED_FOIL = "--showNeededCollectionFoil"
 const val SHOW_NEEDED_DECKLIST = "--showNeededDeck"
 
@@ -119,7 +116,7 @@ fun Set.importCardsOfSet() {
  */
 fun main(args: Array<String>) {
 	val dtf = DateTimeFormat.forPattern("YYYY-MM-dd")
-	Database.connect("jdbc:h2:~/colly", driver = "org.h2.Driver")
+	Database.connect("jdbc:h2:~/caco", driver = "org.h2.Driver")
 
 	transaction {
 		SchemaUtils.createMissingTablesAndColumns(Sets, Cards, CardPossessions, Decks, DeckCards)
@@ -139,7 +136,7 @@ fun main(args: Array<String>) {
 
 			setCodes.forEach { setCode ->
 				try {
-					importSet(setCode).importCardsOfSet()
+					importSet(setCode.toLowerCase()).importCardsOfSet()
 				} catch(ex:Exception) {
 					ex.printStackTrace()
 				}
@@ -201,16 +198,39 @@ fun main(args: Array<String>) {
 		}
 	}
 
+
+
 	// get needed cards for playset collection
 	if(args.any { it.startsWith(SHOW_NEEDED_PLAYSET) }) {
 		transaction {
-			Set.all().forEach { set ->
-				println("${set.name}: needed cards --------------------------------------")
-				set.cards.sortedBy { it.numberInSet }.filter { !it.promo }.forEach {
-					val neededCount = max(0, 4 - it.possessions.count())
-					val n = if(set.cards.count { that -> it.name == that.name } > 1) " (#${it.numberInSet})" else ""
-					if (neededCount > 0) {
-						println("${neededCount}\t${it.name}$n\t[${it.rarity}]")
+			val setCodes = args.filter { it.startsWith(SHOW_NEEDED_PLAYSET) }
+					.flatMap { it.removePrefix(SHOW_NEEDED_PLAYSET).split(",") }
+
+			setCodes.forEach { setCode ->
+				Set.find { Sets.shortName eq setCode.toLowerCase() }.forEach { set ->
+					println("${set.name}: needed cards --------------------------------------")
+					set.cards.sortedBy { it.numberInSet }.filter { !it.promo }.forEach {
+						val neededCount = max(0, 4 - it.possessions.count())
+						val n = if (set.cards.count { that -> it.name == that.name } > 1) " (#${it.numberInSet})" else ""
+						if (neededCount > 0) {
+							println("${neededCount} ${it.name}")
+						}
+					}
+				}
+			}
+		}
+	} else {
+		// get needed cards for playset collection
+		if(args.any { it.startsWith(SHOW_NEEDED_PLAYSET_ALL) }) {
+			transaction {
+				Set.all().forEach { set ->
+					println("${set.name}: needed cards --------------------------------------")
+					set.cards.sortedBy { it.numberInSet }.filter { !it.promo }.forEach {
+						val neededCount = max(0, 4 - it.possessions.count())
+						val n = if(set.cards.count { that -> it.name == that.name } > 1) " (#${it.numberInSet})" else ""
+						if (neededCount > 0) {
+							println("${neededCount}\t${it.name}$n\t[${it.rarity}]")
+						}
 					}
 				}
 			}
