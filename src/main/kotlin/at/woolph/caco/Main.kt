@@ -1,125 +1,65 @@
 package at.woolph.caco
 
-import com.opencsv.CSVReaderHeaderAware
+import at.woolph.caco.datamodel.collection.ArenaCardPossessions
+import at.woolph.caco.datamodel.collection.CardPossessions
+import at.woolph.caco.datamodel.decks.Builds
+import at.woolph.caco.datamodel.decks.DeckCards
+import at.woolph.caco.datamodel.decks.Decks
+import at.woolph.caco.datamodel.decks.Variants
+import at.woolph.caco.datamodel.sets.Cards
+import at.woolph.caco.datamodel.sets.Foil
+import at.woolph.caco.datamodel.sets.Set
+import at.woolph.caco.datamodel.sets.Sets
+import at.woolph.caco.datamodel.sets.Cards.set
+import at.woolph.caco.datamodel.sets.Rarity
+import at.woolph.caco.importer.collection.getLatestDeckboxCollectionExport
+import at.woolph.caco.importer.collection.importDeckbox
+import at.woolph.caco.importer.sets.importCardsOfSet
+import at.woolph.caco.importer.sets.importPromosOfSet
+import at.woolph.caco.importer.sets.importSet
+import at.woolph.caco.importer.sets.importTokensOfSet
+import at.woolph.pdf.*
+import be.quodlibet.boxable.BaseTable
+import be.quodlibet.boxable.HorizontalAlignment
+import be.quodlibet.boxable.VerticalAlignment
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.joda.time.DateTime
-import org.joda.time.Duration
 import org.joda.time.format.DateTimeFormat
-import kotlin.system.exitProcess
-import java.net.MalformedURLException
 import java.io.*
-import java.net.HttpURLConnection
-import java.net.URI
-import java.net.URL
-import javax.json.Json
-import javax.json.JsonObject
-import javax.json.JsonReader
-import java.io.FileReader
-import com.opencsv.CSVReader
+import org.apache.pdfbox.pdmodel.common.PDRectangle
+import org.apache.pdfbox.pdmodel.font.PDType1Font
+import java.awt.Color
+import java.nio.file.Paths
 import kotlin.math.max
+import kotlin.math.min
 
-
-public inline fun <R> InputStream.useJsonReader(block: (JsonReader) -> R): R {
-	this.use {
-		return javax.json.Json.createReader(it).use(block)
-	}
-}
-
-public fun JsonObject.getJsonObjectArray(name: String) = this.getJsonArray(name).getValuesAs(JsonObject::class.java)
-
-const val IMPORT_SET = "--importBase="
+const val IMPORT_SET = "--importSet="
 const val IMPORT_INVENTORY = "--importInventory="
 const val SHOW_NEEDED_PLAYSET_ALL = "--showNeededCollection"
 const val SHOW_NEEDED_PLAYSET = "--showNeededCollection="
 const val SHOW_NEEDED_FOIL = "--showNeededCollectionFoil"
 const val SHOW_NEEDED_DECKLIST = "--showNeededDeck"
+const val PRINT_NEEDED_DECKLIST = "--printNeededDeck"
 
-fun importSet(setCode: String): Set {
-	println("importing set $setCode")
-	Thread.sleep(2000) // delay queries to scryfall api (to prevent overloading service)
-	val conn = URL("https://api.scryfall.com/sets/$setCode").openConnection() as HttpURLConnection
+const val PRINT_INVENTORY = "--printInventory="
+const val PRINT_INVENTORY_PDF = "--printInventoryToPdf="
 
-	try {
-		conn.requestMethod = "GET"
-		conn.setRequestProperty("Accept", "application/json")
-
-		if (conn.responseCode != 200) {
-			throw Exception("Failed : HTTP error code : ${conn.responseCode}")
-		}
-
-		conn.inputStream.useJsonReader {
-			it.readObject().let {
-				if(it.getString("object") == "set") {
-					return Set.new {
-						shortName = it.getString("code")
-						name = it.getString("name")
-						dateOfRelease = DateTime.parse(it.getString("released_at"))
-						officalCardCount = it.getInt("card_count")
-						icon = URI(it.getString("icon_svg_uri"))
-					}
-				} else {
-					throw Exception("result is not a set")
-				}
-			}
-		}
-	} catch(ex:Exception) {
-		throw Exception("unable to import set $setCode", ex)
-	} finally {
-		conn.disconnect()
-	}
-}
-
-fun Set.importCardsOfSet() {
-	var nextURL: URL? = URL("https://api.scryfall.com/cards/search?q=set%3A${this.shortName}&unique=prints&order=set")
-
-	while(nextURL!=null) {
-		println("requesting $nextURL")
-		Thread.sleep(2000) // delay queries to scryfall api (to prevent overloading service)
-		val conn = nextURL.openConnection() as HttpURLConnection
-		nextURL = null
-		conn.requestMethod = "GET"
-		conn.setRequestProperty("Accept", "application/json")
-
-		if (conn.responseCode != 200) {
-			throw RuntimeException("Failed : HTTP error code : ${conn.responseCode}")
-		}
-
-		//conn.inputStream.bufferedReader().useLines { it.forEach { println(it) }	}
-		conn.inputStream.useJsonReader {
-			it.readObject().let{
-				if(it.getBoolean("has_more")) {
-					nextURL = URL(it.getString("next_page"))
-				}
-				it.getJsonObjectArray("data").forEach {
-					if(it.getString("object") == "card") {
-						Card.new {
-							set = this@importCardsOfSet
-							numberInSet = it.getString("collector_number").toInt()
-							name = it.getString("name")
-							rarity = it.getString("rarity").parseRarity()
-							promo = it.getBoolean("promo")
-							image = it.getJsonObject("image_uris")?.getString("png")?.let { URI(it) } ?:
-									it.getJsonObjectArray("card_faces")?.get(0)?.getJsonObject("image_uris")?.getString("png")?.let { URI(it) }
-							cardmarketUri = it.getJsonObject("purchase_uris")?.getString("cardmarket")?.let { URI(it) }
-						}
-					}
-				}
-			}
-		}
-		conn.disconnect()
-	}
-}
+const val ICON_OWNED_FOIL = "\u25C9"
+const val ICON_NOT_OWNED_FOIL = "\u25CE"
+const val ICON_OWNED_CARD = "\u25a0" // "\u25CF"
+const val ICON_NOT_OWNED_CARD = "\u25a1" // "\u25CB"
+const val ICON_REDUNDANT_OWNED_CARD = "+"
 
 /**
  * @see https://github.com/JetBrains/Exposed
  */
 fun main(args: Array<String>) {
+	println("starting main")
 	val dtf = DateTimeFormat.forPattern("YYYY-MM-dd")
 	Database.connect("jdbc:h2:~/caco", driver = "org.h2.Driver")
 
 	transaction {
-		SchemaUtils.createMissingTablesAndColumns(Sets, Cards, CardPossessions, Decks, DeckCards)
+		SchemaUtils.createMissingTablesAndColumns(Sets, Cards, CardPossessions, Decks, Variants, Builds, DeckCards, ArenaCardPossessions)
 	}
 
 	// @TODO wish list sorting (mark specific cards needed for decks or just for collection) => sort by price + modifier based on decklist needs
@@ -128,15 +68,16 @@ fun main(args: Array<String>) {
 	if(args.any { it.startsWith(IMPORT_SET) }) {
 		// import card database
 		transaction {
-			Cards.deleteAll()
-			Sets.deleteAll()
-
 			val setCodes = args.filter { it.startsWith(IMPORT_SET) }
 					.flatMap { it.removePrefix(IMPORT_SET).split(",") }
 
 			setCodes.forEach { setCode ->
 				try {
-					importSet(setCode.toLowerCase()).importCardsOfSet()
+					importSet(setCode.toLowerCase()).apply {
+						importCardsOfSet()
+						importTokensOfSet()
+						importPromosOfSet()
+					}
 				} catch(ex:Exception) {
 					ex.printStackTrace()
 				}
@@ -146,59 +87,8 @@ fun main(args: Array<String>) {
 
 	// import inventory
 	if(args.any { it.startsWith(IMPORT_INVENTORY) }) {
-		val file = args.first { it.startsWith(IMPORT_INVENTORY) }.removePrefix(IMPORT_INVENTORY)
-
-		transaction {
-			CardPossessions.deleteAll()
-
-			val reader = CSVReader(FileReader(file))
-			if (reader.readNext() != null) { // skip header
-				var nextLine: Array<String>? = reader.readNext()
-				while (nextLine != null) {
-					try {
-						val count = nextLine[0].toInt()
-						val cardName = nextLine[2]
-						val cardNumber = nextLine[4].toInt()
-						val setName = nextLine[3].removePrefix("Prerelease Events: ")
-						val prereleasePromo = nextLine[3].startsWith("Prerelease Events: ")
-						val set = Set.find { Sets.name eq setName }.firstOrNull()
-								?: throw Exception("set $setName not found")
-						val card = Card.find { (Cards.numberInSet eq cardNumber) and (Cards.set eq set.id) }.firstOrNull()
-								?: throw Exception("card #$cardNumber (\"$cardName\") not found in set $setName")
-						val foil = nextLine[7] == "foil"
-						val condition = when (nextLine[5]) {
-							"Mint", "Near Mint" -> 1
-							"Good (Lightly Played)" -> 2
-							"Played" -> 3
-							"Heavily Played" -> 4
-							"Poor" -> 5
-							else -> 0
-						}
-						val language = when (nextLine[6]) {
-							"English" -> "en"
-							"German" -> "de"
-							else -> "??"
-						}
-
-						repeat(count) {
-							CardPossession.new {
-								this.card = card
-								this.language = language
-								this.condition = condition
-								this.prereleasePromo = prereleasePromo
-								this.foil = foil
-							}
-						}
-					} catch (e: Exception) {
-						println("unable to import: ${e.message}")
-					}
-					nextLine = reader.readNext()
-				}
-			}
-		}
+		getLatestDeckboxCollectionExport(File(args.first { it.startsWith(IMPORT_INVENTORY) }.removePrefix(IMPORT_INVENTORY)))?. let { importDeckbox(it) }
 	}
-
-
 
 	// get needed cards for playset collection
 	if(args.any { it.startsWith(SHOW_NEEDED_PLAYSET) }) {
@@ -208,8 +98,8 @@ fun main(args: Array<String>) {
 
 			setCodes.forEach { setCode ->
 				Set.find { Sets.shortName eq setCode.toLowerCase() }.forEach { set ->
-					println("${set.name}: needed cards --------------------------------------")
-					set.cards.sortedBy { it.numberInSet }.filter { !it.promo }.forEach {
+					println("${set.name}:")
+					set.cards.sortedBy { it.numberInSet }.filter { !it.promo && (it.rarity == Rarity.COMMON || it.rarity == Rarity.UNCOMMON) }.forEach {
 						val neededCount = max(0, 4 - it.possessions.count())
 						val n = if (set.cards.count { that -> it.name == that.name } > 1) " (#${it.numberInSet})" else ""
 						if (neededCount > 0) {
@@ -243,7 +133,7 @@ fun main(args: Array<String>) {
 			Set.all().forEach { set ->
 				println("${set.name}: needed cards --------------------------------------")
 				set.cards.sortedBy { it.numberInSet }.filter { !it.promo }.forEach {
-					val neededCount = max(0, 1 - it.possessions.filter { it.foil }.count())
+					val neededCount = max(0, 1 - it.possessions.filter { it.foil != Foil.NONFOIL }.count())
 					if (neededCount > 0) {
 						println("${neededCount}\t${it.name}\t[${it.rarity}]")
 					}
@@ -255,7 +145,7 @@ fun main(args: Array<String>) {
 	// get needed cards for decklists
 	if(args.any { it.startsWith(SHOW_NEEDED_DECKLIST) }) {
 		transaction {
-			val deckNeeds = DeckCards.slice(DeckCards.count.sum(), DeckCards.name).selectAll().groupBy(DeckCards.deck, DeckCards.name)
+			val deckNeeds = DeckCards.slice(DeckCards.count.sum(), DeckCards.name).selectAll().groupBy(DeckCards.build, DeckCards.name)
 					.groupingBy { it[DeckCards.name] }.aggregate<ResultRow, String, Long> { _, accumulator: Long?, element, first ->
 						if(first) element.data[0] as Long else max(accumulator!!, element.data[0]!! as Long)
 					}
@@ -273,4 +163,131 @@ fun main(args: Array<String>) {
 			}
 		}
 	}
+
+	if(args.any { it.startsWith(PRINT_INVENTORY) }) {
+		// import card database
+		transaction {
+			val setCodes = args.filter { it.startsWith(PRINT_INVENTORY) }
+					.flatMap { it.removePrefix(PRINT_INVENTORY).split(",") }
+
+			setCodes.forEach { setCode ->
+				Set.find { Sets.shortName eq setCode.toLowerCase() }.forEach { set ->
+					println("${set.name}: inventory --------------------------------------")
+					set.cards.sortedBy { it.numberInSet }.filter { !it.promo }.forEach {
+						val ownedCount = min(4, it.possessions.count())
+						val n = if (set.cards.count { that -> it.name == that.name } > 1) " (#${it.numberInSet})" else ""
+
+						val plus = if(it.possessions.count()>4) ICON_REDUNDANT_OWNED_CARD else ""
+						println("${ICON_OWNED_CARD.repeat(ownedCount)}${ICON_NOT_OWNED_CARD.repeat(4-ownedCount)}$plus\t${it.name}$n")
+					}
+				}
+			}
+		}
+	}
+
+	val fontTitle = Font(PDType1Font.HELVETICA_BOLD, 10f)
+
+	if(args.any { it.startsWith(PRINT_INVENTORY_PDF) }) {
+		// import card database
+		transaction {
+			val setCodes = args.filter { it.startsWith(PRINT_INVENTORY_PDF) }
+					.flatMap { it.removePrefix(PRINT_INVENTORY_PDF).split(",") }
+
+			createPdfDocument(Paths.get("D:\\woolph\\Dropbox\\mtg-inventory.pdf")) {
+				setCodes.forEach { setCode ->
+					Set.find { Sets.shortName eq setCode.toLowerCase() }.forEach { set ->
+						page(PDRectangle.A4) {
+							frame(PagePosition.RIGHT, 50f, 20f, 20f, 20f) {
+								drawText("Inventory ${set.name}", fontTitle, HorizontalAlignment.CENTER, box.upperRightY - 10f, Color.BLACK)
+
+								// TODO calc metrics for all sets (so that formatting is the same for all pages)
+								set.cards.sortedBy { it.numberInSet }.filter { !it.promo }.let {
+									frame(marginTop = fontTitle.height + 20f) {
+										columns((it.size - 1) / 100 + 1, 100, 5f, 3.5f, Font(PDType1Font.HELVETICA, 6.0f)) {
+											var i = 0
+											it.filter { !it.token }.forEach {
+												val ownedCountEN = it.possessions.filter { it.language == "en" }.count()
+												val ownedCountDE = it.possessions.filter { it.language == "de" }.count()
+												this@columns.get(i) {
+													drawTextWithRects("${it.rarity} ${it.numberInSet} ${it.name}", ownedCountEN, ownedCountDE)
+												}
+												i++
+											}
+
+											i++
+											/*
+											this@columns.get(i) {
+												drawText("Tokens", Color.BLACK)
+											}
+											i++
+											*/
+											it.filter { it.token }.forEach {
+												val ownedCountEN = it.possessions.filter { it.language == "en" }.count()
+												val ownedCountDE = it.possessions.filter { it.language == "de" }.count()
+												this@columns.get(i) {
+													drawTextWithRects("T ${it.numberInSet} ${it.name}", ownedCountEN, ownedCountDE)
+												}
+												i++
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// get needed cards for decklists
+	if(args.any { it.startsWith(PRINT_NEEDED_DECKLIST) }) {
+		transaction {
+			val deckNeeds = DeckCards.slice(DeckCards.count.sum(), DeckCards.name).selectAll().groupBy(DeckCards.build, DeckCards.name)
+					.groupingBy { it[DeckCards.name] }.aggregate<ResultRow, String, Long> { _, accumulator: Long?, element, first ->
+						if(first) element.data[0] as Long else max(accumulator!!, element.data[0]!! as Long)
+					}.mapNotNull { (cardName, neededCount) ->
+						val available = (Cards innerJoin CardPossessions).slice(CardPossessions.card.count())
+								.select { Cards.name eq cardName }.groupBy(Cards.name)
+								.map { it.data[0] as Long }.first()
+
+						if(neededCount-available>0) {
+							Pair(cardName, neededCount - available)
+						} else {
+							null
+						}
+
+						// todo print deck names for which it is wanted
+						// TODO print desired sets if there's also the possibility to complete collection while building the deck
+					}
+
+
+			createPdfDocument(Paths.get("d:\\wants.pdf")) {
+				page(PDRectangle.A4) {
+					frame(PagePosition.RIGHT, 50f, 20f, 20f, 20f) {
+
+						drawText("Needs ${set.name}", fontTitle, HorizontalAlignment.CENTER, box.upperRightY-10f, Color.BLACK)
+
+						// TODO calc metrics for all sets (so that formatting is the same for all pages)
+						val baseTable = BaseTable(642f, 842f, 0f, box.width, 0f, this@createPdfDocument, this@page.pdPage, true, true)
+						listOf("Dive Down" to 3, "Surge Mare" to 1).forEach {
+							val row = baseTable.createRow(15f).apply {
+								createCell(15f, it.second.toString(), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE)
+								createCell(30f, it.first, HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE)
+								createCell(15f,"$2.00", HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE)
+								createCell(15f,"[CMD] Brudiclad", HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE)
+								createCell(15f,"1xDOM, 2xIXL", HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE)
+							}
+							//(0 until 3).forEach { val cell = row.createCell(15f, "Row $i Col ${it + 1}", HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE) }
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// TODO list of spare cards
+	// TODO list of needs collection
+	// TODO list of needs for decks
+	// TODO list of high value cards
 }
