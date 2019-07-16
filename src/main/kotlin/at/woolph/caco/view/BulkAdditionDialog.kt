@@ -83,13 +83,13 @@ class BulkAdditionDialog(val set: Set, val owner: View): Dialog<String?>() {
     }
 
     fun bulkAdd() { // TODO test bulk addition
-        cards.forEach {
-            it.bulkAdditionNonPremium.value.let { toBeAdded ->
+        cards.forEach { cardInfo ->
+            cardInfo.bulkAdditionNonPremium.value.let { toBeAdded ->
                 if (toBeAdded > 0) {
                     transaction {
                         repeat(toBeAdded) {
                             CardPossession.new {
-                                this.card = tvCards.selectionModel.selectedItem.card
+                                this.card = cardInfo.card
                                 this.language = languageProperty.value
                                 this.condition = conditionProperty.value
                                 this.foil = Foil.NONFOIL
@@ -98,12 +98,13 @@ class BulkAdditionDialog(val set: Set, val owner: View): Dialog<String?>() {
                     }
                 }
             }
-            it.bulkAdditionPremium.value.let { toBeAdded ->
+            cardInfo.bulkAdditionPremium.value.let { toBeAdded ->
                 if (toBeAdded > 0) {
                     transaction {
                         repeat(toBeAdded) {
                             CardPossession.new {
-                                this.card = tvCards.selectionModel.selectedItem.card
+                                this.card = cardInfo.card
+
                                 this.language = languageProperty.value
                                 this.condition = conditionProperty.value
                                 this.foil = Foil.FOIL
