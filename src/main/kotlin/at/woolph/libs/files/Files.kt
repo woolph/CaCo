@@ -1,6 +1,6 @@
 package at.woolph.libs.files
 
-import at.charlemagne.libs.log.logger
+import at.woolph.libs.log.logger
 import java.io.IOException
 import java.nio.charset.Charset
 import java.nio.file.*
@@ -9,7 +9,6 @@ import java.nio.file.attribute.FileTime
 import java.util.function.BiPredicate
 import java.util.jar.JarInputStream
 import java.util.zip.CRC32
-import kotlin.coroutines.experimental.buildSequence
 import kotlin.streams.asSequence
 
 

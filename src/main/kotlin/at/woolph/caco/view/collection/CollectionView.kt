@@ -16,6 +16,7 @@ import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.Priority
+import javafx.scene.paint.Color
 import javafx.scene.shape.Shape
 import org.jetbrains.exposed.sql.transactions.transaction
 import tornadofx.*
@@ -306,7 +307,7 @@ abstract class CollectionView : View() {
                                     fitWidth = 224.0
                                 }
                                 imageLoadingProgressIndicatorBackground = rectangle {
-                                    fill = javafx.scene.paint.Color.rgb(1, 1, 1, 0.3)
+                                    fill = Color.rgb(1, 1, 1, 0.3)
                                     isVisible = false
                                     height = imageView.fitHeight
                                     width = imageView.fitWidth
@@ -317,20 +318,6 @@ abstract class CollectionView : View() {
                             }
                         }
                     }
-                    /*
-                    buttonbar {
-                        button("<") {
-                            action {
-                                tvCards.selectionModel.selectPrevious()
-                            }
-                        }
-                        button(">") {
-                            action {
-                                tvCards.selectionModel.selectNext()
-                            }
-                        }
-                    }
-                    */
                 }
             }
             center {

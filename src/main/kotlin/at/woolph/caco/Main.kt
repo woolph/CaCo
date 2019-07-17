@@ -18,7 +18,7 @@ import at.woolph.caco.importer.sets.importCardsOfSet
 import at.woolph.caco.importer.sets.importPromosOfSet
 import at.woolph.caco.importer.sets.importSet
 import at.woolph.caco.importer.sets.importTokensOfSet
-import at.woolph.pdf.*
+import at.woolph.libs.pdf.*
 import be.quodlibet.boxable.BaseTable
 import be.quodlibet.boxable.HorizontalAlignment
 import be.quodlibet.boxable.VerticalAlignment

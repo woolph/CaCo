@@ -1,6 +1,6 @@
 package at.woolph.libs.files
 
-import at.charlemagne.libs.log.logger
+import at.woolph.libs.log.logger
 import java.io.IOException
 import java.nio.file.*
 import kotlin.concurrent.thread

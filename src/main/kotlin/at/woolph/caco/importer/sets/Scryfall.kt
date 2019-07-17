@@ -1,7 +1,7 @@
 package at.woolph.caco.importer.sets
 
-import at.charlemagne.libs.json.useJsonReader
-import at.charlemagne.libs.json.getJsonObjectArray
+import at.woolph.libs.json.useJsonReader
+import at.woolph.libs.json.getJsonObjectArray
 import at.woolph.caco.datamodel.sets.*
 import at.woolph.caco.datamodel.sets.CardSet
 import org.jetbrains.exposed.sql.and

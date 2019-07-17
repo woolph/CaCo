@@ -1,7 +1,7 @@
 package at.woolph.libs.files.config
 
 import at.woolph.libs.files.inputStream
-import at.charlemagne.libs.log.logger
+import at.woolph.libs.log.logger
 import kotlin.properties.ReadOnlyProperty
 import java.io.File
 import java.io.InputStream

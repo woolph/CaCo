@@ -15,12 +15,14 @@ import javafx.beans.property.SimpleIntegerProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleStringProperty
 import javafx.collections.FXCollections
+import javafx.event.EventHandler
 import javafx.scene.control.*
 import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import javafx.scene.input.KeyCode
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.Priority
+import javafx.scene.paint.Color
 import javafx.scene.shape.Shape
 import org.jetbrains.exposed.sql.transactions.transaction
 import tornadofx.*
@@ -246,7 +248,7 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
                                         fitWidth = 224.0
                                     }
                                     imageLoadingProgressIndicatorBackground = rectangle {
-                                        fill = javafx.scene.paint.Color.rgb(1, 1, 1, 0.3)
+                                        fill = Color.rgb(1, 1, 1, 0.3)
                                         isVisible = false
                                         height = imageView.fitHeight
                                         width = imageView.fitWidth
@@ -263,7 +265,7 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
                             }
                             field("Number") {
                                 bulkAddNumberSpinner = spinner(0, 999, bulkAddNumberProperty.value, 1, true, property = bulkAddNumberProperty) {
-                                    this.editor.onKeyPressed = javafx.event.EventHandler {
+                                    this.editor.onKeyPressed = EventHandler {
                                         when (it.code) {
                                             KeyCode.UP -> {
                                                 foilProperty.value = Foil.NONFOIL
@@ -324,10 +326,10 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
                 center {
                     tvCards = tableview(cardsFiltered) {
                         hboxConstraints {
-                            hGrow = javafx.scene.layout.Priority.ALWAYS
+                            hGrow = Priority.ALWAYS
                         }
                         vboxConstraints {
-                            vGrow = javafx.scene.layout.Priority.ALWAYS
+                            vGrow = Priority.ALWAYS
                         }
 
                         column("CardSet Number", CardInfo::numberInSet) {
@@ -353,7 +355,7 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
                                 cardNumberInSet.set(it.numberInSet.get())
                                 cardName.set(it.name.get())
 
-								tornadofx.runLater {
+								runLater {
 									bulkAddNumberProperty.set(0)
 									bulkAddNumberSpinner.requestFocus()
 									bulkAddNumberSpinner.editor.selectAll()

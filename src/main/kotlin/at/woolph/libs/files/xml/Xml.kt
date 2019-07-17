@@ -1,6 +1,6 @@
 package at.woolph.libs.files.xml
 
-import at.charlemagne.libs.log.logger
+import at.woolph.libs.log.logger
 import org.w3c.dom.Element
 import org.w3c.dom.NamedNodeMap
 import org.w3c.dom.Node

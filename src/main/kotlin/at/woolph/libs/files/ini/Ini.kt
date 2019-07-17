@@ -1,7 +1,7 @@
 package at.woolph.libs.files.ini
 
 import at.woolph.libs.files.inputStream
-import at.charlemagne.libs.log.logger
+import at.woolph.libs.log.logger
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
