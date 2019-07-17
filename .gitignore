@@ -26,6 +26,7 @@ hs_err_pid*
 .gradle/
 build/
 data/ 
+!gradle-wrapper.jar
 
 #Eclipse
 bin/
