@@ -95,6 +95,8 @@ abstract class CollectionView : View() {
     val filterRarityRare = SimpleBooleanProperty(true)
     val filterRarityMythic = SimpleBooleanProperty(true)
 
+	val imageLoadingProperty = SimpleBooleanProperty(true)
+
     lateinit var imageView: ImageView
     lateinit var imageLoadingProgressIndicatorBackground: Shape
     lateinit var imageLoadingProgressIndicator: ProgressIndicator
@@ -154,6 +156,32 @@ abstract class CollectionView : View() {
         }
     }
 
+	fun loadImage() {
+		if(imageLoadingProperty.get()) {
+			tornadofx.runAsync {
+				imageLoadingProgressIndicatorBackground.isVisible = true
+				imageLoadingProgressIndicator.isVisible = true
+				tvCards.selectedItem?.cardImage
+			} ui {
+				imageView.image = it
+				imageLoadingProgressIndicator.isVisible = false
+				imageLoadingProgressIndicatorBackground.isVisible = false
+			}
+
+			// preload surrounding images
+			tornadofx.runAsync {
+				listOf(tvCards.selectionModel.selectedIndex + 1,
+						tvCards.selectionModel.selectedIndex - 1,
+						tvCards.selectionModel.selectedIndex + 2,
+						tvCards.selectionModel.selectedIndex + 3).forEach {
+					if (0 <= it && it < tvCards.items.size) {
+						tvCards.items[it].cardImage
+					}
+				}
+			}
+		}
+	}
+
     init {
         title = "CaCo"
 
@@ -174,11 +202,23 @@ abstract class CollectionView : View() {
         filterRarityRare.addListener(filterChangeListener)
         filterRarityMythic.addListener(filterChangeListener)
 
+		imageLoadingProperty.addListener { _, _, newValue ->
+			if(newValue) {
+				loadImage()
+			} else {
+				imageView.image = null
+			}
+		}
+
         set = sets.firstOrNull()
 
         with(root) {
             top {
                 toolbar {
+					togglebutton("\uD83D\uDDBC") {
+						imageLoadingProperty.bind(selectedProperty())
+					}
+
                     combobox(setProperty, sets) {
                         cellFormat {
                             graphic = item?.iconImage?.let {
@@ -248,7 +288,7 @@ abstract class CollectionView : View() {
             }
             left {
                 form {
-                    fieldset("Card Info") {
+                    fieldset("Card Info") { // TODO turn this into a reusable fragment
                         field("Set Number") {
                             textfield(cardNumberInSet) {
                                 isEditable = true
@@ -324,30 +364,7 @@ abstract class CollectionView : View() {
                             cardNumberInSet.set(it.numberInSet.get())
                             cardName.set(it.name.get())
 
-                            runAsync {
-                                imageLoadingProgressIndicatorBackground.isVisible = true
-                                imageLoadingProgressIndicator.isVisible = true
-                                newCard.cardImage
-                            } ui {
-                                imageView.image = it
-                                imageLoadingProgressIndicator.isVisible = false
-                                imageLoadingProgressIndicatorBackground.isVisible = false
-                            }
-
-                            runAsync {
-                                val loadingIndizes = listOf(
-                                        selectionModel.selectedIndex + 1,
-                                        selectionModel.selectedIndex - 1,
-                                        selectionModel.selectedIndex + 2,
-                                        selectionModel.selectedIndex - 2,
-                                        selectionModel.selectedIndex + 3)
-
-                                loadingIndizes.forEach {
-                                    if (0 <= it && it < items.size) {
-                                        items[it].cardImage
-                                    }
-                                }
-                            }
+							loadImage()
                         }
                     }
                 }

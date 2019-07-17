@@ -9,6 +9,7 @@ import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.importer.sets.importCardsOfSet
 import at.woolph.caco.importer.sets.importPromosOfSet
 import at.woolph.caco.importer.sets.importTokensOfSet
+import at.woolph.libs.ktfx.commitValue
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleIntegerProperty
 import javafx.beans.property.SimpleObjectProperty
@@ -17,12 +18,14 @@ import javafx.collections.FXCollections
 import javafx.scene.control.*
 import javafx.scene.image.Image
 import javafx.scene.image.ImageView
+import javafx.scene.input.KeyCode
 import javafx.scene.layout.BorderPane
+import javafx.scene.layout.Priority
 import javafx.scene.shape.Shape
 import org.jetbrains.exposed.sql.transactions.transaction
 import tornadofx.*
 
-class BulkAdditionDialog(val set: CardSet, val owner: View): Dialog<String?>() {
+class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolean): Dialog<Boolean>() {
 
     inner class CardInfo(val card: Card) {
         val rarity get() = card.rarity.toProperty()
@@ -39,9 +42,11 @@ class BulkAdditionDialog(val set: CardSet, val owner: View): Dialog<String?>() {
     val cardName = SimpleStringProperty("")
     val cardNumberInSet = SimpleStringProperty("")
 
-    val languageProperty = SimpleStringProperty("de")
-    val conditionProperty = SimpleObjectProperty<Condition>(Condition.NEAR_MINT)
-    val foilProperty = SimpleObjectProperty<Foil>(Foil.NONFOIL)
+    val languageProperty = SimpleStringProperty("en")
+    val conditionProperty = SimpleObjectProperty(Condition.NEAR_MINT)
+    val foilProperty = SimpleObjectProperty(Foil.NONFOIL)
+
+	val imageLoadingProperty = SimpleBooleanProperty(imageLoading)
 
     val bulkAddNumberProperty = SimpleIntegerProperty(0)
     val bulkAddNumber by bulkAddNumberProperty
@@ -72,15 +77,7 @@ class BulkAdditionDialog(val set: CardSet, val owner: View): Dialog<String?>() {
         })
     }
 
-    fun CardSet.reimportSet(): CardSet = apply {
-        importCardsOfSet()
-        importTokensOfSet()
-        importPromosOfSet()
-
-        updateCards()
-    }
-
-    fun bulkAdd() { // TODO test bulk addition
+    fun bulkAdd() { // TODO update card set view
         cards.forEach { cardInfo ->
             cardInfo.bulkAdditionNonPremium.value.let { toBeAdded ->
                 if (toBeAdded > 0) {
@@ -124,6 +121,32 @@ class BulkAdditionDialog(val set: CardSet, val owner: View): Dialog<String?>() {
         }
     }
 
+	fun loadImage() {
+		if(imageLoadingProperty.get()) {
+			runAsync {
+				imageLoadingProgressIndicatorBackground.isVisible = true
+				imageLoadingProgressIndicator.isVisible = true
+				tvCards.selectedItem?.cardImage
+			} ui {
+				imageView.image = it
+				imageLoadingProgressIndicator.isVisible = false
+				imageLoadingProgressIndicatorBackground.isVisible = false
+			}
+
+			// preload surrounding images
+			runAsync {
+				listOf(tvCards.selectionModel.selectedIndex + 1,
+						tvCards.selectionModel.selectedIndex - 1,
+						tvCards.selectionModel.selectedIndex + 2,
+						tvCards.selectionModel.selectedIndex + 3).forEach {
+					if (0 <= it && it < tvCards.items.size) {
+						tvCards.items[it].cardImage
+					}
+				}
+			}
+		}
+	}
+
     init {
         initOwner(owner.primaryStage)
 
@@ -135,6 +158,14 @@ class BulkAdditionDialog(val set: CardSet, val owner: View): Dialog<String?>() {
         filterRarityUncommon.addListener(filterChangeListener)
         filterRarityRare.addListener(filterChangeListener)
         filterRarityMythic.addListener(filterChangeListener)
+
+		imageLoadingProperty.addListener { _, _, newValue ->
+			if(newValue) {
+				loadImage()
+			} else {
+				imageView.image = null
+			}
+		}
 
         isResizable = true
         title = "Bulk Addition: ${set.name}"
@@ -153,8 +184,50 @@ class BulkAdditionDialog(val set: CardSet, val owner: View): Dialog<String?>() {
                         }
                     }
                 }*/
+				top {
+					toolbar {
+						togglebutton("\uD83D\uDDBC") {
+							isSelected = imageLoadingProperty.get()
+							imageLoadingProperty.bind(selectedProperty())
+						}
+						label("Filter: ")
+						/*textfield(filterTextProperty) {
+
+						}*/
+						// TODO segmented button
+						//segmentedbutton {
+						togglebutton("C") {
+							filterRarityCommon.bind(selectedProperty())
+						}
+						togglebutton("U") {
+							filterRarityUncommon.bind(selectedProperty())
+						}
+						togglebutton("R") {
+							filterRarityRare.bind(selectedProperty())
+						}
+						togglebutton("M") {
+							filterRarityMythic.bind(selectedProperty())
+						}
+						//}
+						region {
+							prefWidth = 40.0
+
+							hboxConstraints {
+								hGrow = Priority.ALWAYS
+							}
+						}
+					}
+				}
                 left {
                     form {
+						fieldset("Addition Setup") { // TODO move to own dialog
+							field("Language") {
+								combobox(languageProperty, listOf("en", "de", "jp", "ru", "it", "sp"))
+							}
+							field("Condition") {
+								combobox(conditionProperty, Condition.values().asList())
+							}
+						}
                         fieldset("Card Info") {
                             field("CardSet Number") {
                                 textfield(cardNumberInSet) {
@@ -184,14 +257,6 @@ class BulkAdditionDialog(val set: CardSet, val owner: View): Dialog<String?>() {
                                 }
                             }
                         }
-                        fieldset("Addition Setup") { // TODO move to own dialog
-                            field("Language") {
-                                combobox(languageProperty, listOf("en", "de", "jp", "ru", "it", "sp"))
-                            }
-                            field("Condition") {
-                                combobox(conditionProperty, Condition.values().asList())
-                            }
-                        }
                         fieldset("Current Addition") {
                         field("Foil") {
                                 combobox(foilProperty, Foil.values().asList())
@@ -200,16 +265,16 @@ class BulkAdditionDialog(val set: CardSet, val owner: View): Dialog<String?>() {
                                 bulkAddNumberSpinner = spinner(0, 999, bulkAddNumberProperty.value, 1, true, property = bulkAddNumberProperty) {
                                     this.editor.onKeyPressed = javafx.event.EventHandler {
                                         when (it.code) {
-                                            javafx.scene.input.KeyCode.UP -> {
+                                            KeyCode.UP -> {
                                                 foilProperty.value = Foil.NONFOIL
                                                 tvCards.selectionModel.selectPrevious()
                                             }
-                                            javafx.scene.input.KeyCode.DOWN -> {
+                                            KeyCode.DOWN -> {
                                                 foilProperty.value = Foil.NONFOIL
                                                 tvCards.selectionModel.selectNext()
                                             }
-                                            javafx.scene.input.KeyCode.ENTER -> {
-                                                this@spinner.editor.commitValue()
+                                            KeyCode.ENTER -> {
+												commitValue()
                                                 when(foilProperty.value) {
                                                     Foil.NONFOIL -> tvCards.selectionModel.selectedItem.bulkAdditionNonPremium.set(bulkAddNumberProperty.get())
                                                     Foil.FOIL -> tvCards.selectionModel.selectedItem.bulkAdditionPremium.set(bulkAddNumberProperty.get())
@@ -288,38 +353,16 @@ class BulkAdditionDialog(val set: CardSet, val owner: View): Dialog<String?>() {
                                 cardNumberInSet.set(it.numberInSet.get())
                                 cardName.set(it.name.get())
 
-                                runAsync {
-                                    imageLoadingProgressIndicatorBackground.isVisible = true
-                                    imageLoadingProgressIndicator.isVisible = true
-                                    newCard.cardImage
-                                } ui {
-                                    imageView.image = it
-                                    imageLoadingProgressIndicator.isVisible = false
-                                    imageLoadingProgressIndicatorBackground.isVisible = false
-                                }
+								tornadofx.runLater {
+									bulkAddNumberProperty.set(0)
+									bulkAddNumberSpinner.requestFocus()
+									bulkAddNumberSpinner.editor.selectAll()
+								}
 
-                                tornadofx.runLater {
-                                    bulkAddNumberProperty.set(0)
-                                    bulkAddNumberSpinner.requestFocus()
-                                    bulkAddNumberSpinner.editor.selectAll()
-                                }
-
-                                runAsync {
-                                    val loadingIndizes = listOf(
-                                            selectionModel.selectedIndex + 1,
-                                            selectionModel.selectedIndex - 1,
-                                            selectionModel.selectedIndex + 2,
-                                            selectionModel.selectedIndex - 2,
-                                            selectionModel.selectedIndex + 3)
-
-                                    loadingIndizes.forEach {
-                                        if (0 <= it && it < items.size) {
-                                            items[it].cardImage
-                                        }
-                                    }
-                                }
+								loadImage()
                             }
                         }
+						runLater { selectionModel.selectFirst() }
                     }
                 }
             }
@@ -328,13 +371,12 @@ class BulkAdditionDialog(val set: CardSet, val owner: View): Dialog<String?>() {
         }
 
         setResultConverter { button ->
-            // TODO data validation check
             when (button) {
                 ButtonType.APPLY -> {
                     bulkAdd()
-                    "blabla"
+                    true
                 }
-                else -> null
+                else -> false
             }
         }
     }

@@ -43,8 +43,8 @@ class PaperCollectionView: CollectionView() {
             action {
 				set?.let {
 					transaction {
-						BulkAdditionDialog(it, this@PaperCollectionView).showAndWait().ifPresent {
-							println(it)
+						BulkAdditionDialog(it, this@PaperCollectionView, imageLoadingProperty.get()).showAndWait().ifPresent {
+							updateCards()
 						}
 					}
 				}
