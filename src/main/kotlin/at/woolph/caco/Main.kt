@@ -8,8 +8,8 @@ import at.woolph.caco.datamodel.decks.Decks
 import at.woolph.caco.datamodel.decks.Variants
 import at.woolph.caco.datamodel.sets.Cards
 import at.woolph.caco.datamodel.sets.Foil
-import at.woolph.caco.datamodel.sets.Set
-import at.woolph.caco.datamodel.sets.Sets
+import at.woolph.caco.datamodel.sets.CardSet
+import at.woolph.caco.datamodel.sets.CardSets
 import at.woolph.caco.datamodel.sets.Cards.set
 import at.woolph.caco.datamodel.sets.Rarity
 import at.woolph.caco.importer.collection.getLatestDeckboxCollectionExport
@@ -59,7 +59,7 @@ fun main(args: Array<String>) {
 	Database.connect("jdbc:h2:~/caco", driver = "org.h2.Driver")
 
 	transaction {
-		SchemaUtils.createMissingTablesAndColumns(Sets, Cards, CardPossessions, Decks, Variants, Builds, DeckCards, ArenaCardPossessions)
+		SchemaUtils.createMissingTablesAndColumns(CardSets, Cards, CardPossessions, Decks, Variants, Builds, DeckCards, ArenaCardPossessions)
 	}
 
 	// @TODO wish list sorting (mark specific cards needed for decks or just for collection) => sort by price + modifier based on decklist needs
@@ -97,7 +97,7 @@ fun main(args: Array<String>) {
 					.flatMap { it.removePrefix(SHOW_NEEDED_PLAYSET).split(",") }
 
 			setCodes.forEach { setCode ->
-				Set.find { Sets.shortName eq setCode.toLowerCase() }.forEach { set ->
+				CardSet.find { CardSets.shortName eq setCode.toLowerCase() }.forEach { set ->
 					println("${set.name}:")
 					set.cards.sortedBy { it.numberInSet }.filter { !it.promo && (it.rarity == Rarity.COMMON || it.rarity == Rarity.UNCOMMON) }.forEach {
 						val neededCount = max(0, 4 - it.possessions.count())
@@ -113,7 +113,7 @@ fun main(args: Array<String>) {
 		// get needed cards for playset collection
 		if(args.any { it.startsWith(SHOW_NEEDED_PLAYSET_ALL) }) {
 			transaction {
-				Set.all().forEach { set ->
+				CardSet.all().forEach { set ->
 					println("${set.name}: needed cards --------------------------------------")
 					set.cards.sortedBy { it.numberInSet }.filter { !it.promo }.forEach {
 						val neededCount = max(0, 4 - it.possessions.count())
@@ -130,7 +130,7 @@ fun main(args: Array<String>) {
 	// get needed cards for foil one of collection
 	if(args.any { it.startsWith(SHOW_NEEDED_FOIL) }) {
 		transaction {
-			Set.all().forEach { set ->
+			CardSet.all().forEach { set ->
 				println("${set.name}: needed cards --------------------------------------")
 				set.cards.sortedBy { it.numberInSet }.filter { !it.promo }.forEach {
 					val neededCount = max(0, 1 - it.possessions.filter { it.foil != Foil.NONFOIL }.count())
@@ -171,7 +171,7 @@ fun main(args: Array<String>) {
 					.flatMap { it.removePrefix(PRINT_INVENTORY).split(",") }
 
 			setCodes.forEach { setCode ->
-				Set.find { Sets.shortName eq setCode.toLowerCase() }.forEach { set ->
+				CardSet.find { CardSets.shortName eq setCode.toLowerCase() }.forEach { set ->
 					println("${set.name}: inventory --------------------------------------")
 					set.cards.sortedBy { it.numberInSet }.filter { !it.promo }.forEach {
 						val ownedCount = min(4, it.possessions.count())
@@ -195,7 +195,7 @@ fun main(args: Array<String>) {
 
 			createPdfDocument(Paths.get("D:\\woolph\\Dropbox\\mtg-inventory.pdf")) {
 				setCodes.forEach { setCode ->
-					Set.find { Sets.shortName eq setCode.toLowerCase() }.forEach { set ->
+					CardSet.find { CardSets.shortName eq setCode.toLowerCase() }.forEach { set ->
 						page(PDRectangle.A4) {
 							frame(PagePosition.RIGHT, 50f, 20f, 20f, 20f) {
 								drawText("Inventory ${set.name}", fontTitle, HorizontalAlignment.CENTER, box.upperRightY - 10f, Color.BLACK)

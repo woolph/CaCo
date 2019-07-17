@@ -7,19 +7,16 @@ import at.woolph.caco.datamodel.decks.DeckCards
 import at.woolph.caco.datamodel.decks.Decks
 import at.woolph.caco.datamodel.decks.Variants
 import at.woolph.caco.datamodel.sets.Cards
-import at.woolph.caco.datamodel.sets.Sets
-import at.woolph.caco.view.ArenaCollectionView
-import at.woolph.caco.view.PaperCollectionView
+import at.woolph.caco.datamodel.sets.CardSets
+import at.woolph.caco.view.collection.ArenaCollectionView
+import at.woolph.caco.view.collection.PaperCollectionView
 import at.woolph.libs.ktfx.view
-import javafx.event.EventTarget
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.joda.time.format.DateTimeFormat
 import javafx.geometry.Side
-import javafx.scene.Node
 import javafx.scene.control.*
 import tornadofx.*
-import kotlin.reflect.KClass
 
 /**
  * @see https://github.com/JetBrains/Exposed
@@ -30,7 +27,7 @@ fun main(args: Array<String>) {
 	Database.connect("jdbc:h2:~/caco", driver = "org.h2.Driver")
 
 	transaction {
-		SchemaUtils.createMissingTablesAndColumns(Sets, Cards, CardPossessions, ArenaCardPossessions, Decks, Variants, Builds, DeckCards)
+		SchemaUtils.createMissingTablesAndColumns(CardSets, Cards, CardPossessions, ArenaCardPossessions, Decks, Variants, Builds, DeckCards)
 		//CardPossessions.deleteAll()
 	}
 

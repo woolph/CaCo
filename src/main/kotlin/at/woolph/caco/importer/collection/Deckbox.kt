@@ -4,7 +4,7 @@ import at.woolph.caco.datamodel.collection.CardPossession
 import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.datamodel.collection.Condition
 import at.woolph.caco.datamodel.sets.*
-import at.woolph.caco.datamodel.sets.Set
+import at.woolph.caco.datamodel.sets.CardSet
 import com.opencsv.CSVReader
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteAll
@@ -36,7 +36,7 @@ fun importDeckbox(file: File) {
                     val count = nextLine[0].toInt()
                     val cardName = nextLine[2]
                     val setName = nextLine[3].removePrefix("Prerelease Events: ").removePrefix("Extras: ")
-                    val set = Set.find { Sets.name eq setName }.firstOrNull()
+                    val set = CardSet.find { CardSets.name eq setName }.firstOrNull()
                             ?: throw Exception("set $setName not found")
                     val token = nextLine[3].startsWith("Extras: ")
                     val language = when (nextLine[6]) {

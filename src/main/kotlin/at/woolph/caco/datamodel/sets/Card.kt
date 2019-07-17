@@ -4,7 +4,6 @@ import at.woolph.caco.datamodel.collection.ArenaCardPossession
 import at.woolph.caco.datamodel.collection.ArenaCardPossessions
 import at.woolph.caco.datamodel.collection.CardPossession
 import at.woolph.caco.datamodel.collection.CardPossessions
-import at.woolph.caco.datamodel.sets.Cards.index
 import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.dao.IntEntity
 import org.jetbrains.exposed.dao.IntEntityClass
@@ -12,7 +11,7 @@ import org.jetbrains.exposed.dao.IntIdTable
 import java.net.URI
 
 object Cards : IntIdTable() {
-    val set = reference("set", Sets).index()
+    val set = reference("set", CardSets).index()
     val numberInSet = varchar("number", length = 10).index()
     val name = varchar("name", length = 256).index()
     val arenaId = integer("arenaId").nullable().index()
@@ -26,7 +25,7 @@ object Cards : IntIdTable() {
 class Card(id: EntityID<Int>) : IntEntity(id) {
     companion object : IntEntityClass<Card>(Cards)
 
-    var set by Set referencedOn Cards.set
+    var set by CardSet referencedOn Cards.set
     var numberInSet by Cards.numberInSet
     var name by Cards.name
     var arenaId by Cards.arenaId

@@ -13,9 +13,8 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
 import java.net.URI
-import java.nio.file.Paths
 
-object Sets : IntIdTable() {
+object CardSets : IntIdTable() {
     val shortName = varchar("shortName", length = 3).index()
     val name = varchar("name", length = 256).index()
     val dateOfRelease = date("dateOfRelease").index()
@@ -24,15 +23,15 @@ object Sets : IntIdTable() {
     val icon = varchar("iconURI", length = 256).nullable()
 }
 
-class Set(id: EntityID<Int>) : IntEntity(id) {
-    companion object : IntEntityClass<Set>(Sets)
+class CardSet(id: EntityID<Int>) : IntEntity(id) {
+    companion object : IntEntityClass<CardSet>(CardSets)
 
-    var shortName by Sets.shortName
-    var name by Sets.name
-    var dateOfRelease by Sets.dateOfRelease
-    var officalCardCount by Sets.officalCardCount
-    var digitalOnly by Sets.digitalOnly
-    var icon by Sets.icon.transform({ it?.toString() }, { it?.let { URI(it) } })
+    var shortName by CardSets.shortName
+    var name by CardSets.name
+    var dateOfRelease by CardSets.dateOfRelease
+    var officalCardCount by CardSets.officalCardCount
+    var digitalOnly by CardSets.digitalOnly
+    var icon by CardSets.icon.transform({ it?.toString() }, { it?.let { URI(it) } })
 
     val cards by Card referrersOn Cards.set
 

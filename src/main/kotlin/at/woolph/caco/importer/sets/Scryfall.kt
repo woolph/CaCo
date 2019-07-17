@@ -3,7 +3,7 @@ package at.woolph.caco.importer.sets
 import at.charlemagne.libs.json.useJsonReader
 import at.charlemagne.libs.json.getJsonObjectArray
 import at.woolph.caco.datamodel.sets.*
-import at.woolph.caco.datamodel.sets.Set
+import at.woolph.caco.datamodel.sets.CardSet
 import org.jetbrains.exposed.sql.and
 import org.joda.time.DateTime
 import java.lang.IllegalArgumentException
@@ -29,7 +29,7 @@ fun paddingCollectorNumber(collectorNumber: String): String {
     return String.format("%s%03d%s", prefix, number, suffix)
 }
 
-fun importSet(setCode: String): Set {
+fun importSet(setCode: String): CardSet {
     println("importing set $setCode")
     Thread.sleep(1000) // delay queries to scryfall api (to prevent overloading service)
     val conn = URL("https://api.scryfall.com/sets/$setCode").openConnection() as HttpURLConnection
@@ -45,13 +45,13 @@ fun importSet(setCode: String): Set {
         conn.inputStream.useJsonReader {
             it.readObject().let {
                 if(it.getString("object") == "set") {
-                    return Set.find { Sets.shortName.eq(it.getString("code")) }.singleOrNull()?.apply {
+                    return CardSet.find { CardSets.shortName.eq(it.getString("code")) }.singleOrNull()?.apply {
                         name = it.getString("name")
                         dateOfRelease = DateTime.parse(it.getString("released_at"))
                         officalCardCount = it.getInt("card_count")
                         digitalOnly = it.getBoolean("digital")
                         icon = URI(it.getString("icon_svg_uri"))
-                    } ?: Set.new {
+                    } ?: CardSet.new {
                         shortName = it.getString("code")
                         name = it.getString("name")
                         dateOfRelease = DateTime.parse(it.getString("released_at"))
@@ -71,7 +71,7 @@ fun importSet(setCode: String): Set {
     }
 }
 
-fun Set.importCardsOfSet() {
+fun CardSet.importCardsOfSet() {
     var nextURL: URL? = URL("https://api.scryfall.com/cards/search?q=set%3A${this.shortName}&unique=prints&order=set")
 
     while(nextURL!=null) {
@@ -122,7 +122,7 @@ fun Set.importCardsOfSet() {
     }
 }
 
-fun Set.importTokensOfSet(): Boolean {
+fun CardSet.importTokensOfSet(): Boolean {
     var nextURL: URL? = URL("https://api.scryfall.com/cards/search?q=set%3At${this.shortName}&unique=prints&order=set")
 
     while(nextURL!=null) {
@@ -180,7 +180,7 @@ fun Set.importTokensOfSet(): Boolean {
     return true
 }
 
-fun Set.importPromosOfSet(): Boolean {
+fun CardSet.importPromosOfSet(): Boolean {
     var nextURL: URL? = URL("https://api.scryfall.com/cards/search?q=set%3Ap${this.shortName}&unique=prints&order=set")
 
     while(nextURL!=null) {

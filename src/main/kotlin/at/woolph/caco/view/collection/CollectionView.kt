@@ -1,9 +1,7 @@
-package at.woolph.caco.view
+package at.woolph.caco.view.collection
 
-import at.woolph.caco.datamodel.collection.CardPossession
-import at.woolph.caco.datamodel.collection.Condition
 import at.woolph.caco.datamodel.sets.*
-import at.woolph.caco.datamodel.sets.Set
+import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.importer.sets.importCardsOfSet
 import at.woolph.caco.importer.sets.importPromosOfSet
 import at.woolph.caco.importer.sets.importSet
@@ -13,17 +11,14 @@ import javafx.beans.property.SimpleIntegerProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleStringProperty
 import javafx.collections.FXCollections
-import javafx.event.EventHandler
 import javafx.scene.control.*
 import javafx.scene.image.Image
 import javafx.scene.image.ImageView
-import javafx.scene.input.KeyCode
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.Priority
 import javafx.scene.shape.Shape
 import org.jetbrains.exposed.sql.transactions.transaction
 import tornadofx.*
-import tornadofx.controlsfx.segmentedbutton
 import kotlin.math.min
 
 abstract class CollectionView : View() {
@@ -38,7 +33,7 @@ abstract class CollectionView : View() {
     inner class CardInfo(val card: Card) {
         val rarity get() = card.rarity.toProperty()
         val name get() = card.name.toProperty()
-        val numberInSet get() = card.name.toProperty()
+        val numberInSet get() = card.numberInSet.toProperty()
 
         val possessionNonPremiumProperty = SimpleIntegerProperty(0)
         var possessionNonPremium by possessionNonPremiumProperty
@@ -89,7 +84,7 @@ abstract class CollectionView : View() {
     val cardName = SimpleStringProperty("")
     val cardNumberInSet = SimpleStringProperty("")
 
-    val setProperty = SimpleObjectProperty<Set>()
+    val setProperty = SimpleObjectProperty<CardSet?>()
     var set by setProperty
 
     val filterTextProperty = SimpleStringProperty("")
@@ -105,7 +100,7 @@ abstract class CollectionView : View() {
     lateinit var imageLoadingProgressIndicator: ProgressIndicator
     lateinit var tvCards: TableView<CardInfo>
 
-    val sets = FXCollections.observableArrayList<Set>()
+    val sets = FXCollections.observableArrayList<CardSet>()
 
     val cards = FXCollections.observableArrayList<CardInfo>()
     val cardsFiltered = cards.filtered { cardInfo -> cardInfo.card.filterView() }
@@ -118,7 +113,7 @@ abstract class CollectionView : View() {
 
     abstract fun Card.filterView(): Boolean
 
-    abstract fun getRelevantSets(): List<Set>
+    abstract fun getRelevantSets(): List<CardSet>
     abstract fun ToolBar.addFeatureButtons()
 
     fun updateSets() {
@@ -127,11 +122,11 @@ abstract class CollectionView : View() {
 
     fun updateCards() {
         cards.setAll(transaction {
-            set.cards.toList().map { CardInfo(it) }
-        })
+            set?.cards?.toList()?.map { CardInfo(it) }
+        } ?: emptyList())
     }
 
-    fun addSet(setCode: String): Set { // TODO Progress dialog
+    fun addSet(setCode: String): CardSet { // TODO Progress dialog
         val importedSet = importSet(setCode).reimportSet()
 
         updateSets()
@@ -139,7 +134,7 @@ abstract class CollectionView : View() {
         return importedSet
     }
 
-    fun Set.reimportSet(): Set = apply {
+    fun CardSet.reimportSet(): CardSet = apply {
         importCardsOfSet()
         importTokensOfSet()
         importPromosOfSet()
@@ -179,34 +174,37 @@ abstract class CollectionView : View() {
         filterRarityRare.addListener(filterChangeListener)
         filterRarityMythic.addListener(filterChangeListener)
 
-        set = sets.first()
+        set = sets.firstOrNull()
 
         with(root) {
             top {
                 toolbar {
                     combobox(setProperty, sets) {
                         cellFormat {
-                            graphic = item.iconImage?.let {
+                            graphic = item?.iconImage?.let {
                                 ImageView(it).apply {
                                     fitHeight = 24.0
                                     fitWidth = 24.0
                                 }
                             }
-                            text = "${item.shortName.toUpperCase()} - ${item.name}"
+                            text = item?.let { "${it.shortName.toUpperCase()} - ${it.name}" }
                         }
                     }
                     button("\u21BB") {
                         action {
                             transaction {
-                                set.reimportSet()
+                                set?.reimportSet()
                             }
                         }
                     }
                     button("+") {
                         action {
                             transaction {
-                                DialogEnterSetCode(this@CollectionView).showAndWait().ifPresent {
-                                    set = addSet(it)
+                                AddSetsDialog(this@CollectionView).showAndWait().ifPresent { setCodes ->
+									// TODO progress dialog
+									set = setCodes.split(',').map {
+										addSet(it.trim().toLowerCase())
+									}.last()
                                 }
                             }
                         }
@@ -304,7 +302,7 @@ abstract class CollectionView : View() {
                         vGrow = Priority.ALWAYS
                     }
 
-                    column("Set Number", CardInfo::numberInSet) {
+                    column("Number", CardInfo::numberInSet) {
                         contentWidth(5.0, useAsMin = true, useAsMax = true)
                     }
                     column("Rarity", CardInfo::rarity) {
@@ -353,49 +351,6 @@ abstract class CollectionView : View() {
                         }
                     }
                 }
-            }
-        }
-    }
-}
-
-class DialogEnterSetCode(val owner: View): Dialog<String?>() {
-    val messages
-        get() = owner.messages
-
-    val setCodeProperty = SimpleStringProperty("")
-    val setCode by setCodeProperty
-
-    init {
-        initOwner(owner.primaryStage)
-
-        isResizable = true
-        title = "Add a Set"
-        headerText = "Add a Set"
-
-        dialogPane.apply {
-            content = BorderPane().apply {
-                center {
-                    form {
-                        fieldset {
-                            field("Set Code") {
-                                textfield(setCodeProperty) {
-                                    hgrow = Priority.ALWAYS
-                                    runLater { requestFocus() }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            buttonTypes.setAll(ButtonType.APPLY, ButtonType.CANCEL)
-        }
-
-        setResultConverter { button ->
-            // TODO data validation check
-            when (button) {
-                ButtonType.APPLY -> setCode.toLowerCase()
-                else -> null
             }
         }
     }

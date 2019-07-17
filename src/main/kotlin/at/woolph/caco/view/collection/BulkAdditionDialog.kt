@@ -1,11 +1,11 @@
-package at.woolph.caco.view
+package at.woolph.caco.view.collection
 
 import at.woolph.caco.datamodel.collection.CardPossession
 import at.woolph.caco.datamodel.collection.Condition
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.Foil
 import at.woolph.caco.datamodel.sets.Rarity
-import at.woolph.caco.datamodel.sets.Set
+import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.importer.sets.importCardsOfSet
 import at.woolph.caco.importer.sets.importPromosOfSet
 import at.woolph.caco.importer.sets.importTokensOfSet
@@ -21,10 +21,8 @@ import javafx.scene.layout.BorderPane
 import javafx.scene.shape.Shape
 import org.jetbrains.exposed.sql.transactions.transaction
 import tornadofx.*
-import kotlin.math.min
 
-
-class BulkAdditionDialog(val set: Set, val owner: View): Dialog<String?>() {
+class BulkAdditionDialog(val set: CardSet, val owner: View): Dialog<String?>() {
 
     inner class CardInfo(val card: Card) {
         val rarity get() = card.rarity.toProperty()
@@ -74,7 +72,7 @@ class BulkAdditionDialog(val set: Set, val owner: View): Dialog<String?>() {
         })
     }
 
-    fun Set.reimportSet(): Set = apply {
+    fun CardSet.reimportSet(): CardSet = apply {
         importCardsOfSet()
         importTokensOfSet()
         importPromosOfSet()
@@ -146,7 +144,7 @@ class BulkAdditionDialog(val set: Set, val owner: View): Dialog<String?>() {
                 /*left {
                     form {
                         fieldset {
-                            field("Set Code") {
+                            field("CardSet Code") {
                                 textfield(setCodeProperty) {
                                     hgrow = Priority.ALWAYS
                                     runLater { requestFocus() }
@@ -158,7 +156,7 @@ class BulkAdditionDialog(val set: Set, val owner: View): Dialog<String?>() {
                 left {
                     form {
                         fieldset("Card Info") {
-                            field("Set Number") {
+                            field("CardSet Number") {
                                 textfield(cardNumberInSet) {
                                     isEditable = true
                                 }
@@ -188,30 +186,30 @@ class BulkAdditionDialog(val set: Set, val owner: View): Dialog<String?>() {
                         }
                         fieldset("Addition Setup") { // TODO move to own dialog
                             field("Language") {
-                                combobox(languageProperty, kotlin.collections.listOf("en", "de", "jp", "ru", "it", "sp"))
+                                combobox(languageProperty, listOf("en", "de", "jp", "ru", "it", "sp"))
                             }
                             field("Condition") {
-                                combobox(conditionProperty, at.woolph.caco.datamodel.collection.Condition.values().asList())
+                                combobox(conditionProperty, Condition.values().asList())
                             }
                         }
                         fieldset("Current Addition") {
                         field("Foil") {
-                                combobox(foilProperty, at.woolph.caco.datamodel.sets.Foil.values().asList())
+                                combobox(foilProperty, Foil.values().asList())
                             }
                             field("Number") {
                                 bulkAddNumberSpinner = spinner(0, 999, bulkAddNumberProperty.value, 1, true, property = bulkAddNumberProperty) {
                                     this.editor.onKeyPressed = javafx.event.EventHandler {
                                         when (it.code) {
                                             javafx.scene.input.KeyCode.UP -> {
-                                                foilProperty.value = at.woolph.caco.datamodel.sets.Foil.NONFOIL
+                                                foilProperty.value = Foil.NONFOIL
                                                 tvCards.selectionModel.selectPrevious()
                                             }
                                             javafx.scene.input.KeyCode.DOWN -> {
-                                                foilProperty.value = at.woolph.caco.datamodel.sets.Foil.NONFOIL
+                                                foilProperty.value = Foil.NONFOIL
                                                 tvCards.selectionModel.selectNext()
                                             }
                                             javafx.scene.input.KeyCode.ENTER -> {
-                                                this.commitValue()
+                                                this@spinner.editor.commitValue()
                                                 when(foilProperty.value) {
                                                     Foil.NONFOIL -> tvCards.selectionModel.selectedItem.bulkAdditionNonPremium.set(bulkAddNumberProperty.get())
                                                     Foil.FOIL -> tvCards.selectionModel.selectedItem.bulkAdditionPremium.set(bulkAddNumberProperty.get())
@@ -219,12 +217,12 @@ class BulkAdditionDialog(val set: Set, val owner: View): Dialog<String?>() {
                                                 }
 
                                                 if (it.isShiftDown) {
-                                                    foilProperty.value = at.woolph.caco.datamodel.sets.Foil.values()[foilProperty.value.ordinal + 1]
+                                                    foilProperty.value = Foil.values()[foilProperty.value.ordinal + 1]
                                                     bulkAddNumberProperty.set(0)
                                                     bulkAddNumberSpinner.editor.selectAll()
 
                                                 } else {
-                                                    foilProperty.value = at.woolph.caco.datamodel.sets.Foil.NONFOIL
+                                                    foilProperty.value = Foil.NONFOIL
                                                     tvCards.selectionModel.selectNext()
                                                 }
                                             }
@@ -267,7 +265,7 @@ class BulkAdditionDialog(val set: Set, val owner: View): Dialog<String?>() {
                             vGrow = javafx.scene.layout.Priority.ALWAYS
                         }
 
-                        column("Set Number", CardInfo::numberInSet) {
+                        column("CardSet Number", CardInfo::numberInSet) {
                             contentWidth(5.0, useAsMin = true, useAsMax = true)
                         }
                         column("Rarity", CardInfo::rarity) {
@@ -284,7 +282,7 @@ class BulkAdditionDialog(val set: Set, val owner: View): Dialog<String?>() {
                             contentWidth(5.0, useAsMin = true, useAsMax = true)
                         }
 
-                        selectionModel.selectionMode = javafx.scene.control.SelectionMode.SINGLE
+                        selectionModel.selectionMode = SelectionMode.SINGLE
                         selectionModel.selectedItemProperty().addListener { _, _, newCard ->
                             newCard?.let {
                                 cardNumberInSet.set(it.numberInSet.get())
@@ -307,7 +305,7 @@ class BulkAdditionDialog(val set: Set, val owner: View): Dialog<String?>() {
                                 }
 
                                 runAsync {
-                                    val loadingIndizes = kotlin.collections.listOf(
+                                    val loadingIndizes = listOf(
                                             selectionModel.selectedIndex + 1,
                                             selectionModel.selectedIndex - 1,
                                             selectionModel.selectedIndex + 2,
