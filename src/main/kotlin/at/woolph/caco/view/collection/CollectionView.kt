@@ -6,6 +6,11 @@ import at.woolph.caco.importer.sets.importCardsOfSet
 import at.woolph.caco.importer.sets.importPromosOfSet
 import at.woolph.caco.importer.sets.importSet
 import at.woolph.caco.importer.sets.importTokensOfSet
+import at.woolph.caco.view.CardDetailsView
+import at.woolph.caco.view.CardImageCache
+import at.woolph.caco.view.CardImageTooltip
+import at.woolph.caco.view.getCachedImage
+import at.woolph.libs.ktfx.mapBinding
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleIntegerProperty
 import javafx.beans.property.SimpleObjectProperty
@@ -21,6 +26,9 @@ import javafx.scene.shape.Shape
 import org.jetbrains.exposed.sql.transactions.transaction
 import tornadofx.*
 import kotlin.math.min
+import javafx.scene.control.Tooltip
+
+
 
 abstract class CollectionView : View() {
     companion object {
@@ -54,10 +62,6 @@ abstract class CollectionView : View() {
         val completedPremiumProperty = SimpleBooleanProperty(false)
         var completedPremium by completedPremiumProperty
 
-        val cardImage by lazy {
-            Image(card.image.toString(), 224.0, 312.0, true, true)
-        }
-
         init {
             transaction {
                 possessionNonPremium = card.getPossesionsNonPremium()
@@ -82,9 +86,6 @@ abstract class CollectionView : View() {
 
     override val root = BorderPane()
 
-    val cardName = SimpleStringProperty("")
-    val cardNumberInSet = SimpleStringProperty("")
-
     val setProperty = SimpleObjectProperty<CardSet?>()
     var set by setProperty
 
@@ -96,12 +97,8 @@ abstract class CollectionView : View() {
     val filterRarityRare = SimpleBooleanProperty(true)
     val filterRarityMythic = SimpleBooleanProperty(true)
 
-	val imageLoadingProperty = SimpleBooleanProperty(true)
-
-    lateinit var imageView: ImageView
-    lateinit var imageLoadingProgressIndicatorBackground: Shape
-    lateinit var imageLoadingProgressIndicator: ProgressIndicator
     lateinit var tvCards: TableView<CardInfo>
+	lateinit var toggleButtonImageLoading: ToggleButton
 
     val sets = FXCollections.observableArrayList<CardSet>()
 
@@ -157,40 +154,13 @@ abstract class CollectionView : View() {
         }
     }
 
-	fun loadImage() {
-		if(imageLoadingProperty.get()) {
-			tornadofx.runAsync {
-				imageLoadingProgressIndicatorBackground.isVisible = true
-				imageLoadingProgressIndicator.isVisible = true
-				tvCards.selectedItem?.cardImage
-			} ui {
-				imageView.image = it
-				imageLoadingProgressIndicator.isVisible = false
-				imageLoadingProgressIndicatorBackground.isVisible = false
-			}
-
-			// preload surrounding images
-			tornadofx.runAsync {
-				listOf(tvCards.selectionModel.selectedIndex + 1,
-						tvCards.selectionModel.selectedIndex - 1,
-						tvCards.selectionModel.selectedIndex + 2,
-						tvCards.selectionModel.selectedIndex + 3).forEach {
-					if (0 <= it && it < tvCards.items.size) {
-						tvCards.items[it].cardImage
-					}
-				}
-			}
-		}
-	}
-
     init {
         title = "CaCo"
 
         updateSets()
 
-        setProperty.addListener { observable, oldSet, newSet ->
-            updateCards()
-        }
+        setProperty.addListener { _, _, _ -> updateCards() }
+
         val filterChangeListener = ChangeListener<Any> { _, _, _ ->
             setFilter(filterTextProperty.get(), filterNonFoilCompleteProperty.get(), filterFoilCompleteProperty.get(),
                     filterRarityCommon.get(), filterRarityUncommon.get(), filterRarityRare.get(), filterRarityMythic.get())
@@ -203,22 +173,12 @@ abstract class CollectionView : View() {
         filterRarityRare.addListener(filterChangeListener)
         filterRarityMythic.addListener(filterChangeListener)
 
-		imageLoadingProperty.addListener { _, _, newValue ->
-			if(newValue) {
-				loadImage()
-			} else {
-				imageView.image = null
-			}
-		}
-
         set = sets.firstOrNull()
 
         with(root) {
             top {
                 toolbar {
-					togglebutton("\uD83D\uDDBC") {
-						imageLoadingProperty.bind(selectedProperty())
-					}
+					toggleButtonImageLoading = togglebutton("\uD83D\uDDBC")
 
                     combobox(setProperty, sets) {
                         cellFormat {
@@ -250,6 +210,7 @@ abstract class CollectionView : View() {
                             }
                         }
                     }
+					// TODO filter toolbar into fragment
                     label("Filter: ")
                     textfield(filterTextProperty) {
 
@@ -288,37 +249,12 @@ abstract class CollectionView : View() {
                 }
             }
             left {
-                form {
-                    fieldset("Card Info") { // TODO turn this into a reusable fragment
-                        field("Set Number") {
-                            textfield(cardNumberInSet) {
-                                isEditable = true
-                            }
-                        }
-                        field("Name") {
-                            textfield(cardName) {
-                                isEditable = false
-                            }
-                        }
-                        field("Image") {
-                            stackpane {
-                                imageView = imageview {
-                                    fitHeight = 312.0
-                                    fitWidth = 224.0
-                                }
-                                imageLoadingProgressIndicatorBackground = rectangle {
-                                    fill = Color.rgb(1, 1, 1, 0.3)
-                                    isVisible = false
-                                    height = imageView.fitHeight
-                                    width = imageView.fitWidth
-                                }
-                                imageLoadingProgressIndicator = progressindicator {
-                                    isVisible = false
-                                }
-                            }
-                        }
-                    }
-                }
+				this += find<CardDetailsView>().apply {
+					runLater {
+						this.cardProperty.bind(tvCards.selectionModel.selectedItemProperty().mapBinding { it?.card })
+						this.imageLoadingProperty.bind(toggleButtonImageLoading.selectedProperty())
+					}
+				}
             }
             center {
                 tvCards = tableview(cardsFiltered) {
@@ -345,17 +281,34 @@ abstract class CollectionView : View() {
                         contentWidth(15.0, useAsMin = true, useAsMax = true)
                     }
 
-                    selectionModel.selectionMode = SelectionMode.SINGLE
-                    selectionModel.selectedItemProperty().addListener { _, _, newCard ->
-                        newCard?.let {
-                            cardNumberInSet.set(it.numberInSet.get())
-                            cardName.set(it.name.get())
+					setRowFactory {
+						object: TableRow<CardInfo>() {
+							override fun updateItem(cardInfo: CardInfo?, empty: Boolean) {
+								super.updateItem(cardInfo, empty)
+								tooltip = cardInfo?.card?.let { CardImageTooltip(it, toggleButtonImageLoading.selectedProperty()) }
+							}
+						}
+					}
 
-							loadImage()
-                        }
-                    }
+                    selectionModel.selectionMode = SelectionMode.SINGLE
+					selectionModel.selectedItemProperty().addListener { _, _, _ ->
+						if(toggleButtonImageLoading.isSelected) {
+							tornadofx.runAsync {
+								// precache the next images
+								listOf(tvCards.selectionModel.selectedIndex + 1,
+										tvCards.selectionModel.selectedIndex - 1,
+										tvCards.selectionModel.selectedIndex + 2,
+										tvCards.selectionModel.selectedIndex + 3).forEach {
+									if (0 <= it && it < tvCards.items.size) {
+										tvCards.items[it].card.getCachedImage()
+									}
+								}
+							}
+						}
+					}
                 }
             }
         }
     }
 }
+

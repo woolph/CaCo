@@ -9,7 +9,10 @@ import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.importer.sets.importCardsOfSet
 import at.woolph.caco.importer.sets.importPromosOfSet
 import at.woolph.caco.importer.sets.importTokensOfSet
+import at.woolph.caco.view.CardDetailsView
+import at.woolph.caco.view.getCachedImage
 import at.woolph.libs.ktfx.commitValue
+import at.woolph.libs.ktfx.mapBinding
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleIntegerProperty
 import javafx.beans.property.SimpleObjectProperty
@@ -35,20 +38,11 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
         val numberInSet get() = card.numberInSet.toProperty()
         val bulkAdditionNonPremium = SimpleIntegerProperty(0)
         val bulkAdditionPremium = SimpleIntegerProperty(0)
-
-        val cardImage by lazy {
-            Image(card.image.toString(), 224.0, 312.0, true, true)
-        }
     }
-
-    val cardName = SimpleStringProperty("")
-    val cardNumberInSet = SimpleStringProperty("")
 
     val languageProperty = SimpleStringProperty("en")
     val conditionProperty = SimpleObjectProperty(Condition.NEAR_MINT)
     val foilProperty = SimpleObjectProperty(Foil.NONFOIL)
-
-	val imageLoadingProperty = SimpleBooleanProperty(imageLoading)
 
     val bulkAddNumberProperty = SimpleIntegerProperty(0)
     val bulkAddNumber by bulkAddNumberProperty
@@ -65,10 +59,8 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
     val filterRarityMythic = SimpleBooleanProperty(true)
 
     lateinit var bulkAddNumberSpinner: Spinner<Number>
-    lateinit var imageView: ImageView
-    lateinit var imageLoadingProgressIndicatorBackground: Shape
-    lateinit var imageLoadingProgressIndicator: ProgressIndicator
     lateinit var tvCards: TableView<CardInfo>
+	lateinit var toggleButtonImageLoading: ToggleButton
 
     val cards = FXCollections.observableArrayList<CardInfo>()
     val cardsFiltered = cards.filtered { true }
@@ -123,32 +115,6 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
         }
     }
 
-	fun loadImage() {
-		if(imageLoadingProperty.get()) {
-			runAsync {
-				imageLoadingProgressIndicatorBackground.isVisible = true
-				imageLoadingProgressIndicator.isVisible = true
-				tvCards.selectedItem?.cardImage
-			} ui {
-				imageView.image = it
-				imageLoadingProgressIndicator.isVisible = false
-				imageLoadingProgressIndicatorBackground.isVisible = false
-			}
-
-			// preload surrounding images
-			runAsync {
-				listOf(tvCards.selectionModel.selectedIndex + 1,
-						tvCards.selectionModel.selectedIndex - 1,
-						tvCards.selectionModel.selectedIndex + 2,
-						tvCards.selectionModel.selectedIndex + 3).forEach {
-					if (0 <= it && it < tvCards.items.size) {
-						tvCards.items[it].cardImage
-					}
-				}
-			}
-		}
-	}
-
     init {
         initOwner(owner.primaryStage)
 
@@ -161,36 +127,15 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
         filterRarityRare.addListener(filterChangeListener)
         filterRarityMythic.addListener(filterChangeListener)
 
-		imageLoadingProperty.addListener { _, _, newValue ->
-			if(newValue) {
-				loadImage()
-			} else {
-				imageView.image = null
-			}
-		}
-
         isResizable = true
         title = "Bulk Addition: ${set.name}"
 
         dialogPane.apply {
             content = BorderPane().apply {
-                /*left {
-                    form {
-                        fieldset {
-                            field("CardSet Code") {
-                                textfield(setCodeProperty) {
-                                    hgrow = Priority.ALWAYS
-                                    runLater { requestFocus() }
-                                }
-                            }
-                        }
-                    }
-                }*/
 				top {
 					toolbar {
-						togglebutton("\uD83D\uDDBC") {
-							isSelected = imageLoadingProperty.get()
-							imageLoadingProperty.bind(selectedProperty())
+						toggleButtonImageLoading = togglebutton("\uD83D\uDDBC") {
+							isSelected = imageLoading
 						}
 						label("Filter: ")
 						/*textfield(filterTextProperty) {
@@ -231,33 +176,12 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
 							}
 						}
                         fieldset("Card Info") {
-                            field("CardSet Number") {
-                                textfield(cardNumberInSet) {
-                                    isEditable = true
-                                }
-                            }
-                            field("Name") {
-                                textfield(cardName) {
-                                    isEditable = false
-                                }
-                            }
-                            field("Image") {
-                                stackpane {
-                                    imageView = imageview {
-                                        fitHeight = 312.0
-                                        fitWidth = 224.0
-                                    }
-                                    imageLoadingProgressIndicatorBackground = rectangle {
-                                        fill = Color.rgb(1, 1, 1, 0.3)
-                                        isVisible = false
-                                        height = imageView.fitHeight
-                                        width = imageView.fitWidth
-                                    }
-                                    imageLoadingProgressIndicator = progressindicator {
-                                        isVisible = false
-                                    }
-                                }
-                            }
+							this += find<CardDetailsView>().apply {
+								tornadofx.runLater {
+									this.cardProperty.bind(tvCards.selectionModel.selectedItemProperty().mapBinding { it?.card })
+									this.imageLoadingProperty.bind(toggleButtonImageLoading.selectedProperty())
+								}
+							}
                         }
                         fieldset("Current Addition") {
                         field("Foil") {
@@ -350,19 +274,20 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
                         }
 
                         selectionModel.selectionMode = SelectionMode.SINGLE
-                        selectionModel.selectedItemProperty().addListener { _, _, newCard ->
-                            newCard?.let {
-                                cardNumberInSet.set(it.numberInSet.get())
-                                cardName.set(it.name.get())
-
-								runLater {
-									bulkAddNumberProperty.set(0)
-									bulkAddNumberSpinner.requestFocus()
-									bulkAddNumberSpinner.editor.selectAll()
+                        selectionModel.selectedItemProperty().addListener { _, _, _ ->
+							if(toggleButtonImageLoading.isSelected) {
+								runAsync {
+									// precache the next images
+									listOf(tvCards.selectionModel.selectedIndex + 1,
+											tvCards.selectionModel.selectedIndex - 1,
+											tvCards.selectionModel.selectedIndex + 2,
+											tvCards.selectionModel.selectedIndex + 3).forEach {
+										if (0 <= it && it < tvCards.items.size) {
+											tvCards.items[it].card.getCachedImage()
+										}
+									}
 								}
-
-								loadImage()
-                            }
+							}
                         }
 						runLater { selectionModel.selectFirst() }
                     }
