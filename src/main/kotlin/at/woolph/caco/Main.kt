@@ -54,8 +54,6 @@ const val ICON_REDUNDANT_OWNED_CARD = "+"
  * @see https://github.com/JetBrains/Exposed
  */
 fun main(args: Array<String>) {
-	println("starting main")
-	val dtf = DateTimeFormat.forPattern("YYYY-MM-dd")
 	Database.connect("jdbc:h2:~/caco", driver = "org.h2.Driver")
 
 	transaction {

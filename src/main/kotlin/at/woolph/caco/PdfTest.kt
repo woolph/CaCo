@@ -1,3 +1,5 @@
+package at.woolph.caco
+
 import at.woolph.libs.pdf.*
 import be.quodlibet.boxable.HorizontalAlignment
 import org.apache.pdfbox.pdmodel.common.PDRectangle

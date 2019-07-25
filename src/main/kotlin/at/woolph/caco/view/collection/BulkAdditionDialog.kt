@@ -1,11 +1,9 @@
 package at.woolph.caco.view.collection
 
 import at.woolph.caco.datamodel.collection.CardPossession
+import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.datamodel.collection.Condition
-import at.woolph.caco.datamodel.sets.Card
-import at.woolph.caco.datamodel.sets.Foil
-import at.woolph.caco.datamodel.sets.Rarity
-import at.woolph.caco.datamodel.sets.CardSet
+import at.woolph.caco.datamodel.sets.*
 import at.woolph.caco.importer.sets.importCardsOfSet
 import at.woolph.caco.importer.sets.importPromosOfSet
 import at.woolph.caco.importer.sets.importTokensOfSet
@@ -27,8 +25,12 @@ import javafx.scene.layout.BorderPane
 import javafx.scene.layout.Priority
 import javafx.scene.paint.Color
 import javafx.scene.shape.Shape
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.count
+import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
 import tornadofx.*
+import java.nio.file.Paths
 
 class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolean): Dialog<Boolean>() {
 
@@ -65,6 +67,8 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
     val cards = FXCollections.observableArrayList<CardInfo>()
     val cardsFiltered = cards.filtered { true }
 
+    val buttonTypeExport = ButtonType("Export")
+
     fun updateCards() {
         cards.setAll(transaction {
             set.cards.toList().map { CardInfo(it) }
@@ -72,10 +76,10 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
     }
 
     fun bulkAdd() { // TODO update card set view
-        cards.forEach { cardInfo ->
-            cardInfo.bulkAdditionNonPremium.value.let { toBeAdded ->
-                if (toBeAdded > 0) {
-                    transaction {
+        transaction {
+            cards.forEach { cardInfo ->
+                cardInfo.bulkAdditionNonPremium.value.let { toBeAdded ->
+                    if (toBeAdded > 0) {
                         repeat(toBeAdded) {
                             CardPossession.new {
                                 this.card = cardInfo.card
@@ -86,10 +90,8 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
                         }
                     }
                 }
-            }
-            cardInfo.bulkAdditionPremium.value.let { toBeAdded ->
-                if (toBeAdded > 0) {
-                    transaction {
+                cardInfo.bulkAdditionPremium.value.let { toBeAdded ->
+                    if (toBeAdded > 0) {
                         repeat(toBeAdded) {
                             CardPossession.new {
                                 this.card = cardInfo.card
@@ -103,7 +105,6 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
                 }
             }
         }
-
     }
 
     fun setFilter(filterRarityCommon: Boolean, filterRarityUncommon: Boolean, filterRarityRare: Boolean, filterRarityMythic: Boolean) {
@@ -294,12 +295,59 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
                 }
             }
 
-            buttonTypes.setAll(ButtonType.APPLY, ButtonType.CANCEL)
+            buttonTypes.setAll(ButtonType.APPLY, buttonTypeExport, ButtonType.CANCEL)
         }
 
         setResultConverter { button ->
             when (button) {
                 ButtonType.APPLY -> {
+                    bulkAdd()
+                    true
+                }
+                buttonTypeExport -> {
+                    transaction {
+                        Paths.get("D:\\export.csv").toFile().printWriter().use { out ->
+                            out.println("Count,Tradelist Count,Name,Edition,Card Number,Condition,Language,Foil,Signed,Artist Proof,Altered Art,Misprint,Promo,Textless,My Price")
+                            cards.forEach { cardInfo ->
+                                val cardName = cardInfo.card.name
+                                val cardNumberInSet = cardInfo.card.numberInSet
+                                val token = cardInfo.card.token
+                                val promo = cardInfo.card.promo
+                                val condition = when (conditionProperty.value) {
+                                    Condition.NEAR_MINT -> "Near Mint"
+                                    Condition.EXCELLENT -> "Good (Lightly Played)"
+                                    Condition.GOOD -> "Played"
+                                    Condition.PLAYED -> "Heavily Played"
+                                    Condition.POOR -> "Poor"
+                                    else -> throw Exception("unknown condition")
+                                }
+                                val prereleasePromo = false
+                                val language = when (languageProperty.value) {
+                                    "en" -> "English"
+                                    "de" -> "German"
+                                    "jp" -> "Japanese"
+                                    "ru" -> "Russian"
+                                    else -> throw Exception("unknown language")
+                                }
+                                val setName = when {
+                                    prereleasePromo -> "Prerelease Events: ${set.name}"
+                                    token -> "Extras: ${set.name}"
+                                    else -> set.name
+                                }
+
+                                cardInfo.bulkAdditionNonPremium.value.let { toBeAdded ->
+                                    if (toBeAdded > 0) {
+                                        out.println("$toBeAdded,0,\"$cardName\",\"$setName\",$cardNumberInSet,$condition,$language,,,,,,,,")
+                                    }
+                                }
+                                cardInfo.bulkAdditionPremium.value.let { toBeAdded ->
+                                    if (toBeAdded > 0) {
+                                        out.println("$toBeAdded,0,\"$cardName\",\"$setName\",$cardNumberInSet,$condition,$language,foil,,,,,,,")
+                                    }
+                                }
+                            }
+                        }
+                    }
                     bulkAdd()
                     true
                 }
