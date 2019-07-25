@@ -9,7 +9,6 @@ import tornadofx.action
 import tornadofx.button
 import tornadofx.observable
 
-
 class ArenaCollectionView: CollectionView() {
     override val cardPossesionTargtNonPremium get() = 4
     override val cardPossesionTargtPremium get() = 0

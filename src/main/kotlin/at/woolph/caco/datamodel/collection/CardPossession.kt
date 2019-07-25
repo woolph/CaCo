@@ -12,7 +12,7 @@ import org.jetbrains.exposed.sql.CurrentDateTime
 object CardPossessions : IntIdTable() {
     val card = reference("card", Cards).index()
     val language = varchar("language", length = 2).index()
-    val condition = enumeration("condition", Condition::class).default(Condition.UNKNOWN).index()
+    val condition = enumeration("condition", CardCondition::class).default(CardCondition.UNKNOWN).index()
     val foil = enumeration("foil", Foil::class).default(Foil.NONFOIL).index()
     val datetimeOfAddition = datetime("datetimeOfAddition").index().defaultExpression(CurrentDateTime())
 }

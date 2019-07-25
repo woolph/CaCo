@@ -1,6 +1,6 @@
 package at.woolph.caco.datamodel.collection
 
-enum class Condition {
+enum class CardCondition {
     UNKNOWN, NEAR_MINT, EXCELLENT, GOOD, PLAYED, POOR;
     override fun toString() = when(this) {
         NEAR_MINT -> "NM"

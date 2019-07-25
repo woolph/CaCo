@@ -2,7 +2,7 @@ package at.woolph.caco.importer.collection
 
 import at.woolph.caco.datamodel.collection.CardPossession
 import at.woolph.caco.datamodel.collection.CardPossessions
-import at.woolph.caco.datamodel.collection.Condition
+import at.woolph.caco.datamodel.collection.CardCondition
 import at.woolph.caco.datamodel.sets.*
 import at.woolph.caco.datamodel.sets.CardSet
 import com.opencsv.CSVReader
@@ -11,17 +11,6 @@ import org.jetbrains.exposed.sql.deleteAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.io.File
 import java.io.FileReader
-
-fun getLatestDeckboxCollectionExport(dir: File) = dir.let {
-    if(it.isDirectory) {
-        it.listFiles().asList().onEach { println("content $it") }
-                .filter { it.name.toString().let { it.startsWith("Inventory") && it.endsWith(".csv")} }
-                .onEach {println("passed filter $it") }
-                .maxBy { it.lastModified() }
-    } else {
-        it
-    }
-}
 
 fun importDeckbox(file: File) {
     println("importing deckbox collection export file $file")
@@ -42,15 +31,24 @@ fun importDeckbox(file: File) {
                     val language = when (nextLine[6]) {
                         "English" -> "en"
                         "German" -> "de"
+						"Japanese" -> "ja"
+						"Russian" -> "ru"
+						"Spanish" -> "es"
+						"Korean" -> "ko"
+						"Italian" -> "it"
+						"Portuguese" -> "pt"
+						"French" -> "fr"
+						"Chinese" -> "zhs"
+						"Traditional Chinese" -> "zht"
                         else -> "??"
                     }
                     val condition = when (nextLine[5]) {
-                        "Mint", "Near Mint" -> Condition.NEAR_MINT
-                        "Good (Lightly Played)" -> Condition.EXCELLENT
-                        "Played" -> Condition.GOOD
-                        "Heavily Played" -> Condition.PLAYED
-                        "Poor" -> Condition.POOR
-                        else -> Condition.UNKNOWN
+                        "Mint", "Near Mint" -> CardCondition.NEAR_MINT
+                        "Good (Lightly Played)" -> CardCondition.EXCELLENT
+                        "Played" -> CardCondition.GOOD
+                        "Heavily Played" -> CardCondition.PLAYED
+                        "Poor" -> CardCondition.POOR
+                        else -> CardCondition.UNKNOWN
                     }
                     val foil = when {
                         nextLine[3].startsWith("Prerelease Events: ") -> Foil.PRERELASE_STAMPED_FOIL

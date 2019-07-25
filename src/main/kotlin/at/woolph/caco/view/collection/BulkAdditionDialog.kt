@@ -1,12 +1,8 @@
 package at.woolph.caco.view.collection
 
 import at.woolph.caco.datamodel.collection.CardPossession
-import at.woolph.caco.datamodel.collection.CardPossessions
-import at.woolph.caco.datamodel.collection.Condition
+import at.woolph.caco.datamodel.collection.CardCondition
 import at.woolph.caco.datamodel.sets.*
-import at.woolph.caco.importer.sets.importCardsOfSet
-import at.woolph.caco.importer.sets.importPromosOfSet
-import at.woolph.caco.importer.sets.importTokensOfSet
 import at.woolph.caco.view.CardDetailsView
 import at.woolph.caco.view.getCachedImage
 import at.woolph.libs.ktfx.commitValue
@@ -18,19 +14,12 @@ import javafx.beans.property.SimpleStringProperty
 import javafx.collections.FXCollections
 import javafx.event.EventHandler
 import javafx.scene.control.*
-import javafx.scene.image.Image
-import javafx.scene.image.ImageView
 import javafx.scene.input.KeyCode
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.Priority
-import javafx.scene.paint.Color
-import javafx.scene.shape.Shape
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.count
-import org.jetbrains.exposed.sql.select
+import javafx.stage.FileChooser
 import org.jetbrains.exposed.sql.transactions.transaction
 import tornadofx.*
-import java.nio.file.Paths
 
 class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolean): Dialog<Boolean>() {
 
@@ -43,7 +32,7 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
     }
 
     val languageProperty = SimpleStringProperty("en")
-    val conditionProperty = SimpleObjectProperty(Condition.NEAR_MINT)
+    val conditionProperty = SimpleObjectProperty(CardCondition.NEAR_MINT)
     val foilProperty = SimpleObjectProperty(Foil.NONFOIL)
 
     val bulkAddNumberProperty = SimpleIntegerProperty(0)
@@ -172,8 +161,8 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
 							field("Language") {
 								combobox(languageProperty, listOf("en", "de", "jp", "ru", "it", "sp"))
 							}
-							field("Condition") {
-								combobox(conditionProperty, Condition.values().asList())
+							field("CardCondition") {
+								combobox(conditionProperty, CardCondition.values().asList())
 							}
 						}
                         fieldset("Card Info") {
@@ -305,49 +294,58 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
                     true
                 }
                 buttonTypeExport -> {
-                    transaction {
-                        Paths.get("D:\\export.csv").toFile().printWriter().use { out ->
-                            out.println("Count,Tradelist Count,Name,Edition,Card Number,Condition,Language,Foil,Signed,Artist Proof,Altered Art,Misprint,Promo,Textless,My Price")
-                            cards.forEach { cardInfo ->
-                                val cardName = cardInfo.card.name
-                                val cardNumberInSet = cardInfo.card.numberInSet
-                                val token = cardInfo.card.token
-                                val promo = cardInfo.card.promo
-                                val condition = when (conditionProperty.value) {
-                                    Condition.NEAR_MINT -> "Near Mint"
-                                    Condition.EXCELLENT -> "Good (Lightly Played)"
-                                    Condition.GOOD -> "Played"
-                                    Condition.PLAYED -> "Heavily Played"
-                                    Condition.POOR -> "Poor"
-                                    else -> throw Exception("unknown condition")
-                                }
-                                val prereleasePromo = false
-                                val language = when (languageProperty.value) {
-                                    "en" -> "English"
-                                    "de" -> "German"
-                                    "jp" -> "Japanese"
-                                    "ru" -> "Russian"
-                                    else -> throw Exception("unknown language")
-                                }
-                                val setName = when {
-                                    prereleasePromo -> "Prerelease Events: ${set.name}"
-                                    token -> "Extras: ${set.name}"
-                                    else -> set.name
-                                }
+					chooseFile("Choose File to Export to", arrayOf(FileChooser.ExtensionFilter("CSV", "*.csv")), mode = FileChooserMode.Save).singleOrNull()?.let {
+						transaction {
+							it.printWriter().use { out ->
+								out.println("Count,Tradelist Count,Name,Edition,Card Number,CardCondition,Language,Foil,Signed,Artist Proof,Altered Art,Misprint,Promo,Textless,My Price")
+								cards.forEach { cardInfo ->
+									val cardName = cardInfo.card.name
+									val cardNumberInSet = cardInfo.card.numberInSet
+									val token = cardInfo.card.token
+									val promo = cardInfo.card.promo
+									val condition = when (conditionProperty.value) {
+										CardCondition.NEAR_MINT -> "Near Mint"
+										CardCondition.EXCELLENT -> "Good (Lightly Played)"
+										CardCondition.GOOD -> "Played"
+										CardCondition.PLAYED -> "Heavily Played"
+										CardCondition.POOR -> "Poor"
+										else -> throw Exception("unknown condition")
+									}
+									val prereleasePromo = false
+									val language = when (languageProperty.value) {
+										"en" -> "English"
+										"de" -> "German"
+										"ja" -> "Japanese"
+										"ru" -> "Russian"
+										"es" -> "Spanish"
+										"ko" -> "Korean"
+										"it" -> "Italian"
+										"pt" -> "Portuguese"
+										"fr" -> "French"
+										"zhs" -> "Chinese"
+										"zht" -> "Traditional Chinese"
+										else -> throw Exception("unknown language")
+									}
+									val setName = when {
+										prereleasePromo -> "Prerelease Events: ${set.name}"
+										token -> "Extras: ${set.name}"
+										else -> set.name
+									}
 
-                                cardInfo.bulkAdditionNonPremium.value.let { toBeAdded ->
-                                    if (toBeAdded > 0) {
-                                        out.println("$toBeAdded,0,\"$cardName\",\"$setName\",$cardNumberInSet,$condition,$language,,,,,,,,")
-                                    }
-                                }
-                                cardInfo.bulkAdditionPremium.value.let { toBeAdded ->
-                                    if (toBeAdded > 0) {
-                                        out.println("$toBeAdded,0,\"$cardName\",\"$setName\",$cardNumberInSet,$condition,$language,foil,,,,,,,")
-                                    }
-                                }
-                            }
-                        }
-                    }
+									cardInfo.bulkAdditionNonPremium.value.let { toBeAdded ->
+										if (toBeAdded > 0) {
+											out.println("$toBeAdded,0,\"$cardName\",\"$setName\",$cardNumberInSet,$condition,$language,,,,,,,,")
+										}
+									}
+									cardInfo.bulkAdditionPremium.value.let { toBeAdded ->
+										if (toBeAdded > 0) {
+											out.println("$toBeAdded,0,\"$cardName\",\"$setName\",$cardNumberInSet,$condition,$language,foil,,,,,,,")
+										}
+									}
+								}
+							}
+						}
+					}
                     bulkAdd()
                     true
                 }

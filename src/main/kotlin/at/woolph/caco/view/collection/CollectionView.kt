@@ -6,10 +6,7 @@ import at.woolph.caco.importer.sets.importCardsOfSet
 import at.woolph.caco.importer.sets.importPromosOfSet
 import at.woolph.caco.importer.sets.importSet
 import at.woolph.caco.importer.sets.importTokensOfSet
-import at.woolph.caco.view.CardDetailsView
-import at.woolph.caco.view.CardImageCache
-import at.woolph.caco.view.CardImageTooltip
-import at.woolph.caco.view.getCachedImage
+import at.woolph.caco.view.*
 import at.woolph.libs.ktfx.mapBinding
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleIntegerProperty
@@ -27,8 +24,6 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import tornadofx.*
 import kotlin.math.min
 import javafx.scene.control.Tooltip
-
-
 
 abstract class CollectionView : View() {
     companion object {
@@ -248,14 +243,6 @@ abstract class CollectionView : View() {
                     addFeatureButtons()
                 }
             }
-            left {
-				this += find<CardDetailsView>().apply {
-					runLater {
-						this.cardProperty.bind(tvCards.selectionModel.selectedItemProperty().mapBinding { it?.card })
-						this.imageLoadingProperty.bind(toggleButtonImageLoading.selectedProperty())
-					}
-				}
-            }
             center {
                 tvCards = tableview(cardsFiltered) {
                     hboxConstraints {
@@ -308,6 +295,17 @@ abstract class CollectionView : View() {
 					}
                 }
             }
+			left {
+				vbox {
+					this += find<CardDetailsView>().apply {
+						this.cardProperty.bind(tvCards.selectionModel.selectedItemProperty().mapBinding { it?.card })
+						this.imageLoadingProperty.bind(toggleButtonImageLoading.selectedProperty())
+					}
+					this += find<CardPossessionView>().apply {
+						this.cardProperty.bind(tvCards.selectionModel.selectedItemProperty().mapBinding { it?.card })
+					}
+				}
+			}
         }
     }
 }

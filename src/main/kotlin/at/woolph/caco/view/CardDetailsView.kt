@@ -1,25 +1,20 @@
 package at.woolph.caco.view
 
+import at.woolph.caco.Styles
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.libs.ktfx.ImageCache
 import at.woolph.libs.ktfx.mapBinding
-import at.woolph.libs.ktfx.mapStringBinding
-import javafx.beans.binding.Bindings
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.scene.control.Label
 import javafx.scene.control.ProgressIndicator
-import javafx.scene.effect.Bloom
-import javafx.scene.effect.Effect
 import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import javafx.scene.paint.Color
 import javafx.scene.shape.Shape
 import tornadofx.Fragment
 import tornadofx.*
-import javafx.scene.effect.Glow
 import kotlin.math.min
-
 
 class CardDetailsView(val cardProperty: SimpleObjectProperty<Card?> = SimpleObjectProperty(null)) : Fragment() {
 	var card by cardProperty
@@ -36,6 +31,8 @@ class CardDetailsView(val cardProperty: SimpleObjectProperty<Card?> = SimpleObje
 	private lateinit var imageLoadingProgressIndicator: ProgressIndicator
 
 	override val root =  gridpane {
+		addClass(Styles.cardDetailsView)
+
 		paddingAll = 10.0
 		hgap = 10.0
 		vgap = 10.0
@@ -55,12 +52,6 @@ class CardDetailsView(val cardProperty: SimpleObjectProperty<Card?> = SimpleObje
 				imageView = imageview {
 					fitHeight = 312.0
 					fitWidth = 224.0
-
-					/*
-					val glow = Bloom(0.8)
-					effectProperty().bind(
-							Bindings.`when`(hoverProperty()).then<Effect?>(glow).otherwise(null as Effect?)
-					)*/
 				}
 
 				imageLoadingProgressIndicatorBackground = rectangle {
@@ -99,18 +90,6 @@ class CardDetailsView(val cardProperty: SimpleObjectProperty<Card?> = SimpleObje
 				imageLoadingProgressIndicator.isVisible = false
 				imageLoadingProgressIndicatorBackground.isVisible = false
 			}
-
-			// TODO preload surrounding images?
-			/*tornadofx.runAsync {
-				listOf(tvCards.selectionModel.selectedIndex + 1,
-						tvCards.selectionModel.selectedIndex - 1,
-						tvCards.selectionModel.selectedIndex + 2,
-						tvCards.selectionModel.selectedIndex + 3).forEach {
-					if (0 <= it && it < tvCards.items.size) {
-						tvCards.items[it].cardImage
-					}
-				}
-			}*/
 		} else {
 			imageView.image = null
 			imageLoadingProgressIndicatorBackground.isVisible = true

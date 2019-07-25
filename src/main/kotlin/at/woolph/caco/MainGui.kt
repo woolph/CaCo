@@ -35,7 +35,7 @@ fun main(args: Array<String>) {
 	launch<MyApp>(*args)
 }
 
-class MyApp : App(MyView::class)
+class MyApp : App(MyView::class, Styles::class)
 
 class MyView : View() {
 	override val root = TabPane()

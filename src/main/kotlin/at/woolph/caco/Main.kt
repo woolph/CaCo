@@ -12,7 +12,6 @@ import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.datamodel.sets.CardSets
 import at.woolph.caco.datamodel.sets.Cards.set
 import at.woolph.caco.datamodel.sets.Rarity
-import at.woolph.caco.importer.collection.getLatestDeckboxCollectionExport
 import at.woolph.caco.importer.collection.importDeckbox
 import at.woolph.caco.importer.sets.importCardsOfSet
 import at.woolph.caco.importer.sets.importPromosOfSet
@@ -85,7 +84,16 @@ fun main(args: Array<String>) {
 
 	// import inventory
 	if(args.any { it.startsWith(IMPORT_INVENTORY) }) {
-		getLatestDeckboxCollectionExport(File(args.first { it.startsWith(IMPORT_INVENTORY) }.removePrefix(IMPORT_INVENTORY)))?. let { importDeckbox(it) }
+		File(args.first { it.startsWith(IMPORT_INVENTORY) }.removePrefix(IMPORT_INVENTORY)).let {
+			if(it.isDirectory) {
+				it.listFiles()?.asList()?.onEach { println("content $it") }
+						?.filter { it.name.toString().let { it.startsWith("Inventory") && it.endsWith(".csv")} }
+						?.onEach {println("passed filter $it") }
+						?.maxBy { it.lastModified() }
+			} else {
+				it
+			}
+		}?.let { importDeckbox(it) }
 	}
 
 	// get needed cards for playset collection
