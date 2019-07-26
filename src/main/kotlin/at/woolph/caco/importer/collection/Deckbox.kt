@@ -3,6 +3,7 @@ package at.woolph.caco.importer.collection
 import at.woolph.caco.datamodel.collection.CardPossession
 import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.datamodel.collection.CardCondition
+import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.sets.*
 import at.woolph.caco.datamodel.sets.CardSet
 import com.opencsv.CSVReader
@@ -11,6 +12,21 @@ import org.jetbrains.exposed.sql.deleteAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.io.File
 import java.io.FileReader
+
+fun String.parseLanguageDeckbox(): CardLanguage = when (this) {
+	"English" -> CardLanguage.ENGLISH
+	"German" -> CardLanguage.GERMAN
+	"Japanese" -> CardLanguage.JAPANESE
+	"Russian" -> CardLanguage.RUSSIAN
+	"Spanish" -> CardLanguage.SPANISH
+	"Korean" -> CardLanguage.KOREAN
+	"Italian" -> CardLanguage.ITALIAN
+	"Portuguese" -> CardLanguage.PORTUGUESE
+	"French" -> CardLanguage.FRENCH
+	"Chinese" -> CardLanguage.CHINESE
+	"Traditional Chinese" -> CardLanguage.CHINESE_TRADITIONL
+	else -> CardLanguage.UNKNOWN
+}
 
 fun importDeckbox(file: File) {
     println("importing deckbox collection export file $file")
@@ -28,20 +44,7 @@ fun importDeckbox(file: File) {
                     val set = CardSet.find { CardSets.name eq setName }.firstOrNull()
                             ?: throw Exception("set $setName not found")
                     val token = nextLine[3].startsWith("Extras: ")
-                    val language = when (nextLine[6]) {
-                        "English" -> "en"
-                        "German" -> "de"
-						"Japanese" -> "ja"
-						"Russian" -> "ru"
-						"Spanish" -> "es"
-						"Korean" -> "ko"
-						"Italian" -> "it"
-						"Portuguese" -> "pt"
-						"French" -> "fr"
-						"Chinese" -> "zhs"
-						"Traditional Chinese" -> "zht"
-                        else -> "??"
-                    }
+                    val language = nextLine[6].parseLanguageDeckbox()
                     val condition = when (nextLine[5]) {
                         "Mint", "Near Mint" -> CardCondition.NEAR_MINT
                         "Good (Lightly Played)" -> CardCondition.EXCELLENT
