@@ -2,11 +2,13 @@ package at.woolph.caco.view.collection
 
 import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.datamodel.collection.CardCondition
+import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.datamodel.sets.Cards
 import at.woolph.caco.datamodel.sets.Foil
 import at.woolph.caco.importer.collection.importDeckbox
+import at.woolph.caco.importer.collection.toLanguageDeckbox
 import at.woolph.libs.pdf.*
 import javafx.scene.control.ToolBar
 import javafx.stage.FileChooser
@@ -23,8 +25,8 @@ class EnglishPaperCollectionView: CollectionView() {
     override val cardPossesionTargtNonPremium get() = 4
     override val cardPossesionTargtPremium get() = 1
 
-    override fun Card.getPossesionsNonPremium() = this.possessions.filter { it.language == "en" && !it.foil.isFoil }.count()
-    override fun Card.getPossesionsPremium() = this.possessions.filter { it.language == "en" && it.foil.isFoil }.count()
+    override fun Card.getPossesionsNonPremium() = this.possessions.filter { it.language == CardLanguage.ENGLISH && !it.foil.isFoil }.count()
+    override fun Card.getPossesionsPremium() = this.possessions.filter { it.language == CardLanguage.ENGLISH && it.foil.isFoil }.count()
 
     override fun Card.filterView(): Boolean = true
 
@@ -62,8 +64,8 @@ class EnglishPaperCollectionView: CollectionView() {
 												columns((it.size - 1) / 100 + 1, 100, 5f, 3.5f, Font(PDType1Font.HELVETICA, 6.0f)) {
 													var i = 0
 													it.filter { !it.token }.forEach {
-														val ownedCountEN = it.possessions.filter { it.language == "en" }.count()
-														val ownedCountDE = it.possessions.filter { it.language == "de" }.count()
+                                                        val ownedCountEN = it.possessions.filter { it.language == CardLanguage.ENGLISH }.count()
+                                                        val ownedCountDE = it.possessions.filter { it.language == CardLanguage.GERMAN }.count()
 														this@columns.get(i) {
 															drawTextWithRects("${it.rarity} ${it.numberInSet} ${it.name}", ownedCountEN, ownedCountDE)
 														}
@@ -78,8 +80,8 @@ class EnglishPaperCollectionView: CollectionView() {
 													i++
 													*/
 													it.filter { it.token }.forEach {
-														val ownedCountEN = it.possessions.filter { it.language == "en" }.count()
-														val ownedCountDE = it.possessions.filter { it.language == "de" }.count()
+                                                        val ownedCountEN = it.possessions.filter { it.language == CardLanguage.ENGLISH }.count()
+                                                        val ownedCountDE = it.possessions.filter { it.language == CardLanguage.GERMAN }.count()
 														this@columns.get(i) {
 															drawTextWithRects("T ${it.numberInSet} ${it.name}", ownedCountEN, ownedCountDE)
 														}
@@ -121,20 +123,7 @@ class EnglishPaperCollectionView: CollectionView() {
 									}
 									val prereleasePromo = it[CardPossessions.foil] == Foil.PRERELASE_STAMPED_FOIL
 									val foil = if (it[CardPossessions.foil].isFoil) "foil" else ""
-									val language = when (it[CardPossessions.language]) {
-										"en" -> "English"
-										"de" -> "German"
-										"ja" -> "Japanese"
-										"ru" -> "Russian"
-										"es" -> "Spanish"
-										"ko" -> "Korean"
-										"it" -> "Italian"
-										"pt" -> "Portuguese"
-										"fr" -> "French"
-										"zhs" -> "Chinese"
-										"zht" -> "Traditional Chinese"
-										else -> throw Exception("unknown language")
-									}
+									val language = it[CardPossessions.language].toLanguageDeckbox()
 									val setName = when {
 										prereleasePromo -> "Prerelease Events: ${set?.name}"
 										token -> "Extras: ${set?.name}"

@@ -2,10 +2,8 @@ package at.woolph.caco.view.collection
 
 import at.woolph.caco.datamodel.sets.*
 import at.woolph.caco.datamodel.sets.CardSet
-import at.woolph.caco.importer.sets.importCardsOfSet
-import at.woolph.caco.importer.sets.importPromosOfSet
-import at.woolph.caco.importer.sets.importSet
-import at.woolph.caco.importer.sets.importTokensOfSet
+import at.woolph.caco.datamodel.sets.Cards.nameDE
+import at.woolph.caco.importer.sets.*
 import at.woolph.caco.view.*
 import at.woolph.libs.ktfx.mapBinding
 import javafx.beans.property.SimpleBooleanProperty
@@ -37,6 +35,7 @@ abstract class CollectionView : View() {
     inner class CardInfo(val card: Card) {
         val rarity get() = card.rarity.toProperty()
         val name get() = card.name.toProperty()
+        val nameDE get() = card.nameDE.toProperty()
         val numberInSet get() = card.numberInSet.toProperty()
 
         val possessionNonPremiumProperty = SimpleIntegerProperty(0)
@@ -131,6 +130,7 @@ abstract class CollectionView : View() {
 
     fun CardSet.reimportSet(): CardSet = apply {
         importCardsOfSet()
+        importCardsOfSetAdditionalLanguage("german")
         importTokensOfSet()
         importPromosOfSet()
 
@@ -139,7 +139,7 @@ abstract class CollectionView : View() {
 
     fun setFilter(text: String, nonFoilComplete: Boolean, foilComplete: Boolean, filterRarityCommon: Boolean, filterRarityUncommon: Boolean, filterRarityRare: Boolean, filterRarityMythic: Boolean) {
         cardsFiltered.setPredicate { cardInfo -> cardInfo.card.filterView()
-                    && (if(!text.isNullOrBlank()) cardInfo.name.get().contains(text, ignoreCase = true) else true)
+                    && (if(!text.isNullOrBlank()) cardInfo.name.get().contains(text, ignoreCase = true) || cardInfo.nameDE.get().contains(text, ignoreCase = true) else true)
                     && (nonFoilComplete || !cardInfo.completedNonPremium)
                     && (foilComplete || !cardInfo.completedPremium)
                     && (filterRarityCommon || cardInfo.card.rarity != Rarity.COMMON)
@@ -259,7 +259,9 @@ abstract class CollectionView : View() {
                         contentWidth(5.0, useAsMin = true, useAsMax = true)
                     }
 
-                    column("Name", CardInfo::name).remainingWidth()
+                    column("Name EN", CardInfo::name).remainingWidth()
+
+                    column("Name DE", CardInfo::nameDE).remainingWidth()
 
                     column("Possessions", CardInfo::possessionTotalProperty) {
                         contentWidth(5.0, useAsMin = true, useAsMax = true)

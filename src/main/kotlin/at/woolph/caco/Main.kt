@@ -1,6 +1,7 @@
 package at.woolph.caco
 
 import at.woolph.caco.datamodel.collection.ArenaCardPossessions
+import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.datamodel.decks.Builds
 import at.woolph.caco.datamodel.decks.DeckCards
@@ -212,8 +213,8 @@ fun main(args: Array<String>) {
 										columns((it.size - 1) / 100 + 1, 100, 5f, 3.5f, Font(PDType1Font.HELVETICA, 6.0f)) {
 											var i = 0
 											it.filter { !it.token }.forEach {
-												val ownedCountEN = it.possessions.filter { it.language == "en" }.count()
-												val ownedCountDE = it.possessions.filter { it.language == "de" }.count()
+												val ownedCountEN = it.possessions.filter { it.language == CardLanguage.ENGLISH }.count()
+												val ownedCountDE = it.possessions.filter { it.language == CardLanguage.GERMAN }.count()
 												this@columns.get(i) {
 													drawTextWithRects("${it.rarity} ${it.numberInSet} ${it.name}", ownedCountEN, ownedCountDE)
 												}
@@ -228,8 +229,8 @@ fun main(args: Array<String>) {
 											i++
 											*/
 											it.filter { it.token }.forEach {
-												val ownedCountEN = it.possessions.filter { it.language == "en" }.count()
-												val ownedCountDE = it.possessions.filter { it.language == "de" }.count()
+                                                val ownedCountEN = it.possessions.filter { it.language == CardLanguage.ENGLISH }.count()
+                                                val ownedCountDE = it.possessions.filter { it.language == CardLanguage.GERMAN }.count()
 												this@columns.get(i) {
 													drawTextWithRects("T ${it.numberInSet} ${it.name}", ownedCountEN, ownedCountDE)
 												}

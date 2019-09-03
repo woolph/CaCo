@@ -11,6 +11,7 @@ import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
 import javax.json.JsonNumber
+import javax.json.JsonObject
 
 val patternPromoCollectorNumber = Regex("(s|★|c)$")
 
@@ -71,8 +72,8 @@ fun importSet(setCode: String): CardSet {
     }
 }
 
-fun CardSet.importCardsOfSet() {
-    var nextURL: URL? = URL("https://api.scryfall.com/cards/search?q=set%3A${this.shortName}&unique=prints&order=set")
+fun queryPagedData(startingUri: String, processData: (JsonObject) -> Unit) {
+    var nextURL: URL? = URL(startingUri)
 
     while(nextURL!=null) {
         println("requesting $nextURL")
@@ -93,144 +94,147 @@ fun CardSet.importCardsOfSet() {
                     nextURL = URL(it.getString("next_page"))
                 }
                 it.getJsonObjectArray("data").forEach {
-                    if(it.getString("object") == "card") {
-                        val numberInSetImported = paddingCollectorNumber(it.getString("collector_number"))
-                        Card.find { Cards.set.eq(this@importCardsOfSet.id).and(Cards.numberInSet.eq(numberInSetImported)) }.singleOrNull()?.apply {
-                            name = it.getString("name")
-                            arenaId = it["arena_id"]?.let { (it as? JsonNumber)?.intValue() }
-                            rarity = it.getString("rarity").parseRarity()
-                            promo = it.getBoolean("promo") || it.getString("collector_number").contains(patternPromoCollectorNumber)
-                            image = it.getJsonObject("image_uris")?.getString("png")?.let { URI(it) } ?:
-                                    it.getJsonObjectArray("card_faces")?.get(0)?.getJsonObject("image_uris")?.getString("png")?.let { URI(it) }
-                            cardmarketUri = it.getJsonObject("purchase_uris")?.getString("cardmarket")?.let { URI(it) }
-                        } ?: Card.new {
-                            set = this@importCardsOfSet
-                            numberInSet = numberInSetImported
-                            name = it.getString("name")
-                            arenaId = it["arena_id"]?.let { (it as? JsonNumber)?.intValue() }
-                            rarity = it.getString("rarity").parseRarity()
-                            promo = it.getBoolean("promo") || it.getString("collector_number").contains(patternPromoCollectorNumber)
-                            image = it.getJsonObject("image_uris")?.getString("png")?.let { URI(it) } ?:
-                                    it.getJsonObjectArray("card_faces")?.get(0)?.getJsonObject("image_uris")?.getString("png")?.let { URI(it) }
-                            cardmarketUri = it.getJsonObject("purchase_uris")?.getString("cardmarket")?.let { URI(it) }
-                        }
-                    }
+                    processData(it)
                 }
             }
         }
         conn.disconnect()
+    }
+}
+
+fun CardSet.importCardsOfSet() {
+    queryPagedData("https://api.scryfall.com/cards/search?q=set%3A${this.shortName}&unique=prints&order=set") {
+        if(it.getString("object") == "card") {
+            val numberInSetImported = paddingCollectorNumber(it.getString("collector_number"))
+            Card.find { Cards.set.eq(this@importCardsOfSet.id).and(Cards.numberInSet.eq(numberInSetImported)) }.singleOrNull()?.apply {
+                name = it.getString("name")
+                arenaId = it["arena_id"]?.let { (it as? JsonNumber)?.intValue() }
+                rarity = it.getString("rarity").parseRarity()
+                promo = it.getBoolean("promo") || it.getString("collector_number").contains(patternPromoCollectorNumber)
+                image = it.getJsonObject("image_uris")?.getString("png")?.let { URI(it) } ?:
+                        it.getJsonObjectArray("card_faces")?.get(0)?.getJsonObject("image_uris")?.getString("png")?.let { URI(it) }
+                cardmarketUri = it.getJsonObject("purchase_uris")?.getString("cardmarket")?.let { URI(it) }
+            } ?: Card.new {
+                set = this@importCardsOfSet
+                numberInSet = numberInSetImported
+                name = it.getString("name")
+                arenaId = it["arena_id"]?.let { (it as? JsonNumber)?.intValue() }
+                rarity = it.getString("rarity").parseRarity()
+                promo = it.getBoolean("promo") || it.getString("collector_number").contains(patternPromoCollectorNumber)
+                image = it.getJsonObject("image_uris")?.getString("png")?.let { URI(it) } ?:
+                        it.getJsonObjectArray("card_faces")?.get(0)?.getJsonObject("image_uris")?.getString("png")?.let { URI(it) }
+                cardmarketUri = it.getJsonObject("purchase_uris")?.getString("cardmarket")?.let { URI(it) }
+            }
+        }
+    }
+}
+
+fun CardSet.importCardsOfSetAdditionalLanguage(language: String): Boolean {
+    try{
+        queryPagedData("https://api.scryfall.com/cards/search?q=lang%3A$language%20set%3A${this.shortName}&unique=prints&order=set") {
+            if(it.getString("object") == "card") {
+                val numberInSetImported = paddingCollectorNumber(it.getString("collector_number"))
+                Card.find { Cards.set.eq(this@importCardsOfSetAdditionalLanguage.id).and(Cards.numberInSet.eq(numberInSetImported)) }.singleOrNull()?.apply {
+                    nameDE = it.getPrintedName()
+                } ?: Card.new {
+                    set = this@importCardsOfSetAdditionalLanguage
+                    numberInSet = numberInSetImported
+                    name = it.getString("name")
+                    nameDE = it.getPrintedName()
+                    arenaId = it["arena_id"]?.let { (it as? JsonNumber)?.intValue() }
+                    rarity = it.getString("rarity").parseRarity()
+                    promo = it.getBoolean("promo") || it.getString("collector_number").contains(patternPromoCollectorNumber)
+                    image = it.getJsonObject("image_uris")?.getString("png")?.let { URI(it) } ?:
+                            it.getJsonObjectArray("card_faces")?.get(0)?.getJsonObject("image_uris")?.getString("png")?.let { URI(it) }
+                    cardmarketUri = it.getJsonObject("purchase_uris")?.getString("cardmarket")?.let { URI(it) }
+                }
+            }
+        }
+        return true
+    } catch (e: RuntimeException) {
+        // TODO there may be no german card names for the set => resulting in error 404!!!
+        return false
     }
 }
 
 fun CardSet.importTokensOfSet(): Boolean {
-    var nextURL: URL? = URL("https://api.scryfall.com/cards/search?q=set%3At${this.shortName}&unique=prints&order=set")
-
-    while(nextURL!=null) {
-        println("requesting $nextURL")
-        Thread.sleep(1000) // delay queries to scryfall api (to prevent overloading service)
-        val conn = nextURL.openConnection() as HttpURLConnection
-        nextURL = null
-        conn.requestMethod = "GET"
-        conn.setRequestProperty("Accept", "application/json")
-
-        if (conn.responseCode != 200) {
-            // TODO there may be no tokens for the set => resulting in error 404!!!
-            //throw RuntimeException("Failed : HTTP error code : ${conn.responseCode}")
-            return false
-        }
-
-        //conn.inputStream.bufferedReader().useLines { it.forEach { println(it) }	}
-        conn.inputStream.useJsonReader {
-            it.readObject().let{
-                if(it.getBoolean("has_more")) {
-                    nextURL = URL(it.getString("next_page"))
-                }
-                it.getJsonObjectArray("data").forEach {
-                    if(it.getString("object") == "card" && !it.getString("collector_number").startsWith("CH")) { // ignore checklists // TODO remove checkklist-skip?!
-                        val numberInSetImported = paddingCollectorNumber("T" + it.getString("collector_number"))
-                        Card.find { Cards.set.eq(this@importTokensOfSet.id).and(Cards.numberInSet.eq(numberInSetImported)) }.singleOrNull()?.apply {
-                            name = it.getString("name")
-                            arenaId = it["arena_id"]?.let { (it as? JsonNumber)?.intValue() }
-                            rarity = it.getString("rarity").parseRarity()
-                            promo = it.getBoolean("promo") || it.getString("collector_number").contains(patternPromoCollectorNumber)
-                            token = true
-                            image = it.getJsonObject("image_uris")?.getString("png")?.let { URI(it) } ?:
-                                    it.getJsonObjectArray("card_faces")?.get(0)?.getJsonObject("image_uris")?.getString("png")?.let { URI(it) }
-                            cardmarketUri = it.getJsonObject("purchase_uris")?.getString("cardmarket")?.let { URI(it) }
-                            // TODO update
-                        } ?: Card.new {
-                            set = this@importTokensOfSet
-                            numberInSet = numberInSetImported
-                            name = it.getString("name")
-                            arenaId = it["arena_id"]?.let { (it as? JsonNumber)?.intValue() }
-                            rarity = it.getString("rarity").parseRarity()
-                            promo = it.getBoolean("promo") || it.getString("collector_number").contains(patternPromoCollectorNumber)
-                            token = true
-                            image = it.getJsonObject("image_uris")?.getString("png")?.let { URI(it) } ?:
-                                    it.getJsonObjectArray("card_faces")?.get(0)?.getJsonObject("image_uris")?.getString("png")?.let { URI(it) }
-                            cardmarketUri = it.getJsonObject("purchase_uris")?.getString("cardmarket")?.let { URI(it) }
-                        }
-                    }
+    try{
+        queryPagedData("https://api.scryfall.com/cards/search?q=set%3At${this.shortName}&unique=prints&order=set") {
+            if(it.getString("object") == "card" && !it.getString("collector_number").startsWith("CH")) { // ignore checklists // TODO remove checkklist-skip?!
+                val numberInSetImported = paddingCollectorNumber("T" + it.getString("collector_number"))
+                Card.find { Cards.set.eq(this@importTokensOfSet.id).and(Cards.numberInSet.eq(numberInSetImported)) }.singleOrNull()?.apply {
+                    name = it.getString("name")
+                    arenaId = it["arena_id"]?.let { (it as? JsonNumber)?.intValue() }
+                    rarity = it.getString("rarity").parseRarity()
+                    promo = it.getBoolean("promo") || it.getString(".ba").contains(patternPromoCollectorNumber)
+                    token = true
+                    image = it.getJsonObject("image_uris")?.getString("png")?.let { URI(it) } ?:
+                            it.getJsonObjectArray("card_faces")?.get(0)?.getJsonObject("image_uris")?.getString("png")?.let { URI(it) }
+                    cardmarketUri = it.getJsonObject("purchase_uris")?.getString("cardmarket")?.let { URI(it) }
+                    // TODO update
+                } ?: Card.new {
+                    set = this@importTokensOfSet
+                    numberInSet = numberInSetImported
+                    name = it.getString("name")
+                    arenaId = it["arena_id"]?.let { (it as? JsonNumber)?.intValue() }
+                    rarity = it.getString("rarity").parseRarity()
+                    promo = it.getBoolean("promo") || it.getString("collector_number").contains(patternPromoCollectorNumber)
+                    token = true
+                    image = it.getJsonObject("image_uris")?.getString("png")?.let { URI(it) } ?:
+                            it.getJsonObjectArray("card_faces")?.get(0)?.getJsonObject("image_uris")?.getString("png")?.let { URI(it) }
+                    cardmarketUri = it.getJsonObject("purchase_uris")?.getString("cardmarket")?.let { URI(it) }
                 }
             }
         }
-        conn.disconnect()
+        return true
+    } catch (e: RuntimeException) {
+        // TODO there may be no tokens for the set => resulting in error 404!!!
+        return false
     }
-
-    return true
 }
 
 fun CardSet.importPromosOfSet(): Boolean {
-    var nextURL: URL? = URL("https://api.scryfall.com/cards/search?q=set%3Ap${this.shortName}&unique=prints&order=set")
-
-    while(nextURL!=null) {
-        println("requesting $nextURL")
-        Thread.sleep(1000) // delay queries to scryfall api (to prevent overloading service)
-        val conn = nextURL.openConnection() as HttpURLConnection
-        nextURL = null
-        conn.requestMethod = "GET"
-        conn.setRequestProperty("Accept", "application/json")
-
-        if (conn.responseCode != 200) {
-            // TODO there may be no promos for the set => resulting in error 404!!!
-            //throw RuntimeException("Failed : HTTP error code : ${conn.responseCode}")
-            return false
-        }
-
-        //conn.inputStream.bufferedReader().useLines { it.forEach { println(it) }	}
-        conn.inputStream.useJsonReader {
-            it.readObject().let{
-                if(it.getBoolean("has_more")) {
-                    nextURL = URL(it.getString("next_page"))
-                }
-                it.getJsonObjectArray("data").forEach {
-                    if(it.getString("object") == "card") {
-                        val numberInSetImported = paddingCollectorNumber("P" + it.getString("collector_number"))
-                        Card.find { Cards.set.eq(this@importPromosOfSet.id).and(Cards.numberInSet.eq(numberInSetImported)) }.singleOrNull()?.apply {
-                            name = it.getString("name")
-                            arenaId = it["arena_id"]?.let { (it as? JsonNumber)?.intValue() }
-                            rarity = it.getString("rarity").parseRarity()
-                            promo = it.getBoolean("promo") || it.getString("collector_number").contains(patternPromoCollectorNumber)
-                            image = it.getJsonObject("image_uris")?.getString("png")?.let { URI(it) } ?:
-                                    it.getJsonObjectArray("card_faces")?.get(0)?.getJsonObject("image_uris")?.getString("png")?.let { URI(it) }
-                            cardmarketUri = it.getJsonObject("purchase_uris")?.getString("cardmarket")?.let { URI(it) }
-                            // TODO update
-                        } ?: Card.new {
-                            set = this@importPromosOfSet
-                            numberInSet = numberInSetImported
-                            name = it.getString("name")
-                            arenaId = it["arena_id"]?.let { (it as? JsonNumber)?.intValue() }
-                            rarity = it.getString("rarity").parseRarity()
-                            promo = it.getBoolean("promo") || it.getString("collector_number").contains(patternPromoCollectorNumber)
-                            image = it.getJsonObject("image_uris")?.getString("png")?.let { URI(it) } ?:
-                                    it.getJsonObjectArray("card_faces")?.get(0)?.getJsonObject("image_uris")?.getString("png")?.let { URI(it) }
-                            cardmarketUri = it.getJsonObject("purchase_uris")?.getString("cardmarket")?.let { URI(it) }
-                        }
-                    }
+    try{
+        queryPagedData("https://api.scryfall.com/cards/search?q=set%3Ap${this.shortName}&unique=prints&order=set") {
+            if(it.getString("object") == "card") {
+                val numberInSetImported = paddingCollectorNumber("P" + it.getString("collector_number"))
+                Card.find { Cards.set.eq(this@importPromosOfSet.id).and(Cards.numberInSet.eq(numberInSetImported)) }.singleOrNull()?.apply {
+                    name = it.getString("name")
+                    arenaId = it["arena_id"]?.let { (it as? JsonNumber)?.intValue() }
+                    rarity = it.getString("rarity").parseRarity()
+                    promo = it.getBoolean("promo") || it.getString("collector_number").contains(patternPromoCollectorNumber)
+                    image = it.getJsonObject("image_uris")?.getString("png")?.let { URI(it) } ?:
+                            it.getJsonObjectArray("card_faces")?.get(0)?.getJsonObject("image_uris")?.getString("png")?.let { URI(it) }
+                    cardmarketUri = it.getJsonObject("purchase_uris")?.getString("cardmarket")?.let { URI(it) }
+                    // TODO update
+                } ?: Card.new {
+                    set = this@importPromosOfSet
+                    numberInSet = numberInSetImported
+                    name = it.getString("name")
+                    arenaId = it["arena_id"]?.let { (it as? JsonNumber)?.intValue() }
+                    rarity = it.getString("rarity").parseRarity()
+                    promo = it.getBoolean("promo") || it.getString("collector_number").contains(patternPromoCollectorNumber)
+                    image = it.getJsonObject("image_uris")?.getString("png")?.let { URI(it) } ?:
+                            it.getJsonObjectArray("card_faces")?.get(0)?.getJsonObject("image_uris")?.getString("png")?.let { URI(it) }
+                    cardmarketUri = it.getJsonObject("purchase_uris")?.getString("cardmarket")?.let { URI(it) }
                 }
             }
         }
-        conn.disconnect()
+        return true
+    } catch (e: RuntimeException) {
+        // TODO there may be no tokens for the set => resulting in error 404!!!
+        return false
     }
-    return true
+}
+
+fun JsonObject.getPrintedName(): String? {
+    if(contains("printed_name")) {
+        return getString("printed_name")
+    } else if(contains("card_faces")) {
+        val faces = getJsonObjectArray("card_faces")
+        val frontName = faces[0].getString("printed_name")
+        val backName = faces[1].getString("printed_name")
+        return "$frontName // $backName"
+    }
+    return null
 }

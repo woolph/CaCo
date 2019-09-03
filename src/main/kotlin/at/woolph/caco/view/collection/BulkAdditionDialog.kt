@@ -2,7 +2,9 @@ package at.woolph.caco.view.collection
 
 import at.woolph.caco.datamodel.collection.CardPossession
 import at.woolph.caco.datamodel.collection.CardCondition
+import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.sets.*
+import at.woolph.caco.importer.collection.toLanguageDeckbox
 import at.woolph.caco.view.CardDetailsView
 import at.woolph.caco.view.getCachedImage
 import at.woolph.libs.ktfx.commitValue
@@ -31,7 +33,7 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
         val bulkAdditionPremium = SimpleIntegerProperty(0)
     }
 
-    val languageProperty = SimpleStringProperty("en")
+    val languageProperty = SimpleObjectProperty(CardLanguage.ENGLISH)
     val conditionProperty = SimpleObjectProperty(CardCondition.NEAR_MINT)
     val foilProperty = SimpleObjectProperty(Foil.NONFOIL)
 
@@ -159,7 +161,7 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
                     form {
 						fieldset("Addition Setup") { // TODO move to own dialog
 							field("Language") {
-								combobox(languageProperty, listOf("en", "de", "jp", "ru", "it", "sp"))
+								combobox(languageProperty, CardLanguage.values().toList())
 							}
 							field("CardCondition") {
 								combobox(conditionProperty, CardCondition.values().asList())
@@ -312,20 +314,7 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
 										else -> throw Exception("unknown condition")
 									}
 									val prereleasePromo = false
-									val language = when (languageProperty.value) {
-										"en" -> "English"
-										"de" -> "German"
-										"ja" -> "Japanese"
-										"ru" -> "Russian"
-										"es" -> "Spanish"
-										"ko" -> "Korean"
-										"it" -> "Italian"
-										"pt" -> "Portuguese"
-										"fr" -> "French"
-										"zhs" -> "Chinese"
-										"zht" -> "Traditional Chinese"
-										else -> throw Exception("unknown language")
-									}
+									val language = languageProperty.value.toLanguageDeckbox()
 									val setName = when {
 										prereleasePromo -> "Prerelease Events: ${set.name}"
 										token -> "Extras: ${set.name}"

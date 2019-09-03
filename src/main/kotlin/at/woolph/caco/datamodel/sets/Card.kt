@@ -14,6 +14,7 @@ object Cards : IntIdTable() {
     val set = reference("set", CardSets).index()
     val numberInSet = varchar("number", length = 10).index()
     val name = varchar("name", length = 256).index()
+    val nameDE = varchar("nameDE", length = 256).index().nullable()
     val arenaId = integer("arenaId").nullable().index()
     val rarity = enumeration("rarity", Rarity::class).index()
     val promo = bool("promo").default(false).index()
@@ -28,6 +29,7 @@ class Card(id: EntityID<Int>) : IntEntity(id) {
     var set by CardSet referencedOn Cards.set
     var numberInSet by Cards.numberInSet
     var name by Cards.name
+    var nameDE by Cards.nameDE
     var arenaId by Cards.arenaId
     var rarity by Cards.rarity
     var promo by Cards.promo

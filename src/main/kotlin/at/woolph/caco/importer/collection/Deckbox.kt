@@ -27,6 +27,20 @@ fun String.parseLanguageDeckbox(): CardLanguage = when (this) {
 	"Traditional Chinese" -> CardLanguage.CHINESE_TRADITIONL
 	else -> CardLanguage.UNKNOWN
 }
+fun CardLanguage.toLanguageDeckbox(): String = when (this) {
+    CardLanguage.ENGLISH -> "English"
+    CardLanguage.GERMAN -> "German"
+    CardLanguage.JAPANESE -> "Japanese"
+    CardLanguage.RUSSIAN -> "Russian"
+    CardLanguage.SPANISH -> "Spanish"
+    CardLanguage.KOREAN -> "Korean"
+    CardLanguage.ITALIAN -> "Italian"
+    CardLanguage.PORTUGUESE -> "Portuguese"
+    CardLanguage.FRENCH -> "French"
+    CardLanguage.CHINESE -> "Chinese"
+    CardLanguage.CHINESE_TRADITIONL -> "Traditional Chinese"
+    else -> throw Exception("unknown language")
+}
 
 fun importDeckbox(file: File) {
     println("importing deckbox collection export file $file")
