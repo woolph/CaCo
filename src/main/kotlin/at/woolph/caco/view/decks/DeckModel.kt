@@ -8,4 +8,6 @@ class DeckModel(deck: Deck): ItemViewModel<Deck>(deck) {
 	val format = bind(Deck::format)
 	val comment = bind(Deck::comment)
 	val archived = bind(Deck::archived)
+
+	override fun toString() = "[${format.value}] ${name.value}"
 }

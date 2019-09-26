@@ -27,11 +27,6 @@ fun main(args: Array<String>) {
 	transaction {
 		SchemaUtils.createMissingTablesAndColumns(CardSets, Cards, CardPossessions, ArenaCardPossessions, Decks, Variants, Builds, DeckCards)
 		//CardPossessions.deleteAll()
-
-		Deck.new {
-			name = "Sultai Midrange"
-			format = Format.Standard
-		}
 	}
 
 
@@ -57,6 +52,7 @@ class MyView : View() {
 				isClosable = false
 				view(ArenaCollectionView::class)
 			}
+
 			tab("Decks") {
 				isClosable = false
 				view(DecksView::class)

@@ -6,6 +6,8 @@ import at.woolph.caco.datamodel.sets.*
 import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.importer.sets.*
 import at.woolph.caco.view.*
+import at.woolph.caco.view.collection.AddSetsDialog
+import at.woolph.caco.view.collection.CollectionView
 import at.woolph.libs.ktfx.mapBinding
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleIntegerProperty
@@ -47,6 +49,33 @@ class DecksView : View() {
 		updateDecks()
 
         with(root) {
+			top {
+				toolbar {
+					button("+") {
+						action {
+							transaction {
+								AddDeckDialog(this@DecksView).showAndWait().ifPresent { (name, format, comment) ->
+									transaction {
+										Deck.new {
+											this.name = name
+											this.format = format
+											this.comment = comment
+										}
+										updateDecks()
+									}
+								}
+							}
+						}
+					}
+					region {
+						prefWidth = 40.0
+
+						hboxConstraints {
+							hGrow = Priority.ALWAYS
+						}
+					}
+				}
+			}
 			left {
 				tvDecks = tableview(decksFiltered) {
 					hboxConstraints {
@@ -61,12 +90,21 @@ class DecksView : View() {
 					column("Format", DeckModel::format) {
 						contentWidth(35.0, useAsMin = true, useAsMax = true)
 					}
+					column("Archiv", DeckModel::archived) {
+						contentWidth(35.0, useAsMin = true, useAsMax = true)
+					}
 
 					setRowFactory {
 						object: TableRow<DeckModel>() {
 							override fun updateItem(deckModel: DeckModel?, empty: Boolean) {
 								super.updateItem(deckModel, empty)
-								tooltip = deckModel?.comment?.value?.let { Tooltip(it) }
+								tooltip = deckModel?.comment?.value?.let { if(it.isNotBlank()) Tooltip(it) else null }
+
+								setOnContextMenuRequested { event ->
+									item?.let {
+										getContextMenu(it).show(this, event.screenX, event.screenY)
+									}
+								}
 							}
 						}
 					}
@@ -76,4 +114,15 @@ class DecksView : View() {
 			}
         }
     }
+
+	private fun getContextMenu(deck: DeckModel) = ContextMenu().apply {
+		item("Delete $deck") {
+			action {
+
+			}
+		}
+		checkmenuitem("Archive $deck") {
+			selectedProperty().bindBidirectional(deck.archived)
+		}
+	}
 }
