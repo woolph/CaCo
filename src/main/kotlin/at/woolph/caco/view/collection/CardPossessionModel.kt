@@ -1,5 +1,7 @@
 package at.woolph.caco.view.collection
 
+import at.woolph.caco.datamodel.collection.CardCondition
+import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.sets.Card
 import javafx.beans.property.SimpleIntegerProperty
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -33,4 +35,7 @@ class CardPossessionModel(card: Card, val collectionsSettings: CollectionSetting
 			possessionPremium.set(collectionsSettings.possessionFilterPremium(item))
 		}
 	}
+
+	fun getPaperPossessions(language: CardLanguage, condition: CardCondition)
+			= transaction { item.possessions.filter { it.language == language && it.condition == condition }.count() }
 }

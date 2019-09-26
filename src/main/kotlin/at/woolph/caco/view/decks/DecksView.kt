@@ -53,18 +53,7 @@ class DecksView : View() {
 				toolbar {
 					button("+") {
 						action {
-							transaction {
-								AddDeckDialog(this@DecksView).showAndWait().ifPresent { (name, format, comment) ->
-									transaction {
-										Deck.new {
-											this.name = name
-											this.format = format
-											this.comment = comment
-										}
-										updateDecks()
-									}
-								}
-							}
+							addNewDeck()
 						}
 					}
 					region {
@@ -91,7 +80,8 @@ class DecksView : View() {
 						contentWidth(35.0, useAsMin = true, useAsMax = true)
 					}
 					column("Archiv", DeckModel::archived) {
-						contentWidth(35.0, useAsMin = true, useAsMax = true)
+						useCheckbox()
+						contentWidth(15.0, useAsMin = true, useAsMax = true)
 					}
 
 					setRowFactory {
@@ -101,9 +91,7 @@ class DecksView : View() {
 								tooltip = deckModel?.comment?.value?.let { if(it.isNotBlank()) Tooltip(it) else null }
 
 								setOnContextMenuRequested { event ->
-									item?.let {
-										getContextMenu(it).show(this, event.screenX, event.screenY)
-									}
+									getContextMenu(item).show(this, event.screenX, event.screenY)
 								}
 							}
 						}
@@ -115,14 +103,42 @@ class DecksView : View() {
         }
     }
 
-	private fun getContextMenu(deck: DeckModel) = ContextMenu().apply {
-		item("Delete $deck") {
-			action {
-
+	fun addNewDeck() {
+		transaction {
+			AddDeckDialog(this@DecksView).showAndWait().ifPresent { (name, format, comment) ->
+				transaction {
+					Deck.new {
+						this.name = name
+						this.format = format
+						this.comment = comment
+					}
+					updateDecks()
+				}
 			}
 		}
-		checkmenuitem("Archive $deck") {
-			selectedProperty().bindBidirectional(deck.archived)
-		}
 	}
+
+	private fun getContextMenu(deck: DeckModel?) = if(deck != null) ContextMenu().apply {
+			item("Delete") {
+				action {
+					confirmation("Are you sure you want to delete $deck?", null, ButtonType.YES, ButtonType.NO) {
+						if(it == ButtonType.YES) {
+							transaction {
+								deck.item.delete()
+								updateDecks()
+							}
+						}
+					}
+				}
+			}
+			checkmenuitem("Archive") {
+				selectedProperty().bindBidirectional(deck.archived)
+			}
+		} else ContextMenu().apply {
+			item("Add new deck") {
+				action {
+					addNewDeck()
+				}
+			}
+		}
 }

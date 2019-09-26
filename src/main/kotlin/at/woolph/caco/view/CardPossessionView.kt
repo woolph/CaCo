@@ -5,17 +5,30 @@ import at.woolph.caco.datamodel.collection.CardCondition
 import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.view.collection.CardPossessionModel
 import at.woolph.libs.ktfx.mapBinding
+import at.woolph.libs.ktfx.toStringBinding
+import javafx.beans.binding.Bindings
+import javafx.beans.property.SimpleIntegerProperty
 import javafx.beans.property.SimpleObjectProperty
+import javafx.collections.ObservableIntegerArray
 import javafx.scene.control.Label
+import org.jetbrains.exposed.sql.transactions.transaction
 import tornadofx.Fragment
 import tornadofx.*
 
 class CardPossessionView(val cardProperty: SimpleObjectProperty<CardPossessionModel?> = SimpleObjectProperty(null)) : Fragment() {
-	var card by cardProperty
+	//var card by cardProperty
 
-	private val conditions = CardCondition.values()
 	private val languages = CardLanguage.values()
-	private val labelPossessions = Array(conditions.count()) { Array(languages.count()) { Label("0$it") } }
+	private val conditions = CardCondition.values()
+	private val possessions = Array(languages.count()) { languageIndex ->
+			Array(conditions.count()) { conditionIndex ->
+				//SimpleIntegerProperty(0) // TODO
+				cardProperty.integerBinding {
+					it?.getPaperPossessions(languages[languageIndex], conditions[conditionIndex]) ?: 0
+				}
+			}
+		}
+	private val sums = Array(languages.count()) { integerBinding(this, *possessions[it]) { possessions[it].sumBy { it.value } } }
 
 	override val root = gridpane {
 		addClass(Styles.cardPossessionView)
@@ -30,13 +43,22 @@ class CardPossessionView(val cardProperty: SimpleObjectProperty<CardPossessionMo
 				label(cl.toString())
 			}
 		}
+		row {
+			label("\u2211")
+			languages.forEach { cl ->
+				label {
+					textProperty().bind(sums[cl.ordinal].toStringBinding())
+				}
+			}
+		}
 		CardCondition.values().forEach { cc ->
 			row {
 				label(cc.toString())
 
 				languages.forEach { cl ->
-					//label("0")
-					add(labelPossessions[cc.ordinal][cl.ordinal])
+					label {
+						textProperty().bind(possessions[cl.ordinal][cc.ordinal].toStringBinding())
+					}
 				}
 			}
 		}
