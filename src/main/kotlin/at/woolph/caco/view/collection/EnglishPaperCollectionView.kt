@@ -21,20 +21,15 @@ import tornadofx.*
 import kotlin.math.max
 
 
-class EnglishPaperCollectionView: CollectionView() {
-    override val cardPossesionTargtNonPremium get() = 4
-    override val cardPossesionTargtPremium get() = 1
+class EnglishPaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
+	companion object {
+		val COLLECTION_SETTINGS = CollectionSettings(4, 1,
+				{ !it.digitalOnly },
+				{ it.possessions.filter { it.language == CardLanguage.ENGLISH && !it.foil.isFoil }.count() },
+				{ it.possessions.filter { it.language == CardLanguage.ENGLISH && it.foil.isFoil }.count() })
+	}
 
-    override fun Card.getPossesionsNonPremium() = this.possessions.filter { it.language == CardLanguage.ENGLISH && !it.foil.isFoil }.count()
-    override fun Card.getPossesionsPremium() = this.possessions.filter { it.language == CardLanguage.ENGLISH && it.foil.isFoil }.count()
-
-    override fun Card.filterView(): Boolean = true
-
-    override fun getRelevantSets() = transaction {
-        CardSet.all().toList().filter { !it.digitalOnly }.observable().sorted { t1: CardSet, t2: CardSet ->
-            -t1.dateOfRelease.compareTo(t2.dateOfRelease)
-        }
-    }
+	override fun CardPossessionModel.filterView(): Boolean = true
 
     override fun ToolBar.addFeatureButtons() {
         button("Import Collection") {
@@ -144,7 +139,7 @@ class EnglishPaperCollectionView: CollectionView() {
 					it.printWriter().use { out ->
 						transaction {
 							set?.cards?.sortedBy { it.numberInSet }?.filter { !it.promo }?.forEach {
-								val neededCount = max(0, cardPossesionTargtNonPremium - it.possessions.count())
+								val neededCount = max(0, collectionSettings.cardPossesionTargtNonPremium - it.possessions.count())
 								//val n = if(set.cards.count { that -> it.name == that.name } > 1) " (#${it.numberInSet})" else ""
 								if (neededCount > 0) {
 									out.println("${neededCount} ${it.name} (${set?.name})")

@@ -2,32 +2,22 @@ package at.woolph.caco.view
 
 import at.woolph.caco.Styles
 import at.woolph.caco.datamodel.collection.CardCondition
-import at.woolph.caco.datamodel.sets.Card
+import at.woolph.caco.datamodel.collection.CardLanguage
+import at.woolph.caco.view.collection.CardPossessionModel
 import at.woolph.libs.ktfx.mapBinding
 import javafx.beans.property.SimpleObjectProperty
 import javafx.scene.control.Label
-import javafx.scene.control.ProgressIndicator
-import javafx.scene.image.ImageView
-import javafx.scene.paint.Color
-import javafx.scene.shape.Shape
 import tornadofx.Fragment
 import tornadofx.*
-import kotlin.math.min
 
-class CardPossessionView(val cardProperty: SimpleObjectProperty<Card?> = SimpleObjectProperty(null)) : Fragment() {
+class CardPossessionView(val cardProperty: SimpleObjectProperty<CardPossessionModel?> = SimpleObjectProperty(null)) : Fragment() {
 	var card by cardProperty
 
-	private lateinit var labelNumberInSet: Label
-	private lateinit var labelRarity: Label
-	private lateinit var labelCardName: Label
+	private val conditions = CardCondition.values()
+	private val languages = CardLanguage.values()
+	private val labelPossessions = Array(conditions.count()) { Array(languages.count()) { Label("0$it") } }
 
-	private lateinit var imageView: ImageView
-	private lateinit var imageLoadingProgressIndicatorBackground: Shape
-	private lateinit var imageLoadingProgressIndicator: ProgressIndicator
-
-	private val languages = listOf("en", "de", "ja", "ru", "es", "fr", "it", "pt", "ko", "zhs", "zht")
-
-	override val root =  gridpane {
+	override val root = gridpane {
 		addClass(Styles.cardPossessionView)
 
 		paddingAll = 10.0
@@ -35,23 +25,25 @@ class CardPossessionView(val cardProperty: SimpleObjectProperty<Card?> = SimpleO
 		vgap = 10.0
 
 		row {
-			label("Condition")
-			languages.forEach {
-				label(it)
+			label("")
+			languages.forEach { cl ->
+				label(cl.toString())
 			}
 		}
-		CardCondition.values().forEach {
+		CardCondition.values().forEach { cc ->
 			row {
-				label(it.toString())
+				label(cc.toString())
 
-				languages.forEach {
-					label("0")
+				languages.forEach { cl ->
+					//label("0")
+					add(labelPossessions[cc.ordinal][cl.ordinal])
 				}
 			}
 		}
 	}
 
 	init {
+
 		//labelNumberInSet.textProperty().bind(cardProperty.mapBinding { it?.numberInSet ?: "" })
 		//labelRarity.textProperty().bind(cardProperty.mapBinding { it?.rarity?.toString() ?: "" })
 		//labelCardName.textProperty().bind(cardProperty.mapBinding { it?.name ?: "" })

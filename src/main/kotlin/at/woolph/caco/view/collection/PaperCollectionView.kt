@@ -19,22 +19,16 @@ import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
 import tornadofx.*
 
+class PaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
+	// TODO collection modification matrix (language, condition, premium)
+	companion object {
+		val COLLECTION_SETTINGS = CollectionSettings(4, 1,
+				{ !it.digitalOnly },
+				{ it.possessions.filter { !it.foil.isFoil }.count() },
+				{ it.possessions.filter { it.foil.isFoil }.count() })
+	}
 
-class PaperCollectionView: CollectionView() {
-    // TODO collection modification matrix (language, condition, premium)
-    override val cardPossesionTargtNonPremium get() = 4
-    override val cardPossesionTargtPremium get() = 1
-
-    override fun Card.getPossesionsNonPremium() = this.possessions.filter { !it.foil.isFoil }.count()
-    override fun Card.getPossesionsPremium() = this.possessions.filter { it.foil.isFoil }.count()
-
-    override fun Card.filterView(): Boolean = true
-
-    override fun getRelevantSets() = transaction {
-        CardSet.all().toList().filter { !it.digitalOnly }.observable().sorted { t1: CardSet, t2: CardSet ->
-            -t1.dateOfRelease.compareTo(t2.dateOfRelease)
-        }
-    }
+    override fun CardPossessionModel.filterView(): Boolean = true
 
     override fun ToolBar.addFeatureButtons() {
         button("Bulk Add") {
@@ -162,7 +156,7 @@ class PaperCollectionView: CollectionView() {
 					it.printWriter().use { out ->
 						transaction {
 							set?.cards?.sortedBy { it.numberInSet }?.filter { !it.promo }?.forEach {
-								val neededCount = kotlin.math.max(0, cardPossesionTargtNonPremium - it.possessions.count())
+								val neededCount = kotlin.math.max(0, collectionSettings.cardPossesionTargtNonPremium - it.possessions.count())
 								//val n = if(set.cards.count { that -> it.name == that.name } > 1) " (#${it.numberInSet})" else ""
 								if (neededCount > 0) {
 									out.println("${neededCount} ${it.name} (${set?.name})")

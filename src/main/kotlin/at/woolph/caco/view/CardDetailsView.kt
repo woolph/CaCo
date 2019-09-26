@@ -1,9 +1,8 @@
 package at.woolph.caco.view
 
 import at.woolph.caco.Styles
-import at.woolph.caco.datamodel.sets.Card
-import at.woolph.libs.ktfx.ImageCache
-import at.woolph.libs.ktfx.mapBinding
+import at.woolph.caco.view.collection.CardModel
+import at.woolph.libs.ktfx.*
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.scene.control.Label
@@ -16,7 +15,7 @@ import tornadofx.Fragment
 import tornadofx.*
 import kotlin.math.min
 
-class CardDetailsView(val cardProperty: SimpleObjectProperty<Card?> = SimpleObjectProperty(null)) : Fragment() {
+class CardDetailsView(val cardProperty: SimpleObjectProperty<CardModel?> = SimpleObjectProperty(null)) : Fragment() {
 	var card by cardProperty
 
 	val imageLoadingProperty = SimpleBooleanProperty(true)
@@ -71,9 +70,9 @@ class CardDetailsView(val cardProperty: SimpleObjectProperty<Card?> = SimpleObje
 	}
 
 	init {
-		labelNumberInSet.textProperty().bind(cardProperty.mapBinding { it?.numberInSet ?: "" })
-		labelRarity.textProperty().bind(cardProperty.mapBinding { it?.rarity?.toString() ?: "" })
-		labelCardName.textProperty().bind(cardProperty.mapBinding { it?.name ?: "" })
+		labelNumberInSet.textProperty().bind(cardProperty.selectNullable { it?.numberInSet }.toStringBinding())
+		labelRarity.textProperty().bind(cardProperty.selectNullable { it?.rarity }.toStringBinding())
+		labelCardName.textProperty().bind(cardProperty.selectNullable { it?.name })
 
 		cardProperty.addListener { _, _, _ -> loadImage() }
 		imageLoadingProperty.addListener { _, _, _ -> loadImage() }
@@ -99,6 +98,6 @@ class CardDetailsView(val cardProperty: SimpleObjectProperty<Card?> = SimpleObje
 
 object CardImageCache: ImageCache()
 
-fun Card?.getCachedImage(): Image? {
-	return this?.image?.let { CardImageCache.getImage(it,224.0, 312.0, true, true) }
+fun CardModel?.getCachedImage(): Image? {
+	return this?.image?.value?.let { CardImageCache.getImage(it,224.0, 312.0, true, true) }
 }

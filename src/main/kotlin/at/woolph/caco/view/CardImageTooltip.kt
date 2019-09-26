@@ -1,6 +1,6 @@
 package at.woolph.caco.view
 
-import at.woolph.caco.datamodel.sets.Card
+import at.woolph.caco.view.collection.CardModel
 import javafx.beans.value.ObservableBooleanValue
 import javafx.scene.control.ProgressIndicator
 import javafx.scene.control.Tooltip
@@ -9,7 +9,7 @@ import javafx.scene.layout.StackPane
 import tornadofx.*
 import kotlin.math.min
 
-class CardImageTooltip(val card: Card, val imageLoadingProperty: ObservableBooleanValue): Tooltip() {
+class CardImageTooltip(val card: CardModel, val imageLoadingProperty: ObservableBooleanValue): Tooltip() {
 	private lateinit var imageView: ImageView
 	private lateinit var imageLoadingProgressIndicator: ProgressIndicator
 
@@ -42,7 +42,7 @@ class CardImageTooltip(val card: Card, val imageLoadingProperty: ObservableBoole
 			}
 			else {
 				graphic = null
-				text = card.name
+				text = card.name.value
 			}
 		}
 	}

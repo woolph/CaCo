@@ -1,5 +1,5 @@
 package at.woolph.caco.datamodel.decks
 
 enum class Format {
-    Unknown, Standard, StandardPlus, Commander, Modern, Pauper, Legacy, Vintage
+    Unknown, Standard, Historic, Commander, Modern, Pauper, Legacy, Vintage
 }

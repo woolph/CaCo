@@ -2,14 +2,12 @@ package at.woolph.caco
 
 import at.woolph.caco.datamodel.collection.ArenaCardPossessions
 import at.woolph.caco.datamodel.collection.CardPossessions
-import at.woolph.caco.datamodel.decks.Builds
-import at.woolph.caco.datamodel.decks.DeckCards
-import at.woolph.caco.datamodel.decks.Decks
-import at.woolph.caco.datamodel.decks.Variants
+import at.woolph.caco.datamodel.decks.*
 import at.woolph.caco.datamodel.sets.Cards
 import at.woolph.caco.datamodel.sets.CardSets
 import at.woolph.caco.view.collection.ArenaCollectionView
 import at.woolph.caco.view.collection.PaperCollectionView
+import at.woolph.caco.view.decks.DecksView
 import at.woolph.libs.ktfx.view
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -29,6 +27,11 @@ fun main(args: Array<String>) {
 	transaction {
 		SchemaUtils.createMissingTablesAndColumns(CardSets, Cards, CardPossessions, ArenaCardPossessions, Decks, Variants, Builds, DeckCards)
 		//CardPossessions.deleteAll()
+
+		Deck.new {
+			name = "Sultai Midrange"
+			format = Format.Standard
+		}
 	}
 
 
@@ -56,6 +59,7 @@ class MyView : View() {
 			}
 			tab("Decks") {
 				isClosable = false
+				view(DecksView::class)
 			}
 		}
 	}

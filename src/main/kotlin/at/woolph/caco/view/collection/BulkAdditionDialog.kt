@@ -8,7 +8,6 @@ import at.woolph.caco.importer.collection.toLanguageDeckbox
 import at.woolph.caco.view.CardDetailsView
 import at.woolph.caco.view.getCachedImage
 import at.woolph.libs.ktfx.commitValue
-import at.woolph.libs.ktfx.mapBinding
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleIntegerProperty
 import javafx.beans.property.SimpleObjectProperty
@@ -25,10 +24,7 @@ import tornadofx.*
 
 class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolean): Dialog<Boolean>() {
 
-    inner class CardInfo(val card: Card) {
-        val rarity get() = card.rarity.toProperty()
-        val name get() = card.name.toProperty()
-        val numberInSet get() = card.numberInSet.toProperty()
+    inner class CardModel(card: Card): at.woolph.caco.view.collection.CardModel(card) {
         val bulkAdditionNonPremium = SimpleIntegerProperty(0)
         val bulkAdditionPremium = SimpleIntegerProperty(0)
     }
@@ -52,17 +48,17 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
     val filterRarityMythic = SimpleBooleanProperty(true)
 
     lateinit var bulkAddNumberSpinner: Spinner<Number>
-    lateinit var tvCards: TableView<CardInfo>
+    lateinit var tvCards: TableView<CardModel>
 	lateinit var toggleButtonImageLoading: ToggleButton
 
-    val cards = FXCollections.observableArrayList<CardInfo>()
+    val cards = FXCollections.observableArrayList<CardModel>()
     val cardsFiltered = cards.filtered { true }
 
     val buttonTypeExport = ButtonType("Export")
 
     fun updateCards() {
         cards.setAll(transaction {
-            set.cards.toList().map { CardInfo(it) }
+            set.cards.toList().map { CardModel(it) }
         })
     }
 
@@ -73,7 +69,7 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
                     if (toBeAdded > 0) {
                         repeat(toBeAdded) {
                             CardPossession.new {
-                                this.card = cardInfo.card
+                                this.card = cardInfo.item
                                 this.language = languageProperty.value
                                 this.condition = conditionProperty.value
                                 this.foil = Foil.NONFOIL
@@ -85,7 +81,7 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
                     if (toBeAdded > 0) {
                         repeat(toBeAdded) {
                             CardPossession.new {
-                                this.card = cardInfo.card
+                                this.card = cardInfo.item
 
                                 this.language = languageProperty.value
                                 this.condition = conditionProperty.value
@@ -100,10 +96,10 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
 
     fun setFilter(filterRarityCommon: Boolean, filterRarityUncommon: Boolean, filterRarityRare: Boolean, filterRarityMythic: Boolean) {
         cardsFiltered.setPredicate { cardInfo ->
-                (filterRarityCommon || cardInfo.card.rarity != Rarity.COMMON)
-                && (filterRarityUncommon || cardInfo.card.rarity != Rarity.UNCOMMON)
-                && (filterRarityRare || cardInfo.card.rarity != Rarity.RARE)
-                && (filterRarityMythic || cardInfo.card.rarity != Rarity.MYTHIC)
+                (filterRarityCommon || cardInfo.rarity.value != Rarity.COMMON)
+                && (filterRarityUncommon || cardInfo.rarity.value != Rarity.UNCOMMON)
+                && (filterRarityRare || cardInfo.rarity.value != Rarity.RARE)
+                && (filterRarityMythic || cardInfo.rarity.value != Rarity.MYTHIC)
         }
     }
 
@@ -170,7 +166,7 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
                         fieldset("Card Info") {
 							this += find<CardDetailsView>().apply {
 								tornadofx.runLater {
-									this.cardProperty.bind(tvCards.selectionModel.selectedItemProperty().mapBinding { it?.card })
+									this.cardProperty.bind(tvCards.selectionModel.selectedItemProperty())
 									this.imageLoadingProperty.bind(toggleButtonImageLoading.selectedProperty())
 								}
 							}
@@ -248,20 +244,20 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
                             vGrow = Priority.ALWAYS
                         }
 
-                        column("CardSet Number", CardInfo::numberInSet) {
+                        column("CardSet Number", CardModel::numberInSet) {
                             contentWidth(5.0, useAsMin = true, useAsMax = true)
                         }
-                        column("Rarity", CardInfo::rarity) {
-                            contentWidth(5.0, useAsMin = true, useAsMax = true)
-                        }
-
-                        column("Name", CardInfo::name).remainingWidth()
-
-                        column("Add", CardInfo::bulkAdditionNonPremium) {
+                        column("Rarity", CardModel::rarity) {
                             contentWidth(5.0, useAsMin = true, useAsMax = true)
                         }
 
-                        column("Add Premium", CardInfo::bulkAdditionPremium) {
+                        column("Name", CardModel::name).remainingWidth()
+
+                        column("Add", CardModel::bulkAdditionNonPremium) {
+                            contentWidth(5.0, useAsMin = true, useAsMax = true)
+                        }
+
+                        column("Add Premium", CardModel::bulkAdditionPremium) {
                             contentWidth(5.0, useAsMin = true, useAsMax = true)
                         }
 
@@ -275,7 +271,7 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
 											tvCards.selectionModel.selectedIndex + 2,
 											tvCards.selectionModel.selectedIndex + 3).forEach {
 										if (0 <= it && it < tvCards.items.size) {
-											tvCards.items[it].card.getCachedImage()
+											tvCards.items[it].getCachedImage()
 										}
 									}
 								}
@@ -301,10 +297,10 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
 							it.printWriter().use { out ->
 								out.println("Count,Tradelist Count,Name,Edition,Card Number,CardCondition,Language,Foil,Signed,Artist Proof,Altered Art,Misprint,Promo,Textless,My Price")
 								cards.forEach { cardInfo ->
-									val cardName = cardInfo.card.name
-									val cardNumberInSet = cardInfo.card.numberInSet
-									val token = cardInfo.card.token
-									val promo = cardInfo.card.promo
+									val cardName = cardInfo.item.name
+									val cardNumberInSet = cardInfo.item.numberInSet
+									val token = cardInfo.item.token
+									val promo = cardInfo.item.promo
 									val condition = when (conditionProperty.value) {
 										CardCondition.NEAR_MINT -> "Near Mint"
 										CardCondition.EXCELLENT -> "Good (Lightly Played)"

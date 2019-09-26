@@ -2,7 +2,6 @@ package at.woolph.caco.view.collection
 
 import at.woolph.caco.datamodel.sets.*
 import at.woolph.caco.datamodel.sets.CardSet
-import at.woolph.caco.datamodel.sets.Cards.nameDE
 import at.woolph.caco.importer.sets.*
 import at.woolph.caco.view.*
 import at.woolph.libs.ktfx.mapBinding
@@ -12,70 +11,20 @@ import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleStringProperty
 import javafx.collections.FXCollections
 import javafx.scene.control.*
-import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.Priority
-import javafx.scene.paint.Color
-import javafx.scene.shape.Shape
 import org.jetbrains.exposed.sql.transactions.transaction
 import tornadofx.*
 import kotlin.math.min
-import javafx.scene.control.Tooltip
 
-abstract class CollectionView : View() {
+abstract class CollectionView(val collectionSettings: CollectionSettings) : View() {
     companion object {
         val FOIL_NOT_IN_POSSESION = "\u2606"
         val FOIL_IN_POSSESION = "\u2605"
         val CARD_NOT_IN_POSSESION = "\u2B1C"
         val CARD_IN_POSSESION = "\u2B1B"
         val ICON_REDUNDANT_OWNED_CARD = "+"
-    }
-
-    inner class CardInfo(val card: Card) {
-        val rarity get() = card.rarity.toProperty()
-        val name get() = card.name.toProperty()
-        val nameDE get() = card.nameDE.toProperty()
-        val numberInSet get() = card.numberInSet.toProperty()
-
-        val possessionNonPremiumProperty = SimpleIntegerProperty(0)
-        var possessionNonPremium by possessionNonPremiumProperty
-
-        val possessionPremiumProperty = SimpleIntegerProperty(0)
-        var possessionPremium by possessionPremiumProperty
-
-        val possessionTotalProperty = SimpleIntegerProperty(0)
-        var possessionTotal by possessionTotalProperty
-
-        val collectionCompletionProperty = SimpleStringProperty("")
-        var collectionCompletion by collectionCompletionProperty
-
-        val completedNonPremiumProperty = SimpleBooleanProperty(false)
-        var completedNonPremium by completedNonPremiumProperty
-
-        val completedPremiumProperty = SimpleBooleanProperty(false)
-        var completedPremium by completedPremiumProperty
-
-        init {
-            transaction {
-                possessionNonPremium = card.getPossesionsNonPremium()
-                possessionPremium = card.getPossesionsPremium()
-
-                possessionTotal = possessionNonPremium + possessionPremium
-
-                val ownedCount = min(cardPossesionTargtNonPremium, possessionNonPremium)
-                val ownedCountFoil = min(cardPossesionTargtPremium, possessionPremium)
-
-                val plus = if(possessionNonPremium>cardPossesionTargtNonPremium) ICON_REDUNDANT_OWNED_CARD else " "
-                val plusFoil = if(possessionPremium>cardPossesionTargtPremium) ICON_REDUNDANT_OWNED_CARD else " "
-
-                collectionCompletion = "${CARD_IN_POSSESION.repeat(ownedCount)}${CARD_NOT_IN_POSSESION.repeat(cardPossesionTargtNonPremium-ownedCount)}$plus\t${FOIL_IN_POSSESION.repeat(ownedCountFoil)}${FOIL_NOT_IN_POSSESION.repeat(cardPossesionTargtPremium-ownedCountFoil)}$plusFoil"
-
-                completedNonPremium = possessionNonPremium>=cardPossesionTargtNonPremium
-                completedPremium = possessionPremium>=cardPossesionTargtPremium
-                //collectionCompletion = "${CARD_IN_POSSESION.repeat(ownedCount)}${CARD_NOT_IN_POSSESION.repeat(CARD_POSSESION_TARGET-ownedCount)} ${FOIL_IN_POSSESION.repeat(ownedCountFoil)}${FOIL_NOT_IN_POSSESION.repeat(FOIL_POSSESION_TARGET-ownedCountFoil)}"
-            }
-        }
     }
 
     override val root = BorderPane()
@@ -91,32 +40,27 @@ abstract class CollectionView : View() {
     val filterRarityRare = SimpleBooleanProperty(true)
     val filterRarityMythic = SimpleBooleanProperty(true)
 
-    lateinit var tvCards: TableView<CardInfo>
+    lateinit var tvCards: TableView<CardPossessionModel>
 	lateinit var toggleButtonImageLoading: ToggleButton
 
     val sets = FXCollections.observableArrayList<CardSet>()
 
-    val cards = FXCollections.observableArrayList<CardInfo>()
-    val cardsFiltered = cards.filtered { cardInfo -> cardInfo.card.filterView() }
+    val cards = FXCollections.observableArrayList<CardPossessionModel>()
+    val cardsFiltered = cards.filtered { cardInfo -> cardInfo.filterView() }
 
-    abstract val cardPossesionTargtNonPremium: Int
-    abstract val cardPossesionTargtPremium: Int
+    abstract fun CardPossessionModel.filterView(): Boolean
 
-    abstract fun Card.getPossesionsNonPremium(): Int
-    abstract fun Card.getPossesionsPremium(): Int
-
-    abstract fun Card.filterView(): Boolean
-
-    abstract fun getRelevantSets(): List<CardSet>
     abstract fun ToolBar.addFeatureButtons()
 
     fun updateSets() {
-        sets.setAll(getRelevantSets())
+        sets.setAll(transaction { CardSet.all().toList().filter { collectionSettings.cardSetFilter(it) }.observable().sorted { t1: CardSet, t2: CardSet ->
+			-t1.dateOfRelease.compareTo(t2.dateOfRelease)
+		}})
     }
 
     fun updateCards() {
         cards.setAll(transaction {
-            set?.cards?.toList()?.map { CardInfo(it) }
+            set?.cards?.toList()?.map { CardPossessionModel(it, collectionSettings) }
         } ?: emptyList())
     }
 
@@ -138,14 +82,14 @@ abstract class CollectionView : View() {
     }
 
     fun setFilter(text: String, nonFoilComplete: Boolean, foilComplete: Boolean, filterRarityCommon: Boolean, filterRarityUncommon: Boolean, filterRarityRare: Boolean, filterRarityMythic: Boolean) {
-        cardsFiltered.setPredicate { cardInfo -> cardInfo.card.filterView()
-                    && (if(!text.isNullOrBlank()) cardInfo.name.get().contains(text, ignoreCase = true) || cardInfo.nameDE.get().contains(text, ignoreCase = true) else true)
-                    && (nonFoilComplete || !cardInfo.completedNonPremium)
-                    && (foilComplete || !cardInfo.completedPremium)
-                    && (filterRarityCommon || cardInfo.card.rarity != Rarity.COMMON)
-                    && (filterRarityUncommon || cardInfo.card.rarity != Rarity.UNCOMMON)
-                    && (filterRarityRare || cardInfo.card.rarity != Rarity.RARE)
-                    && (filterRarityMythic || cardInfo.card.rarity != Rarity.MYTHIC)
+        cardsFiltered.setPredicate { cardInfo -> cardInfo.filterView()
+                    && (if(!text.isNullOrBlank()) cardInfo.name.value.contains(text, ignoreCase = true) || cardInfo.nameDE.value?.contains(text, ignoreCase = true) ?: false else true)
+                    && (nonFoilComplete || !cardInfo.completedNonPremium.get())
+                    && (foilComplete || !cardInfo.completedPremium.get())
+                    && (filterRarityCommon || cardInfo.rarity.value != Rarity.COMMON)
+                    && (filterRarityUncommon || cardInfo.rarity.value != Rarity.UNCOMMON)
+                    && (filterRarityRare || cardInfo.rarity.value != Rarity.RARE)
+                    && (filterRarityMythic || cardInfo.rarity.value != Rarity.MYTHIC)
         }
     }
 
@@ -210,11 +154,13 @@ abstract class CollectionView : View() {
                     textfield(filterTextProperty) {
 
                     }
-                    togglebutton(CARD_IN_POSSESION.repeat(cardPossesionTargtNonPremium)) {
-                        filterNonFoilCompleteProperty.bind(selectedProperty())
-                    }
-                    if (cardPossesionTargtPremium > 0) {
-                        togglebutton(FOIL_IN_POSSESION.repeat(cardPossesionTargtPremium)) {
+					if (collectionSettings.cardPossesionTargtNonPremium > 0) {
+						togglebutton(CARD_IN_POSSESION.repeat(collectionSettings.cardPossesionTargtNonPremium)) {
+							filterNonFoilCompleteProperty.bind(selectedProperty())
+						}
+					}
+                    if (collectionSettings.cardPossesionTargtPremium > 0) {
+                        togglebutton(FOIL_IN_POSSESION.repeat(collectionSettings.cardPossesionTargtPremium)) {
                             filterFoilCompleteProperty.bind(selectedProperty())
                         }
                     }
@@ -252,29 +198,29 @@ abstract class CollectionView : View() {
                         vGrow = Priority.ALWAYS
                     }
 
-                    column("Number", CardInfo::numberInSet) {
+                    column("Number", CardPossessionModel::numberInSet) {
                         contentWidth(5.0, useAsMin = true, useAsMax = true)
                     }
-                    column("Rarity", CardInfo::rarity) {
+                    column("Rarity", CardPossessionModel::rarity) {
                         contentWidth(5.0, useAsMin = true, useAsMax = true)
                     }
 
-                    column("Name EN", CardInfo::name).remainingWidth()
+                    column("Name EN", CardPossessionModel::name).remainingWidth()
 
-                    column("Name DE", CardInfo::nameDE).remainingWidth()
+                    column("Name DE", CardPossessionModel::nameDE).remainingWidth()
 
-                    column("Possessions", CardInfo::possessionTotalProperty) {
+                    column("Possessions", CardPossessionModel::possessionTotal) {
                         contentWidth(5.0, useAsMin = true, useAsMax = true)
                     }
-                    column("Collection Completion", CardInfo::collectionCompletionProperty) {
+                    column("Collection Completion", CardPossessionModel::collectionCompletion) {
                         contentWidth(15.0, useAsMin = true, useAsMax = true)
                     }
 
 					setRowFactory {
-						object: TableRow<CardInfo>() {
-							override fun updateItem(cardInfo: CardInfo?, empty: Boolean) {
+						object: TableRow<CardPossessionModel>() {
+							override fun updateItem(cardInfo: CardPossessionModel?, empty: Boolean) {
 								super.updateItem(cardInfo, empty)
-								tooltip = cardInfo?.card?.let { CardImageTooltip(it, toggleButtonImageLoading.selectedProperty()) }
+								tooltip = cardInfo?.let { CardImageTooltip(it, toggleButtonImageLoading.selectedProperty()) }
 							}
 						}
 					}
@@ -289,7 +235,7 @@ abstract class CollectionView : View() {
 										tvCards.selectionModel.selectedIndex + 2,
 										tvCards.selectionModel.selectedIndex + 3).forEach {
 									if (0 <= it && it < tvCards.items.size) {
-										tvCards.items[it].card.getCachedImage()
+										tvCards.items[it].getCachedImage()
 									}
 								}
 							}
@@ -300,11 +246,11 @@ abstract class CollectionView : View() {
 			left {
 				vbox {
 					this += find<CardDetailsView>().apply {
-						this.cardProperty.bind(tvCards.selectionModel.selectedItemProperty().mapBinding { it?.card })
+						this.cardProperty.bind(tvCards.selectionModel.selectedItemProperty())
 						this.imageLoadingProperty.bind(toggleButtonImageLoading.selectedProperty())
 					}
 					this += find<CardPossessionView>().apply {
-						this.cardProperty.bind(tvCards.selectionModel.selectedItemProperty().mapBinding { it?.card })
+						this.cardProperty.bind(tvCards.selectionModel.selectedItemProperty())
 					}
 				}
 			}
