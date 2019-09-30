@@ -276,6 +276,9 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
 									}
 								}
 							}
+                            bulkAddNumberProperty.set(0)
+                            bulkAddNumberSpinner.editorProperty().value.selectAll()
+                            bulkAddNumberSpinner.requestFocus()
                         }
 						runLater { selectionModel.selectFirst() }
                     }
