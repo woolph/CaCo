@@ -21,6 +21,7 @@ object Cards : IntIdTable() {
     val token = bool("token").default(false).index()
     val image = varchar("imageURI", length = 256).nullable()
     val cardmarketUri = varchar("cardmarketUri", length = 256).nullable()
+    // TODO wanted possession count (overruling the default collectionsettings e.g. for planeswalker deck cards = 0, for "seven dwarves" = 7, for promo cards = 1)
 }
 
 class Card(id: EntityID<Int>) : IntEntity(id) {
