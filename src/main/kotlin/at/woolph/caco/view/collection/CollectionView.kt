@@ -4,19 +4,17 @@ import at.woolph.caco.datamodel.sets.*
 import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.importer.sets.*
 import at.woolph.caco.view.*
-import at.woolph.libs.ktfx.mapBinding
 import javafx.beans.property.SimpleBooleanProperty
-import javafx.beans.property.SimpleIntegerProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleStringProperty
 import javafx.collections.FXCollections
+import javafx.geometry.Pos
 import javafx.scene.control.*
 import javafx.scene.image.ImageView
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.Priority
 import org.jetbrains.exposed.sql.transactions.transaction
 import tornadofx.*
-import kotlin.math.min
 
 abstract class CollectionView(val collectionSettings: CollectionSettings) : View() {
     companion object {
@@ -190,67 +188,73 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : View
                 }
             }
             center {
-                tvCards = tableview(cardsFiltered) {
-                    hboxConstraints {
-                        hGrow = Priority.ALWAYS
-                    }
-                    vboxConstraints {
-                        vGrow = Priority.ALWAYS
-                    }
-
-                    column("Number", CardPossessionModel::numberInSet) {
-                        contentWidth(5.0, useAsMin = true, useAsMax = true)
-                    }
-                    column("Rarity", CardPossessionModel::rarity) {
-                        contentWidth(5.0, useAsMin = true, useAsMax = true)
-                    }
-
-                    column("Name EN", CardPossessionModel::name).remainingWidth()
-
-                    column("Name DE", CardPossessionModel::nameDE).remainingWidth()
-
-                    column("Possessions", CardPossessionModel::possessionTotal) {
-                        contentWidth(5.0, useAsMin = true, useAsMax = true)
-                    }
-                    column("Collection Completion", CardPossessionModel::collectionCompletion) {
-                        contentWidth(15.0, useAsMin = true, useAsMax = true)
-                    }
-
-					setRowFactory {
-						object: TableRow<CardPossessionModel>() {
-							override fun updateItem(cardInfo: CardPossessionModel?, empty: Boolean) {
-								super.updateItem(cardInfo, empty)
-								tooltip = cardInfo?.let { CardImageTooltip(it, toggleButtonImageLoading.selectedProperty()) }
+				splitpane {
+					vbox {
+						alignment = Pos.TOP_CENTER
+						this += find<CardDetailsView> {
+							runLater {
+								this.cardProperty.bind(tvCards.selectionModel.selectedItemProperty())
+								this.imageLoadingProperty.bind(toggleButtonImageLoading.selectedProperty())
+							}
+						}
+						this += find<CardPossessionView> {
+							runLater {
+								this.cardProperty.bind(tvCards.selectionModel.selectedItemProperty())
 							}
 						}
 					}
 
-                    selectionModel.selectionMode = SelectionMode.SINGLE
-					selectionModel.selectedItemProperty().addListener { _, _, _ ->
-						if(toggleButtonImageLoading.isSelected) {
-							tornadofx.runAsync {
-								// precache the next images
-								listOf(tvCards.selectionModel.selectedIndex + 1,
-										tvCards.selectionModel.selectedIndex - 1,
-										tvCards.selectionModel.selectedIndex + 2,
-										tvCards.selectionModel.selectedIndex + 3).forEach {
-									if (0 <= it && it < tvCards.items.size) {
-										tvCards.items[it].getCachedImage()
+					tvCards = tableview(cardsFiltered) {
+						hboxConstraints {
+							hGrow = Priority.ALWAYS
+						}
+						vboxConstraints {
+							vGrow = Priority.ALWAYS
+						}
+
+						column("Number", CardPossessionModel::numberInSet) {
+							contentWidth(5.0, useAsMin = true, useAsMax = true)
+						}
+						column("Rarity", CardPossessionModel::rarity) {
+							contentWidth(5.0, useAsMin = true, useAsMax = true)
+						}
+
+						column("Name EN", CardPossessionModel::name).remainingWidth()
+
+						column("Name DE", CardPossessionModel::nameDE).remainingWidth()
+
+						column("Possessions", CardPossessionModel::possessionTotal) {
+							contentWidth(5.0, useAsMin = true, useAsMax = true)
+						}
+						column("Collection Completion", CardPossessionModel::collectionCompletion) {
+							contentWidth(15.0, useAsMin = true, useAsMax = true)
+						}
+
+						setRowFactory {
+							object : TableRow<CardPossessionModel>() {
+								override fun updateItem(cardInfo: CardPossessionModel?, empty: Boolean) {
+									super.updateItem(cardInfo, empty)
+									tooltip = cardInfo?.let { CardImageTooltip(it, toggleButtonImageLoading.selectedProperty()) }
+								}
+							}
+						}
+
+						selectionModel.selectionMode = SelectionMode.SINGLE
+						selectionModel.selectedItemProperty().addListener { _, _, _ ->
+							if (toggleButtonImageLoading.isSelected) {
+								tornadofx.runAsync {
+									// precache the next images
+									listOf(tvCards.selectionModel.selectedIndex + 1,
+											tvCards.selectionModel.selectedIndex - 1,
+											tvCards.selectionModel.selectedIndex + 2,
+											tvCards.selectionModel.selectedIndex + 3).forEach {
+										if (0 <= it && it < tvCards.items.size) {
+											tvCards.items[it].getCachedImage()
+										}
 									}
 								}
 							}
 						}
-					}
-                }
-            }
-			left {
-				vbox {
-					this += find<CardDetailsView>().apply {
-						this.cardProperty.bind(tvCards.selectionModel.selectedItemProperty())
-						this.imageLoadingProperty.bind(toggleButtonImageLoading.selectedProperty())
-					}
-					this += find<CardPossessionView>().apply {
-						this.cardProperty.bind(tvCards.selectionModel.selectedItemProperty())
 					}
 				}
 			}

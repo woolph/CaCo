@@ -1,12 +1,10 @@
 package at.woolph.libs.ktfx
 
 import javafx.event.EventTarget
-import tornadofx.UIComponent
-import tornadofx.add
-import tornadofx.find
 import kotlin.reflect.KClass
 import javafx.scene.control.Spinner
 import javafx.scene.image.Image
+import tornadofx.*
 import java.net.URI
 
 fun <T: UIComponent> EventTarget.view(type: KClass<T>) {

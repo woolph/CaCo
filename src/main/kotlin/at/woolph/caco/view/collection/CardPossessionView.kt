@@ -1,11 +1,11 @@
-package at.woolph.caco.view
+package at.woolph.caco.view.collection
 
 import at.woolph.caco.Styles
 import at.woolph.caco.datamodel.collection.CardCondition
 import at.woolph.caco.datamodel.collection.CardLanguage
-import at.woolph.caco.view.collection.CardPossessionModel
 import at.woolph.libs.ktfx.toStringBinding
 import javafx.beans.property.SimpleObjectProperty
+import javafx.geometry.HPos
 import javafx.geometry.Pos
 import javafx.geometry.Rectangle2D
 import javafx.scene.control.Label
@@ -28,11 +28,15 @@ class CardPossessionView(val cardProperty: SimpleObjectProperty<CardPossessionMo
 
 	private val languages = CardLanguage.values().filter { it != CardLanguage.UNKNOWN }
 	private val conditions = CardCondition.values().filter { it != CardCondition.UNKNOWN }
-	private val possessions = generateMap(languages) { language -> generateMap(conditions) { condition ->
-				cardProperty.integerBinding { it?.getPaperPossessions(language, condition) ?: 0 }
-			}
+	private val possessions = generateMap(languages) { language ->
+		generateMap(conditions) { condition ->
+			cardProperty.integerBinding { it?.getPaperPossessions(language, condition) ?: 0 }
 		}
-	private val sums = generateMap(languages) { integerBinding(this, *possessions[it]?.values?.toTypedArray() ?: emptyArray()) { possessions[it]?.values?.sumBy { it.value } ?: 0 } }
+	}
+	private val sums = generateMap(languages) {
+		integerBinding(this, *possessions[it]?.values?.toTypedArray()
+				?: emptyArray()) { possessions[it]?.values?.sumBy { it.value } ?: 0 }
+	}
 
 	private val iconCollection = IconCollection(resources.image("mkm-icons.png"), 16.0, 16.0)
 
@@ -76,15 +80,10 @@ class CardPossessionView(val cardProperty: SimpleObjectProperty<CardPossessionMo
 			}
 		}
 		row {
-			label("\u2211") {
-				maxWidth = Double.POSITIVE_INFINITY
-				alignment = Pos.CENTER
-			}
+			label("\u2211")
 			languages.forEach { cl ->
 				label {
 					textProperty().bind(sums[cl]?.toStringBinding())
-					maxWidth = Double.POSITIVE_INFINITY
-					alignment = Pos.CENTER_RIGHT
 				}
 			}
 		}
@@ -95,15 +94,19 @@ class CardPossessionView(val cardProperty: SimpleObjectProperty<CardPossessionMo
 				languages.forEach { cl ->
 					label {
 						textProperty().bind(possessions[cl]?.get(cc)?.toStringBinding())
-						maxWidth = Double.POSITIVE_INFINITY
-						alignment = Pos.CENTER_RIGHT
 					}
 				}
 			}
 		}
-		constraintsForColumn(0).percentWidth = 150.0/(languages.count()+1.5)
+		constraintsForColumn(0).apply {
+			percentWidth = 150.0 / (languages.count() + 1.5)
+			halignment = HPos.CENTER
+		}
 		for(columnIndex in 1..languages.count()) {
-			constraintsForColumn(columnIndex).percentWidth = 100.0/(languages.count()+1.5)
+			constraintsForColumn(columnIndex).apply {
+				percentWidth = 100.0 / (languages.count() + 1.5)
+				halignment = HPos.CENTER
+			}
 		}
 	}
 
