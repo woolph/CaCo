@@ -6,7 +6,6 @@ import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.libs.ktfx.toStringBinding
 import javafx.beans.property.SimpleObjectProperty
 import javafx.geometry.HPos
-import javafx.geometry.Pos
 import javafx.geometry.Rectangle2D
 import javafx.scene.control.Label
 import javafx.scene.image.Image
@@ -24,8 +23,6 @@ class IconCollection(val image: Image, val iconWidth: Double, val iconHeight: Do
 }
 
 class CardPossessionView(val cardProperty: SimpleObjectProperty<CardPossessionModel?> = SimpleObjectProperty(null)) : Fragment() {
-	//var card by cardProperty
-
 	private val languages = CardLanguage.values().filter { it != CardLanguage.UNKNOWN }
 	private val conditions = CardCondition.values().filter { it != CardCondition.UNKNOWN }
 	private val possessions = generateMap(languages) { language ->
@@ -40,29 +37,29 @@ class CardPossessionView(val cardProperty: SimpleObjectProperty<CardPossessionMo
 
 	private val iconCollection = IconCollection(resources.image("mkm-icons.png"), 16.0, 16.0)
 
-	private fun CardLanguage.getIcon() = when(this) {
-		CardLanguage.ENGLISH -> iconCollection[5,1]
-		CardLanguage.FRENCH -> iconCollection[5,3]
-		CardLanguage.GERMAN -> iconCollection[5,5]
-		CardLanguage.SPANISH -> iconCollection[5,7]
-		CardLanguage.ITALIAN -> iconCollection[5,9]
-		CardLanguage.CHINESE -> iconCollection[5,11]
-		CardLanguage.JAPANESE -> iconCollection[5,13]
-		CardLanguage.PORTUGUESE -> iconCollection[5,15]
-		CardLanguage.RUSSIAN -> iconCollection[5,17]
-		CardLanguage.KOREAN -> iconCollection[5,19]
-		CardLanguage.CHINESE_TRADITIONL -> iconCollection[5,21]
-		else -> Label(this.toString())
-	}
+	private fun CardLanguage.toIcon() = when(this) {
+		CardLanguage.ENGLISH -> 1
+		CardLanguage.FRENCH -> 3
+		CardLanguage.GERMAN -> 5
+		CardLanguage.SPANISH -> 7
+		CardLanguage.ITALIAN -> 9
+		CardLanguage.CHINESE -> 11
+		CardLanguage.JAPANESE -> 13
+		CardLanguage.PORTUGUESE -> 15
+		CardLanguage.RUSSIAN -> 17
+		CardLanguage.KOREAN -> 19
+		CardLanguage.CHINESE_TRADITIONAL -> 21
+		else -> null
+	}?.let { iconCollection[5, it] } ?: Label(this.toString())
 
-	private fun CardCondition.getIcon() = when(this) {
-		CardCondition.NEAR_MINT -> iconCollection[4,2]
-		CardCondition.EXCELLENT -> iconCollection[4,4]
-		CardCondition.GOOD -> iconCollection[4,6]
-		CardCondition.PLAYED -> iconCollection[4,8]
-		CardCondition.POOR -> iconCollection[4,10]
-		else -> Label(this.toString())
-	}
+	private fun CardCondition.toIcon() = when(this) {
+		CardCondition.NEAR_MINT -> 2
+		CardCondition.EXCELLENT -> 4
+		CardCondition.GOOD -> 6
+		CardCondition.PLAYED -> 8
+		CardCondition.POOR -> 10
+		else -> null
+	}?.let { iconCollection[4, it] } ?: Label(this.toString())
 
 	override val root = gridpane {
 		minWidth = 300.0
@@ -76,7 +73,7 @@ class CardPossessionView(val cardProperty: SimpleObjectProperty<CardPossessionMo
 		row {
 			label("")
 			languages.forEach { cl ->
-				add(cl.getIcon())
+				add(cl.toIcon())
 			}
 		}
 		row {
@@ -89,7 +86,7 @@ class CardPossessionView(val cardProperty: SimpleObjectProperty<CardPossessionMo
 		}
 		conditions.forEach { cc ->
 			row {
-				add(cc.getIcon())
+				add(cc.toIcon())
 
 				languages.forEach { cl ->
 					label {
@@ -108,11 +105,5 @@ class CardPossessionView(val cardProperty: SimpleObjectProperty<CardPossessionMo
 				halignment = HPos.CENTER
 			}
 		}
-	}
-
-	init {
-		//labelNumberInSet.textProperty().bind(cardProperty.mapBinding { it?.numberInSet ?: "" })
-		//labelRarity.textProperty().bind(cardProperty.mapBinding { it?.rarity?.toString() ?: "" })
-		//labelCardName.textProperty().bind(cardProperty.mapBinding { it?.name ?: "" })
 	}
 }

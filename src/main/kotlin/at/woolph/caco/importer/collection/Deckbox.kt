@@ -24,7 +24,7 @@ fun String.parseLanguageDeckbox(): CardLanguage = when (this) {
 	"Portuguese" -> CardLanguage.PORTUGUESE
 	"French" -> CardLanguage.FRENCH
 	"Chinese" -> CardLanguage.CHINESE
-	"Traditional Chinese" -> CardLanguage.CHINESE_TRADITIONL
+	"Traditional Chinese" -> CardLanguage.CHINESE_TRADITIONAL
 	else -> CardLanguage.UNKNOWN
 }
 fun CardLanguage.toLanguageDeckbox(): String = when (this) {
@@ -38,7 +38,7 @@ fun CardLanguage.toLanguageDeckbox(): String = when (this) {
     CardLanguage.PORTUGUESE -> "Portuguese"
     CardLanguage.FRENCH -> "French"
     CardLanguage.CHINESE -> "Chinese"
-    CardLanguage.CHINESE_TRADITIONL -> "Traditional Chinese"
+    CardLanguage.CHINESE_TRADITIONAL -> "Traditional Chinese"
     else -> throw Exception("unknown language")
 }
 

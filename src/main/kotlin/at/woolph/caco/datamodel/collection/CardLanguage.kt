@@ -1,19 +1,22 @@
 package at.woolph.caco.datamodel.collection
 
 enum class CardLanguage {
-	UNKNOWN, ENGLISH, GERMAN, SPANISH, JAPANESE, RUSSIAN, CHINESE, CHINESE_TRADITIONL, KOREAN, ITALIAN, FRENCH, PORTUGUESE;
+	UNKNOWN, ENGLISH, GERMAN,
+	RUSSIAN, JAPANESE,
+	SPANISH, PORTUGUESE, ITALIAN, FRENCH,
+	CHINESE, CHINESE_TRADITIONAL, KOREAN;
 	override fun toString() = when(this) {
 		ENGLISH -> "en"
 		GERMAN -> "de"
+		RUSSIAN -> "ru"
+		JAPANESE -> "ja"
 		SPANISH -> "es"
-		KOREAN -> "ko"
+		PORTUGUESE -> "pt"
 		ITALIAN -> "it"
 		FRENCH -> "fr"
-		PORTUGUESE -> "pt"
-		JAPANESE -> "ja"
-		RUSSIAN -> "ru"
 		CHINESE -> "zhs"
-		CHINESE_TRADITIONL -> "zht"
+		CHINESE_TRADITIONAL -> "zht"
+		KOREAN -> "ko"
 		else -> "?"
 	}
 }
