@@ -110,7 +110,7 @@ class PaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
 				chooseFile("Choose File to Export to", arrayOf(FileChooser.ExtensionFilter("CSV", "*.csv")), mode = FileChooserMode.Save).singleOrNull()?.let {
 					it.printWriter().use { out ->
 						transaction {
-							out.println("Count,Tradelist Count,Name,Edition,Card Number,CardCondition,Language,Foil,Signed,Artist Proof,Altered Art,Misprint,Promo,Textless,My Price")
+							out.println("Count,Tradelist Count,Name,Edition,Card Number,Condition,Language,Foil,Signed,Artist Proof,Altered Art,Misprint,Promo,Textless,My Price")
 
 							set?.cards?.forEach {
 								((Cards innerJoin CardPossessions)
