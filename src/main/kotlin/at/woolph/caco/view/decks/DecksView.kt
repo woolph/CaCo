@@ -1,56 +1,58 @@
 package at.woolph.caco.view.decks
 
 import at.woolph.caco.datamodel.decks.*
-import at.woolph.caco.datamodel.decks.Deck.Companion.referrersOn
-import at.woolph.caco.datamodel.sets.*
-import at.woolph.caco.datamodel.sets.CardSet
-import at.woolph.caco.importer.sets.*
-import at.woolph.caco.view.*
-import at.woolph.caco.view.collection.AddSetsDialog
-import at.woolph.caco.view.collection.CollectionView
-import at.woolph.libs.ktfx.mapBinding
-import javafx.beans.property.SimpleBooleanProperty
-import javafx.beans.property.SimpleIntegerProperty
-import javafx.beans.property.SimpleObjectProperty
-import javafx.beans.property.SimpleStringProperty
 import javafx.collections.FXCollections
-import javafx.collections.ObservableList
-import javafx.event.EventTarget
+import javafx.geometry.Orientation
 import javafx.scene.control.*
-import javafx.scene.image.ImageView
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.Priority
-import org.jetbrains.exposed.dao.Entity
 import org.jetbrains.exposed.sql.transactions.transaction
 import tornadofx.*
-import kotlin.math.min
-import kotlin.properties.ReadWriteProperty
-import kotlin.reflect.KProperty
+import java.security.KeyStore
 
 class DecksView : View() {
     override val root = BorderPane()
 
-    lateinit var tvDecks: TableView<DeckModel>
+    lateinit var tvArchetypes: TableView<DeckTreeModel>
+	val archetypes = FXCollections.observableArrayList<DeckTreeModel>()
+	val archetypesFiltered = archetypes.filtered { it.filterView() }
 
-    val decks = FXCollections.observableArrayList<DeckModel>()
+	fun DeckTreeModel.filterView(): Boolean = true
+
+
+	lateinit var tvDecks: TableView<DeckVariantModel>
+    val decks = FXCollections.observableArrayList<DeckVariantModel>()
     val decksFiltered = decks.filtered { it.filterView() }
 
-    fun DeckModel.filterView(): Boolean = true
+    fun DeckVariantModel.filterView(): Boolean = true
+
+
+	fun updateArchetypes() {
+		archetypes.setAll(transaction {
+			DeckArchetype.all().map { DeckArchetypeModel(it) }
+		})
+	}
 
     fun updateDecks() {
 		decks.setAll(transaction {
-			Deck.all().map { DeckModel(it) }
+			DeckVariant.all().map { DeckVariantModel(it) }
         })
     }
 
     init {
         title = "CaCo"
 
+		updateArchetypes()
 		updateDecks()
 
         with(root) {
 			top {
 				toolbar {
+					button("+") {
+						action {
+							addNewArchetype()
+						}
+					}
 					button("+") {
 						action {
 							addNewDeck()
@@ -66,32 +68,69 @@ class DecksView : View() {
 				}
 			}
 			left {
-				tvDecks = tableview(decksFiltered) {
-					hboxConstraints {
-						hGrow = Priority.ALWAYS
-					}
-					vboxConstraints {
-						vGrow = Priority.ALWAYS
-					}
-					column("Name", DeckModel::name) {
-						remainingWidth()
-					}
-					column("Format", DeckModel::format) {
-						contentWidth(35.0, useAsMin = true, useAsMax = true)
-					}
-					column("Archiv", DeckModel::archived) {
-						useCheckbox()
-						contentWidth(15.0, useAsMin = true, useAsMax = true)
+				splitpane(orientation = Orientation.VERTICAL) {
+					tvArchetypes = tableview(archetypesFiltered) {
+						hboxConstraints {
+							hGrow = Priority.ALWAYS
+						}
+						vboxConstraints {
+							vGrow = Priority.ALWAYS
+						}
+						column("Format", DeckTreeModel::format) {
+							contentWidth(35.0, useAsMin = true, useAsMax = true)
+						}
+						column("Name", DeckTreeModel::name) {
+							remainingWidth()
+						}
+						column("Archiv", DeckTreeModel::archived) {
+							useCheckbox()
+							contentWidth(15.0, useAsMin = true, useAsMax = true)
+						}
+
+						setRowFactory {
+							object: TableRow<DeckTreeModel>() {
+								override fun updateItem(deckModel: DeckTreeModel?, empty: Boolean) {
+									super.updateItem(deckModel, empty)
+									tooltip = deckModel?.comment?.value?.let { if(it.isNotBlank()) Tooltip(it) else null }
+
+									setOnContextMenuRequested { event ->
+										getContextMenu(item).show(this, event.screenX, event.screenY)
+									}
+								}
+							}
+						}
 					}
 
-					setRowFactory {
-						object: TableRow<DeckModel>() {
-							override fun updateItem(deckModel: DeckModel?, empty: Boolean) {
-								super.updateItem(deckModel, empty)
-								tooltip = deckModel?.comment?.value?.let { if(it.isNotBlank()) Tooltip(it) else null }
+					tvDecks = tableview(decksFiltered) {
+						hboxConstraints {
+							hGrow = Priority.ALWAYS
+						}
+						vboxConstraints {
+							vGrow = Priority.ALWAYS
+						}
+						column("Archetype", DeckVariantModel::archetypeName) {
+							remainingWidth()
+						}
+						column("Name", DeckVariantModel::name) {
+							remainingWidth()
+						}
+						column("Format", DeckVariantModel::format) {
+							contentWidth(35.0, useAsMin = true, useAsMax = true)
+						}
+						column("Archiv", DeckVariantModel::archived) {
+							useCheckbox()
+							contentWidth(15.0, useAsMin = true, useAsMax = true)
+						}
 
-								setOnContextMenuRequested { event ->
-									getContextMenu(item).show(this, event.screenX, event.screenY)
+						setRowFactory {
+							object: TableRow<DeckVariantModel>() {
+								override fun updateItem(deckModel: DeckVariantModel?, empty: Boolean) {
+									super.updateItem(deckModel, empty)
+									tooltip = deckModel?.comment?.value?.let { if(it.isNotBlank()) Tooltip(it) else null }
+
+									setOnContextMenuRequested { event ->
+										getContextMenu(item).show(this, event.screenX, event.screenY)
+									}
 								}
 							}
 						}
@@ -103,14 +142,29 @@ class DecksView : View() {
         }
     }
 
-	fun addNewDeck() {
+	fun addNewArchetype() {
 		transaction {
-			AddDeckDialog(this@DecksView).showAndWait().ifPresent { (name, format, comment) ->
+			AddDeckArchetypeDialog(this@DecksView).showAndWait().ifPresent { (name, format, comment) ->
 				transaction {
-					Deck.new {
+					DeckArchetype.new {
 						this.name = name
 						this.format = format
 						this.comment = comment
+					}
+					updateArchetypes()
+				}
+			}
+		}
+	}
+
+	fun addNewDeck(initialArchetype: DeckArchetypeModel? = null) {
+		transaction {
+			AddDeckVariantDialog(this@DecksView, initialArchetype?.item).showAndWait().ifPresent { (name, format, comment) ->
+				transaction {
+					DeckArchetype.new {
+						this.name = name
+						this.format = format
+						this.comment = comment// TODO
 					}
 					updateDecks()
 				}
@@ -118,7 +172,51 @@ class DecksView : View() {
 		}
 	}
 
-	private fun getContextMenu(deck: DeckModel?) = if(deck != null) ContextMenu().apply {
+	private fun getContextMenu(deck: DeckTreeModel?) = if(deck != null) ContextMenu().apply {
+		if(deck is DeckArchetypeModel) {
+			item("Add Deck") {
+				action {
+					println(deck.item)
+					addNewDeck(deck)
+				}
+			}
+		}
+		checkmenuitem("Archive") {
+			selectedProperty().bindBidirectional(deck.archived)
+		}
+	} else ContextMenu().apply {
+		item("Add new archetype") {
+			action {
+				addNewArchetype()
+			}
+		}
+	}
+
+	private fun getContextMenu(deck: DeckArchetypeModel?) = if(deck != null) ContextMenu().apply {
+		item("Delete") {
+			action {
+				confirmation("Are you sure you want to delete archetype $deck?", null, ButtonType.YES, ButtonType.NO) {
+					if(it == ButtonType.YES) {
+						transaction {
+							deck.item.delete()
+							updateArchetypes()
+						}
+					}
+				}
+			}
+		}
+		checkmenuitem("Archive") {
+			selectedProperty().bindBidirectional(deck.archived)
+		}
+	} else ContextMenu().apply {
+		item("Add new archetype") {
+			action {
+				addNewArchetype()
+			}
+		}
+	}
+
+	private fun getContextMenu(deck: DeckVariantModel?) = if(deck != null) ContextMenu().apply {
 			item("Delete") {
 				action {
 					confirmation("Are you sure you want to delete $deck?", null, ButtonType.YES, ButtonType.NO) {
@@ -135,7 +233,7 @@ class DecksView : View() {
 				selectedProperty().bindBidirectional(deck.archived)
 			}
 		} else ContextMenu().apply {
-			item("Add new deck") {
+			item("Add new archetype") {
 				action {
 					addNewDeck()
 				}

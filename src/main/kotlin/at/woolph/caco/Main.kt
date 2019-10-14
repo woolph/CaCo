@@ -5,8 +5,8 @@ import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.datamodel.decks.Builds
 import at.woolph.caco.datamodel.decks.DeckCards
-import at.woolph.caco.datamodel.decks.Decks
-import at.woolph.caco.datamodel.decks.Variants
+import at.woolph.caco.datamodel.decks.DeckArchetypes
+import at.woolph.caco.datamodel.decks.DeckVariants
 import at.woolph.caco.datamodel.sets.Cards
 import at.woolph.caco.datamodel.sets.Foil
 import at.woolph.caco.datamodel.sets.CardSet
@@ -24,7 +24,6 @@ import be.quodlibet.boxable.HorizontalAlignment
 import be.quodlibet.boxable.VerticalAlignment
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.joda.time.format.DateTimeFormat
 import java.io.*
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.font.PDType1Font
@@ -57,7 +56,7 @@ fun main(args: Array<String>) {
 	Database.connect("jdbc:h2:~/caco", driver = "org.h2.Driver")
 
 	transaction {
-		SchemaUtils.createMissingTablesAndColumns(CardSets, Cards, CardPossessions, Decks, Variants, Builds, DeckCards, ArenaCardPossessions)
+		SchemaUtils.createMissingTablesAndColumns(CardSets, Cards, CardPossessions, DeckArchetypes, DeckVariants, Builds, DeckCards, ArenaCardPossessions)
 	}
 
 	// @TODO wish list sorting (mark specific cards needed for decks or just for collection) => sort by price + modifier based on decklist needs
@@ -264,8 +263,8 @@ fun main(args: Array<String>) {
 							null
 						}
 
-						// todo print deck names for which it is wanted
-						// TODO print desired sets if there's also the possibility to complete collection while building the deck
+						// todo print archetype names for which it is wanted
+						// TODO print desired sets if there's also the possibility to complete collection while building the archetype
 					}
 
 

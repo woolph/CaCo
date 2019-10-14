@@ -7,7 +7,7 @@ import org.jetbrains.exposed.dao.IntIdTable
 
 object DeckCards : IntIdTable() {
     val build = reference("build", Builds).index()
-    val name = varchar("name", length = 256).index()
+    val name = varchar("archetypeName", length = 256).index()
     val place = enumeration("place", Place::class).index()
     val count = integer("count").index()
     val comment = text("comment").nullable()

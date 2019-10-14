@@ -5,14 +5,15 @@ import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleStringProperty
 import javafx.scene.control.ButtonType
 import javafx.scene.control.Dialog
+import javafx.scene.image.ImageView
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.Priority
 import tornadofx.*
 
 
-class AddDeckDialog(val owner: View): Dialog<Triple<String, Format, String>?>() {
-	val messages
-		get() = owner.messages
+class AddDeckArchetypeDialog(val owner: View): Dialog<Triple<String, Format, String>?>() {
+	val messages get() = owner.messages
+	val resources get() = owner.resources
 
 	val name = SimpleStringProperty("")
 	val format = SimpleObjectProperty(Format.Standard)
@@ -22,8 +23,8 @@ class AddDeckDialog(val owner: View): Dialog<Triple<String, Format, String>?>() 
 		initOwner(owner.primaryStage)
 
 		isResizable = true
-		title = "Adding a Deck"
-		headerText = "Add a Deck"
+		title = "Adding a DeckArchetype"
+		headerText = "Add a DeckArchetype"
 
 		dialogPane.apply {
 			content = BorderPane().apply {
@@ -37,7 +38,17 @@ class AddDeckDialog(val owner: View): Dialog<Triple<String, Format, String>?>() 
 								}
 							}
 							field("Format") {
-								combobox(format, Format.values().toList())
+								combobox(format, Format.values().toList()) {
+									/*cellFormat(FX.defaultScope) {
+										graphic = item?.let {
+											ImageView(resources.image("${it.name}.png")).apply {
+												fitHeight = 24.0
+												fitWidth = 24.0
+											}
+										}
+										text = item?.let { it.name }
+									}*/
+								}
 							}
 							field("Comment") {
 								textarea(comment)

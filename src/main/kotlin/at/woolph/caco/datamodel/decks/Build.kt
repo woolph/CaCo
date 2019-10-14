@@ -7,7 +7,7 @@ import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.dao.IntIdTable
 
 object Builds : IntIdTable() {
-    val variant = reference("variant", Variants).index()
+    val variant = reference("variant", DeckVariants).index()
 
     val version = varchar("version", length = 64).index().default("")
     val dateOfCreation = date("dateOfCreation").index()
@@ -19,7 +19,7 @@ object Builds : IntIdTable() {
 class Build(id: EntityID<Int>) : IntEntity(id) {
     companion object : IntEntityClass<Build>(Builds)
 
-    var variant by Variant referencedOn Builds.variant
+    var variant by DeckVariant referencedOn Builds.variant
 
     var version by Builds.version
     var dateOfCreation by Builds.dateOfCreation
