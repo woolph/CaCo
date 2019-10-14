@@ -38,4 +38,16 @@ class CardPossessionModel(card: Card, val collectionsSettings: CollectionSetting
 
 	fun getPaperPossessions(language: CardLanguage, condition: CardCondition)
 			= transaction { item.possessions.filter { it.language == language && it.condition == condition }.count() }
+
+	fun getPaperPossessionsString2(language: CardLanguage, condition: CardCondition? = null)
+			= transaction { String.format("%d/%d★",
+			item.possessions.filter { it.language == language && (condition == null || it.condition == condition) }.count(),
+			item.possessions.filter { it.language == language && (condition == null || it.condition == condition) && it.foil.isFoil }.count())
+	}
+	fun getPaperPossessionsString(language: CardLanguage, condition: CardCondition? = null): String {
+		val list = transaction { item.possessions.filter { it.language == language && (condition == null || it.condition == condition) } }
+		val count = list.count()
+		val foilCount = list.count { it.foil.isFoil }
+		return if(count>0) count.toString()+"'".repeat(foilCount) else ""
+	}
 }

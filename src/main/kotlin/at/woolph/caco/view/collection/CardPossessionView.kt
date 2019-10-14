@@ -27,12 +27,11 @@ class CardPossessionView(val cardProperty: SimpleObjectProperty<CardPossessionMo
 	private val conditions = CardCondition.values().filter { it != CardCondition.UNKNOWN }
 	private val possessions = generateMap(languages) { language ->
 		generateMap(conditions) { condition ->
-			cardProperty.integerBinding { it?.getPaperPossessions(language, condition) ?: 0 }
+			cardProperty.stringBinding { it?.getPaperPossessionsString(language, condition) }
 		}
 	}
-	private val sums = generateMap(languages) {
-		integerBinding(this, *possessions[it]?.values?.toTypedArray()
-				?: emptyArray()) { possessions[it]?.values?.sumBy { it.value } ?: 0 }
+	private val sums = generateMap(languages) { language ->
+		cardProperty.stringBinding { it?.getPaperPossessionsString(language) }
 	}
 
 	private val iconCollection = IconCollection(resources.image("mkm-icons.png"), 16.0, 16.0)
@@ -77,10 +76,13 @@ class CardPossessionView(val cardProperty: SimpleObjectProperty<CardPossessionMo
 			}
 		}
 		row {
-			label("\u2211")
+			label("\u2211") {
+				addClass(Styles.sumRow)
+			}
 			languages.forEach { cl ->
 				label {
-					textProperty().bind(sums[cl]?.toStringBinding())
+					textProperty().bind(sums[cl])
+					addClass(Styles.sumRow)
 				}
 			}
 		}
@@ -90,7 +92,7 @@ class CardPossessionView(val cardProperty: SimpleObjectProperty<CardPossessionMo
 
 				languages.forEach { cl ->
 					label {
-						textProperty().bind(possessions[cl]?.get(cc)?.toStringBinding())
+						textProperty().bind(possessions[cl]?.get(cc))
 					}
 				}
 			}

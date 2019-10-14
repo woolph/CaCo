@@ -17,6 +17,7 @@ class Styles : Stylesheet() {
 		// css classes
 		val cardDetailsView by cssclass()
 		val cardPossessionView by cssclass()
+		val sumRow by cssclass()
 	}
 
 	init {
@@ -30,6 +31,12 @@ class Styles : Stylesheet() {
 		cardPossessionView {
 			label {
 				fontSize = 14.px
+			}
+		}
+
+		cardPossessionView {
+			sumRow {
+				fontWeight = FontWeight.BOLD
 			}
 		}
 	}
