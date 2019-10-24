@@ -159,15 +159,13 @@ class DecksView : View() {
 
 	fun addNewDeck(initialArchetype: DeckArchetypeModel? = null) {
 		transaction {
-			AddDeckVariantDialog(this@DecksView, initialArchetype?.item).showAndWait().ifPresent { (name, format, comment) ->
-				transaction {
-					DeckArchetype.new {
-						this.name = name
-						this.format = format
-						this.comment = comment// TODO
-					}
-					updateDecks()
+			AddDeckVariantDialog(this@DecksView, initialArchetype?.item).showAndWait().ifPresent { (archetype, name, comment) ->
+				DeckVariant.new {
+					this.archetype = archetype
+					this.name = name
+					this.comment = comment// TODO
 				}
+				updateDecks()
 			}
 		}
 	}

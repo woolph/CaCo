@@ -13,13 +13,11 @@ import javafx.scene.layout.Priority
 import org.jetbrains.exposed.sql.transactions.transaction
 import tornadofx.*
 
-
-class AddDeckVariantDialog(val owner: View, initialArchetype: DeckArchetype? = null): Dialog<Triple<String, Format, String>?>() {
+class AddDeckVariantDialog(val owner: View, initialArchetype: DeckArchetype? = null): Dialog<Triple<DeckArchetype, String, String>?>() {
 	val messages get() = owner.messages
 	val resources get() = owner.resources
 
 	val name = SimpleStringProperty("")
-	val format = SimpleObjectProperty(Format.Standard)
 	val comment = SimpleStringProperty("")
 
 	val deckArchetype = SimpleObjectProperty<DeckArchetype?>()
@@ -30,7 +28,6 @@ class AddDeckVariantDialog(val owner: View, initialArchetype: DeckArchetype? = n
 		deckArchetypes.setAll(transaction { DeckArchetype.all().toList().observable().sorted { t1, t2 ->
 			t1.format.ordinal.compareTo(t2.format.ordinal)
 		}})
-
 	}
 
 	init {
@@ -70,9 +67,6 @@ class AddDeckVariantDialog(val owner: View, initialArchetype: DeckArchetype? = n
 									runLater { requestFocus() }
 								}
 							}
-							field("Format") {
-								combobox(format, Format.values().toList())
-							}
 							field("Comment") {
 								textarea(comment)
 							}
@@ -87,7 +81,7 @@ class AddDeckVariantDialog(val owner: View, initialArchetype: DeckArchetype? = n
 		setResultConverter { button ->
 			// TODO data validation check
 			when (button) {
-				ButtonType.APPLY -> Triple(name.value, format.value, comment.value)
+				ButtonType.APPLY -> Triple(deckArchetype.value!!, name.value, comment.value)
 				else -> null
 			}
 		}
