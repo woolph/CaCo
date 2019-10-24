@@ -13,7 +13,7 @@ object DeckVariants : IntIdTable() {
 
     val name = varchar("name", length = 256).index().nullable()
     val originator = varchar("originator", length = 256).index().default("")
-	val priority = enumeration("priority", Priority::class).index()
+	val priority = enumeration("priority", Priority::class).index().default(Priority.MaybeCool)
     val link = varchar("link", length = 256).nullable()
     val comment = text("comment").nullable()
 
