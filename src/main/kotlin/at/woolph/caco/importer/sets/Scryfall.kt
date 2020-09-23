@@ -10,8 +10,7 @@ import java.lang.IllegalArgumentException
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
-import javax.json.JsonNumber
-import javax.json.JsonObject
+import javax.json.*
 
 val patternPromoCollectorNumber = Regex("(s|★|c)$")
 
@@ -193,31 +192,45 @@ fun CardSet.importTokensOfSet(): Boolean {
     }
 }
 
+fun JsonArray.containsString(value: String): Boolean = this.indices.any {
+	try {
+		this.getString(it) == value
+	} catch (e: ClassCastException) {
+		false
+	}
+}
+
 fun CardSet.importPromosOfSet(): Boolean {
     try{
         queryPagedData("https://api.scryfall.com/cards/search?q=set%3Ap${this.shortName}&unique=prints&order=set") {
             if(it.getString("object") == "card") {
-                val numberInSetImported = paddingCollectorNumber("P" + it.getString("collector_number"))
-                Card.find { Cards.set.eq(this@importPromosOfSet.id).and(Cards.numberInSet.eq(numberInSetImported)) }.singleOrNull()?.apply {
-                    name = it.getString("name")
-                    arenaId = it["arena_id"]?.let { (it as? JsonNumber)?.intValue() }
-                    rarity = it.getString("rarity").parseRarity()
-                    promo = it.getBoolean("promo") || it.getString("collector_number").contains(patternPromoCollectorNumber)
-                    image = it.getJsonObject("image_uris")?.getString("png")?.let { URI(it) } ?:
-                            it.getJsonObjectArray("card_faces")?.get(0)?.getJsonObject("image_uris")?.getString("png")?.let { URI(it) }
-                    cardmarketUri = it.getJsonObject("purchase_uris")?.getString("cardmarket")?.let { URI(it) }
-                    // TODO update
-                } ?: Card.new {
-                    set = this@importPromosOfSet
-                    numberInSet = numberInSetImported
-                    name = it.getString("name")
-                    arenaId = it["arena_id"]?.let { (it as? JsonNumber)?.intValue() }
-                    rarity = it.getString("rarity").parseRarity()
-                    promo = it.getBoolean("promo") || it.getString("collector_number").contains(patternPromoCollectorNumber)
-                    image = it.getJsonObject("image_uris")?.getString("png")?.let { URI(it) } ?:
-                            it.getJsonObjectArray("card_faces")?.get(0)?.getJsonObject("image_uris")?.getString("png")?.let { URI(it) }
-                    cardmarketUri = it.getJsonObject("purchase_uris")?.getString("cardmarket")?.let { URI(it) }
-                }
+				if(!it.getJsonArray("promo_types").containsString("datestamped")
+						&& !it.getJsonArray("promo_types").containsString("prerelease")
+						//&& !it.getJsonArray("promo_types").containsString("promopack")
+						&& !it.getJsonArray("promo_types").containsString("promostamped") ) {
+					val numberInSetImported = paddingCollectorNumber("P" + it.getString("collector_number"))
+					Card.find { Cards.set.eq(this@importPromosOfSet.id).and(Cards.numberInSet.eq(numberInSetImported)) }.singleOrNull()?.apply {
+						name = it.getString("name")
+						arenaId = it["arena_id"]?.let { (it as? JsonNumber)?.intValue() }
+						rarity = it.getString("rarity").parseRarity()
+						promo = it.getBoolean("promo") || it.getString("collector_number").contains(patternPromoCollectorNumber)
+						image = it.getJsonObject("image_uris")?.getString("png")?.let { URI(it) } ?:
+								it.getJsonObjectArray("card_faces")?.get(0)?.getJsonObject("image_uris")?.getString("png")?.let { URI(it) }
+						cardmarketUri = it.getJsonObject("purchase_uris")?.getString("cardmarket")?.let { URI(it) }
+						// TODO update
+					} ?: Card.new {
+						set = this@importPromosOfSet
+						numberInSet = numberInSetImported
+						name = it.getString("name")
+						arenaId = it["arena_id"]?.let { (it as? JsonNumber)?.intValue() }
+						rarity = it.getString("rarity").parseRarity()
+						promo = it.getBoolean("promo") || it.getString("collector_number").contains(patternPromoCollectorNumber)
+						image = it.getJsonObject("image_uris")?.getString("png")?.let { URI(it) } ?:
+								it.getJsonObjectArray("card_faces")?.get(0)?.getJsonObject("image_uris")?.getString("png")?.let { URI(it) }
+						cardmarketUri = it.getJsonObject("purchase_uris")?.getString("cardmarket")?.let { URI(it) }
+					}
+				}
+
             }
         }
         return true

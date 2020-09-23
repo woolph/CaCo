@@ -25,8 +25,8 @@ class EnglishPaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
 	companion object {
 		val COLLECTION_SETTINGS = CollectionSettings(4, 1,
 				{ !it.digitalOnly },
-				{ it.possessions.filter { it.language == CardLanguage.ENGLISH && !it.foil.isFoil }.count() },
-				{ it.possessions.filter { it.language == CardLanguage.ENGLISH && it.foil.isFoil }.count() })
+				{ it.possessions.filter { it.language == CardLanguage.ENGLISH && !it.foil }.count() },
+				{ it.possessions.filter { it.language == CardLanguage.ENGLISH && it.foil }.count() })
 	}
 
 	override fun CardPossessionModel.filterView(): Boolean = true
@@ -116,8 +116,9 @@ class EnglishPaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
 										CardCondition.POOR -> "Poor"
 										else -> throw Exception("unknown condition")
 									}
-									val prereleasePromo = it[CardPossessions.foil] == Foil.PRERELASE_STAMPED_FOIL
-									val foil = if (it[CardPossessions.foil].isFoil) "foil" else ""
+									val prereleasePromo = it[CardPossessions.stampPrereleaseDate]
+									val promostamped = if(it[CardPossessions.stampPlaneswalkerSymbol]) "promo" else ""
+									val foil = if (it[CardPossessions.foil]) "foil" else ""
 									val language = it[CardPossessions.language].toLanguageDeckbox()
 									val setName = when {
 										prereleasePromo -> "Prerelease Events: ${set?.name}"
@@ -125,7 +126,7 @@ class EnglishPaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
 										else -> set?.name
 									}
 
-									out.println("$count,0,\"$cardName\",\"$setName\",$cardNumberInSet,$condition,$language,$foil,,,,,,,")
+									out.println("$count,0,\"$cardName\",\"$setName\",$cardNumberInSet,$condition,$language,$foil,,,,,$promostamped,,")
 								}
 							}
 						}

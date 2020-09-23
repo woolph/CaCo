@@ -42,12 +42,12 @@ class CardPossessionModel(card: Card, val collectionsSettings: CollectionSetting
 	fun getPaperPossessionsString2(language: CardLanguage, condition: CardCondition? = null)
 			= transaction { String.format("%d/%d★",
 			item.possessions.filter { it.language == language && (condition == null || it.condition == condition) }.count(),
-			item.possessions.filter { it.language == language && (condition == null || it.condition == condition) && it.foil.isFoil }.count())
+			item.possessions.filter { it.language == language && (condition == null || it.condition == condition) && it.foil }.count())
 	}
 	fun getPaperPossessionsString(language: CardLanguage, condition: CardCondition? = null): String {
 		val list = transaction { item.possessions.filter { it.language == language && (condition == null || it.condition == condition) } }
 		val count = list.count()
-		val foilCount = list.count { it.foil.isFoil }
+		val foilCount = list.count { it.foil }
 		return if(count>0) count.toString()+"'".repeat(foilCount) else ""
 	}
 }

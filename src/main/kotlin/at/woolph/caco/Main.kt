@@ -139,7 +139,7 @@ fun main(args: Array<String>) {
 			CardSet.all().forEach { set ->
 				println("${set.name}: needed cards --------------------------------------")
 				set.cards.sortedBy { it.numberInSet }.filter { !it.promo }.forEach {
-					val neededCount = max(0, 1 - it.possessions.filter { it.foil != Foil.NONFOIL }.count())
+					val neededCount = max(0, 1 - it.possessions.filter { it.foil }.count())
 					if (neededCount > 0) {
 						println("${neededCount}\t${it.name}\t[${it.rarity}]")
 					}

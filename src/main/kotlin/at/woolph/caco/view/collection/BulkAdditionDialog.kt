@@ -27,6 +27,7 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
     inner class CardModel(card: Card): at.woolph.caco.view.collection.CardModel(card) {
         val bulkAdditionNonPremium = SimpleIntegerProperty(0)
         val bulkAdditionPremium = SimpleIntegerProperty(0)
+		val bulkAdditionPrereleasePromo = SimpleIntegerProperty(0)
     }
 
     val languageProperty = SimpleObjectProperty(CardLanguage.ENGLISH)
@@ -72,7 +73,7 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
                                 this.card = cardInfo.item
                                 this.language = languageProperty.value
                                 this.condition = conditionProperty.value
-                                this.foil = Foil.NONFOIL
+                                this.foil = false
                             }
                         }
                     }
@@ -85,11 +86,25 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
 
                                 this.language = languageProperty.value
                                 this.condition = conditionProperty.value
-                                this.foil = Foil.FOIL
+                                this.foil = true
                             }
                         }
                     }
                 }
+				cardInfo.bulkAdditionPrereleasePromo.value.let { toBeAdded ->
+					if (toBeAdded > 0) {
+						repeat(toBeAdded) {
+							CardPossession.new {
+								this.card = cardInfo.item
+
+								this.language = languageProperty.value
+								this.condition = conditionProperty.value
+								this.foil = true
+								this.stampPrereleaseDate = true
+							}
+						}
+					}
+				}
             }
         }
     }
@@ -192,6 +207,7 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
                                                 when(foilProperty.value) {
                                                     Foil.NONFOIL -> tvCards.selectionModel.selectedItem.bulkAdditionNonPremium.set(bulkAddNumberProperty.get())
                                                     Foil.FOIL -> tvCards.selectionModel.selectedItem.bulkAdditionPremium.set(bulkAddNumberProperty.get())
+													Foil.PRERELASE_STAMPED_FOIL -> tvCards.selectionModel.selectedItem.bulkAdditionPrereleasePromo.set(bulkAddNumberProperty.get())
                                                     // TODO addition premium else ->
                                                 }
 
@@ -221,6 +237,7 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
                                     when(foilProperty.value) {
                                         Foil.NONFOIL -> tvCards.selectionModel.selectedItem.bulkAdditionNonPremium.set(bulkAddNumberProperty.get())
                                         Foil.FOIL -> tvCards.selectionModel.selectedItem.bulkAdditionPremium.set(bulkAddNumberProperty.get())
+                                        Foil.PRERELASE_STAMPED_FOIL -> tvCards.selectionModel.selectedItem.bulkAdditionPrereleasePromo.set(bulkAddNumberProperty.get())
                                         // TODO addition premium else ->
                                     }
 

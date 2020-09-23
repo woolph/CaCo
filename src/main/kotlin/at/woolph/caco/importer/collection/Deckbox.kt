@@ -67,19 +67,18 @@ fun importDeckbox(file: File) {
                         "Poor" -> CardCondition.POOR
                         else -> CardCondition.UNKNOWN
                     }
+					val stampPrereleaseDate = nextLine[3].startsWith("Prerelease Events: ")
                     val foil = when {
-                        nextLine[3].startsWith("Prerelease Events: ") -> Foil.PRERELASE_STAMPED_FOIL
-                        nextLine[7] == "foil" -> Foil.FOIL
-                        else -> Foil.NONFOIL
+						stampPrereleaseDate -> true
+                        nextLine[7] == "foil" -> true
+                        else -> false
                     }
+					val stampPlaneswalkerSymbol = nextLine[12] == "promo"
+					val markPlaneswalkerSymbol = false // TODO ??
                     val cardNumber = when{
-                        foil == Foil.PRERELASE_STAMPED_FOIL -> "P"
                         token -> "T"
                         else -> ""
-                    } + nextLine[4].padStart(3, '0') + when {
-                        foil == Foil.PRERELASE_STAMPED_FOIL -> "s"
-                        else -> ""
-                    }
+                    } + nextLine[4].padStart(3, '0')
                     val card = Card.find { (Cards.numberInSet eq cardNumber) and (Cards.set eq set.id) and (Cards.token eq token)}.firstOrNull()
                             ?: throw Exception("card #$cardNumber (\"$cardName\") not found in set $setName")
 
@@ -89,6 +88,9 @@ fun importDeckbox(file: File) {
                             this.language = language
                             this.condition = condition
                             this.foil = foil
+                            this.stampPrereleaseDate = stampPrereleaseDate
+                            this.stampPlaneswalkerSymbol = stampPlaneswalkerSymbol
+                            this.markPlaneswalkerSymbol = markPlaneswalkerSymbol
                         }
                     }
                 } catch (e: Exception) {
