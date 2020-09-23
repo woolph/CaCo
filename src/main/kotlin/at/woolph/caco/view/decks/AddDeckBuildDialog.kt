@@ -13,7 +13,7 @@ import javafx.scene.layout.Priority
 import org.jetbrains.exposed.sql.transactions.transaction
 import tornadofx.*
 
-class AddDeckVariantDialog(val owner: View, initialArchetype: DeckArchetype? = null): Dialog<Triple<DeckArchetype, String, String>?>() {
+class AddDeckBuildDialog(val owner: View, initialArchetype: DeckArchetype? = null): Dialog<Triple<DeckArchetype, String, String>?>() {
 	val messages get() = owner.messages
 	val resources get() = owner.resources
 

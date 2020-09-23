@@ -7,25 +7,32 @@ import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.dao.IntIdTable
 
 object Builds : IntIdTable() {
-    val variant = reference("variant", DeckVariants).index()
+    val archetype = reference("archetype", DeckArchetypes).index()
+
+	val parentBuild = reference("parentBuild", Builds).nullable()
 
     val version = varchar("version", length = 64).index().default("")
     val dateOfCreation = date("dateOfCreation").index()
     val dateOfLastModification = date("dateOfLastModification").index()
 	val latestSetConsidered = reference("latestSetConsidered", CardSets).index().nullable()
     val comment = text("comment").nullable()
+
+	val archived = bool("archived").default(false)
 }
 
 class Build(id: EntityID<Int>) : IntEntity(id) {
     companion object : IntEntityClass<Build>(Builds)
 
-    var variant by DeckVariant referencedOn Builds.variant
+    var archetype by DeckArchetype referencedOn Builds.archetype
+	var parentBuild by Build optionalReferencedOn Builds.parentBuild
 
     var version by Builds.version
     var dateOfCreation by Builds.dateOfCreation
     var dateOfLastModification by Builds.dateOfLastModification
     var latestSetConsidered by Builds.latestSetConsidered
     var comment by Builds.comment
+
+	val archived by Builds.archived
 
     val cards by DeckCard referrersOn DeckCards.build
 
