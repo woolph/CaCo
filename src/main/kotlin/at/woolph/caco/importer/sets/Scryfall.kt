@@ -11,6 +11,8 @@ import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
 import javax.json.*
+import kotlin.math.max
+import kotlin.math.min
 
 val patternPromoCollectorNumber = Regex("(s|★|c)$")
 
@@ -24,9 +26,10 @@ val patternPromoCollectorNumber = Regex("(s|★|c)$")
 fun paddingCollectorNumber(collectorNumber: String): String {
     val pattern = Regex("^([^\\d]*)(\\d*)([^\\d]*)$")
     val (prefix, number, suffix) = pattern.find(collectorNumber)?.let {
-        Triple(it.groupValues[1], it.groupValues[2].toInt(), it.groupValues[3])
+        Triple(it.groupValues[1].let { if(it == "TCH") "CH" else it }, it.groupValues[2].toInt(), it.groupValues[3])
     } ?: throw IllegalArgumentException("collectors number does not match the regex $pattern")
-    return String.format("%s%03d%s", prefix, number, suffix)
+	val numberPadding = min(max(3 - prefix.length, 0), 3)
+    return String.format("%s%0${numberPadding}d%s", prefix, number, suffix)
 }
 
 fun importSet(setCode: String): CardSet {
@@ -159,8 +162,8 @@ fun CardSet.importCardsOfSetAdditionalLanguage(language: String): Boolean {
 fun CardSet.importTokensOfSet(): Boolean {
     try{
         queryPagedData("https://api.scryfall.com/cards/search?q=set%3At${this.shortName}&unique=prints&order=set") {
-            if(it.getString("object") == "card" && !it.getString("collector_number").startsWith("CH")) { // ignore checklists // TODO remove checkklist-skip?!
-                val numberInSetImported = paddingCollectorNumber("T" + it.getString("collector_number"))
+            if(it.getString("object") == "card") {
+				val numberInSetImported = paddingCollectorNumber("T" + it.getString("collector_number"))
                 Card.find { Cards.set.eq(this@importTokensOfSet.id).and(Cards.numberInSet.eq(numberInSetImported)) }.singleOrNull()?.apply {
                     name = it.getString("name")
                     arenaId = it["arena_id"]?.let { (it as? JsonNumber)?.intValue() }
@@ -185,9 +188,10 @@ fun CardSet.importTokensOfSet(): Boolean {
                 }
             }
         }
+		// Substitute cards
 		try {
 			queryPagedData("https://api.scryfall.com/cards/search?q=set%3As${this.shortName}&unique=prints&order=set") {
-				if(it.getString("object") == "card" && !it.getString("collector_number").startsWith("CH")) { // ignore checklists // TODO remove checkklist-skip?!
+				if(it.getString("object") == "card") {
 					val numberInSetImported = paddingCollectorNumber("S" + it.getString("collector_number"))
 					Card.find { Cards.set.eq(this@importTokensOfSet.id).and(Cards.numberInSet.eq(numberInSetImported)) }.singleOrNull()?.apply {
 						name = it.getString("name")
@@ -234,7 +238,7 @@ fun CardSet.importPromosOfSet(): Boolean {
 						&& !it.getJsonArray("promo_types").containsString("prerelease")
 						//&& !it.getJsonArray("promo_types").containsString("promopack")
 						&& !it.getJsonArray("promo_types").containsString("promostamped") ) {
-					val numberInSetImported = paddingCollectorNumber("P" + it.getString("collector_number"))
+					val numberInSetImported = paddingCollectorNumber(it.getString("collector_number")+" P")
 					Card.find { Cards.set.eq(this@importPromosOfSet.id).and(Cards.numberInSet.eq(numberInSetImported)) }.singleOrNull()?.apply {
 						name = it.getString("name")
 						arenaId = it["arena_id"]?.let { (it as? JsonNumber)?.intValue() }
