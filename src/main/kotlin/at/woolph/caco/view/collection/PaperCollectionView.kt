@@ -3,10 +3,8 @@ package at.woolph.caco.view.collection
 import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.datamodel.collection.CardCondition
 import at.woolph.caco.datamodel.collection.CardLanguage
-import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.datamodel.sets.Cards
-import at.woolph.caco.datamodel.sets.Foil
 import at.woolph.caco.importer.collection.importDeckbox
 import at.woolph.caco.importer.collection.toLanguageDeckbox
 import at.woolph.libs.pdf.*
@@ -22,7 +20,7 @@ import tornadofx.*
 class PaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
 	// TODO collection modification matrix (language, condition, premium)
 	companion object {
-		val COLLECTION_SETTINGS = CollectionSettings(4, 1,
+		val COLLECTION_SETTINGS = CollectionSettings(1, 0,
 				{ !it.digitalOnly },
 				{ it.possessions.filter { !it.foil }.count() },
 				{ it.possessions.filter { it.foil }.count() })
