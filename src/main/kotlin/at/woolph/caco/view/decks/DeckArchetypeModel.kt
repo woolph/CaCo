@@ -9,5 +9,9 @@ class DeckArchetypeModel(deck: DeckArchetype): ItemViewModel<DeckArchetype>(deck
 	override val comment = bind(DeckArchetype::comment)
 	override val archived = bind(DeckArchetype::archived)
 
+	val priority = bind(DeckArchetype::priority)
+	val originator = bind(DeckArchetype::originator)
+	val link = bind(DeckArchetype::link)
+
 	override fun toString() = "[${format.value}] ${name.value}"
 }

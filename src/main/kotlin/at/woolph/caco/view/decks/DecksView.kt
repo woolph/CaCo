@@ -8,7 +8,6 @@ import javafx.scene.layout.BorderPane
 import javafx.scene.layout.Priority
 import org.jetbrains.exposed.sql.transactions.transaction
 import tornadofx.*
-import java.security.KeyStore
 
 class DecksView : View() {
     override val root = BorderPane()
@@ -20,12 +19,11 @@ class DecksView : View() {
 	fun DeckTreeModel.filterView(): Boolean = true
 
 
-	lateinit var tvDecks: TableView<DeckVariantModel>
-    val decks = FXCollections.observableArrayList<DeckVariantModel>()
+	lateinit var tvDecks: TableView<DeckBuildModel>
+    val decks = FXCollections.observableArrayList<DeckBuildModel>()
     val decksFiltered = decks.filtered { it.filterView() }
 
-    fun DeckVariantModel.filterView(): Boolean = true
-
+    fun DeckBuildModel.filterView(): Boolean = true
 
 	fun updateArchetypes() {
 		archetypes.setAll(transaction {
@@ -35,7 +33,7 @@ class DecksView : View() {
 
     fun updateDecks() {
 		decks.setAll(transaction {
-			DeckVariant.all().map { DeckVariantModel(it) }
+			Build.all().map { DeckBuildModel(it) }
         })
     }
 
@@ -108,23 +106,23 @@ class DecksView : View() {
 						vboxConstraints {
 							vGrow = Priority.ALWAYS
 						}
-						column("Archetype", DeckVariantModel::archetypeName) {
+						column("Archetype", DeckBuildModel::archetypeName) {
 							remainingWidth()
 						}
-						column("Name", DeckVariantModel::name) {
+						column("Name", DeckBuildModel::name) {
 							remainingWidth()
 						}
-						column("Format", DeckVariantModel::format) {
+						column("Format", DeckBuildModel::format) {
 							contentWidth(35.0, useAsMin = true, useAsMax = true)
 						}
-						column("Archiv", DeckVariantModel::archived) {
+						column("Archiv", DeckBuildModel::archived) {
 							useCheckbox()
 							contentWidth(15.0, useAsMin = true, useAsMax = true)
 						}
 
 						setRowFactory {
-							object: TableRow<DeckVariantModel>() {
-								override fun updateItem(deckModel: DeckVariantModel?, empty: Boolean) {
+							object: TableRow<DeckBuildModel>() {
+								override fun updateItem(deckModel: DeckBuildModel?, empty: Boolean) {
 									super.updateItem(deckModel, empty)
 									tooltip = deckModel?.comment?.value?.let { if(it.isNotBlank()) Tooltip(it) else null }
 
@@ -159,10 +157,10 @@ class DecksView : View() {
 
 	fun addNewDeck(initialArchetype: DeckArchetypeModel? = null) {
 		transaction {
-			AddDeckVariantDialog(this@DecksView, initialArchetype?.item).showAndWait().ifPresent { (archetype, name, comment) ->
-				DeckVariant.new {
+			AddDeckBuildDialog(this@DecksView, initialArchetype?.item).showAndWait().ifPresent { (archetype, subname, comment) ->
+				Build.new {
 					this.archetype = archetype
-					this.name = name
+					this.version = subname
 					this.comment = comment// TODO
 				}
 				updateDecks()
@@ -214,7 +212,7 @@ class DecksView : View() {
 		}
 	}
 
-	private fun getContextMenu(deck: DeckVariantModel?) = if(deck != null) ContextMenu().apply {
+	private fun getContextMenu(deck: DeckBuildModel?) = if(deck != null) ContextMenu().apply {
 			item("Delete") {
 				action {
 					confirmation("Are you sure you want to delete $deck?", null, ButtonType.YES, ButtonType.NO) {

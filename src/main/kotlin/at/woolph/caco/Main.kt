@@ -6,7 +6,6 @@ import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.datamodel.decks.Builds
 import at.woolph.caco.datamodel.decks.DeckCards
 import at.woolph.caco.datamodel.decks.DeckArchetypes
-import at.woolph.caco.datamodel.decks.DeckVariants
 import at.woolph.caco.datamodel.sets.Cards
 import at.woolph.caco.datamodel.sets.Foil
 import at.woolph.caco.datamodel.sets.CardSet
@@ -56,7 +55,7 @@ fun main(args: Array<String>) {
 	Database.connect("jdbc:h2:~/caco", driver = "org.h2.Driver")
 
 	transaction {
-		SchemaUtils.createMissingTablesAndColumns(CardSets, Cards, CardPossessions, DeckArchetypes, DeckVariants, Builds, DeckCards, ArenaCardPossessions)
+		SchemaUtils.createMissingTablesAndColumns(CardSets, Cards, CardPossessions, DeckArchetypes, Builds, DeckCards, ArenaCardPossessions)
 	}
 
 	// @TODO wish list sorting (mark specific cards needed for decks or just for collection) => sort by price + modifier based on decklist needs
