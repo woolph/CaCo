@@ -33,7 +33,7 @@ class PaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
             action {
 				set?.let {
 					transaction {
-						BulkAdditionDialog(it, this@PaperCollectionView, toggleButtonImageLoading.isSelected).showAndWait().ifPresent {
+						BulkAdditionDialog(it, this@PaperCollectionView, toggleButtonImageLoading.isSelected, tvCards.selectedItem?.item).showAndWait().ifPresent {
 							updateCards()
 						}
 					}

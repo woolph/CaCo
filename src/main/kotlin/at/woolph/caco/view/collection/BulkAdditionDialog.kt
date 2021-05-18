@@ -25,6 +25,7 @@ import javafx.scene.layout.Priority
 import javafx.stage.FileChooser
 import org.jetbrains.exposed.sql.transactions.transaction
 import tornadofx.*
+import java.io.File
 
 
 fun <S> TableView<S>.getNextEditableColumn(forward: Boolean, currentCol: TableColumn<S, out Any>?): TableColumn<S, *>? {
@@ -44,7 +45,7 @@ fun <S> TableView<S>.getNextEditableColumn(forward: Boolean, currentCol: TableCo
 	return columns[nextIndex]
 }
 
-class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolean): Dialog<Boolean>() {
+class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolean, selection: Card? = null): Dialog<Boolean>() {
 
     inner class CardModel(card: Card): at.woolph.caco.view.collection.CardModel(card) {
         val bulkAdditionNonPremium = SimpleIntegerProperty(0)
@@ -56,12 +57,6 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
     val conditionProperty = SimpleObjectProperty(CardCondition.NEAR_MINT)
     val foilProperty = SimpleObjectProperty(Foil.NONFOIL)
 
-    val bulkAddNumberProperty = SimpleIntegerProperty(0)
-    val bulkAddNumber by bulkAddNumberProperty
-
-    val bulkAddNumberFoilProperty = SimpleIntegerProperty(0)
-    val bulkAddNumberFoil by bulkAddNumberFoilProperty
-
     val filterTextProperty = SimpleStringProperty("")
     val filterNonFoilCompleteProperty = SimpleBooleanProperty(true)
     val filterFoilCompleteProperty = SimpleBooleanProperty(true)
@@ -70,7 +65,7 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
     val filterRarityRare = SimpleBooleanProperty(true)
     val filterRarityMythic = SimpleBooleanProperty(true)
 
-    lateinit var bulkAddNumberSpinner: Spinner<Number>
+    lateinit var bulkAddNumberTextField: TextField
     lateinit var tvCards: TableView<CardModel>
 	lateinit var toggleButtonImageLoading: ToggleButton
 
@@ -139,9 +134,6 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
                 && (filterRarityMythic || cardInfo.rarity.value != Rarity.MYTHIC)
         }
     }
-
-	var lastKeyEvent: KeyEvent? = null
-	var editingPosition: TablePosition<CardModel, *>? = null
 
     init {
         initOwner(owner.primaryStage)
@@ -212,12 +204,9 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
 							}
                         }
                         fieldset("Current Addition") {
-                        field("Foil") {
-                                combobox(foilProperty, Foil.values().asList())
-                            }
                             field("Number") {
-                                bulkAddNumberSpinner = spinner(0, 999, bulkAddNumberProperty.value, 1, true, property = bulkAddNumberProperty) {
-                                    this.editor.onKeyPressed = EventHandler {
+                                bulkAddNumberTextField = textfield {
+                                    onKeyPressed = EventHandler {
                                         when (it.code) {
                                             KeyCode.UP -> {
                                                 foilProperty.value = Foil.NONFOIL
@@ -227,51 +216,21 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
                                                 foilProperty.value = Foil.NONFOIL
                                                 tvCards.selectionModel.selectNext()
                                             }
-                                            KeyCode.ENTER -> {
-												commitValue()
-                                                when(foilProperty.value) {
-                                                    Foil.NONFOIL -> tvCards.selectionModel.selectedItem.bulkAdditionNonPremium.set(bulkAddNumberProperty.get())
-                                                    Foil.FOIL -> tvCards.selectionModel.selectedItem.bulkAdditionPremium.set(bulkAddNumberProperty.get())
-													Foil.PRERELASE_STAMPED_FOIL -> tvCards.selectionModel.selectedItem.bulkAdditionPrereleasePromo.set(bulkAddNumberProperty.get())
-                                                    // TODO addition premium else ->
-                                                }
-
-                                                if (it.isShiftDown) {
-                                                    foilProperty.value = Foil.values()[foilProperty.value.ordinal + 1]
-                                                    bulkAddNumberProperty.set(0)
-                                                    bulkAddNumberSpinner.editor.selectAll()
-
-                                                } else {
-                                                    foilProperty.value = Foil.NONFOIL
-                                                    tvCards.selectionModel.selectNext()
-                                                }
-                                            }
                                         }
                                     }
-                                }
-                            }
-                        }
-                        buttonbar {
-                            button("<") {
-                                action {
-                                    tvCards.selectionModel.selectPrevious()
-                                }
-                            }
-                            button("Add") {
-                                action {
-                                    when(foilProperty.value) {
-                                        Foil.NONFOIL -> tvCards.selectionModel.selectedItem.bulkAdditionNonPremium.set(bulkAddNumberProperty.get())
-                                        Foil.FOIL -> tvCards.selectionModel.selectedItem.bulkAdditionPremium.set(bulkAddNumberProperty.get())
-                                        Foil.PRERELASE_STAMPED_FOIL -> tvCards.selectionModel.selectedItem.bulkAdditionPrereleasePromo.set(bulkAddNumberProperty.get())
-                                        // TODO addition premium else ->
-                                    }
+                                    onAction = EventHandler {
+                                        val regex = Regex("(\\d+)?(\\*(\\d+))?(/(\\d+))?")
+                                        regex.matchEntire(this.text)?.let {
+                                            val nonfoils = it.groups[1]?.value?.toInt() ?: 0
+                                            val foils = it.groups[3]?.value?.toInt() ?: 0
+                                            val prereleaseStampedFoils = it.groups[5]?.value?.toInt() ?: 0
 
-                                    tvCards.selectionModel.selectNext()
-                                }
-                            }
-                            button(">") {
-                                action {
-                                    tvCards.selectionModel.selectNext()
+                                            tvCards.selectionModel.selectedItem.bulkAdditionNonPremium.set(nonfoils)
+                                            tvCards.selectionModel.selectedItem.bulkAdditionPremium.set(foils)
+                                            tvCards.selectionModel.selectedItem.bulkAdditionPrereleasePromo.set(prereleaseStampedFoils)
+                                            tvCards.selectionModel.selectNext()
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -299,79 +258,15 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
 
                         column("Add", CardModel::bulkAdditionNonPremium) {
                             contentWidth(5.0, useAsMin = true, useAsMax = true)
-							makeEditable()
                         }
 
                         column("Add Premium", CardModel::bulkAdditionPremium) {
                             contentWidth(5.0, useAsMin = true, useAsMax = true)
-							makeEditable()
                         }
 
 						column("Add Prerelease Promo", CardModel::bulkAdditionPrereleasePromo) {
 							contentWidth(5.0, useAsMin = true, useAsMax = true)
-							makeEditable()
 						}
-
-
-						addEventFilter(KeyEvent.KEY_PRESSED) {
-							if (it.code == KeyCode.TAB || it.code == KeyCode.ENTER) {
-								println("TAB or ENTER down on tableView")
-								editingPosition = editingCell
-								lastKeyEvent = it
-
-								this.edit(0, getNextEditableColumn(it.isShiftDown, editingCell?.tableColumn))
-								it.consume()
-							}
-//							when(it.code) {
-//								KeyCode.TAB -> {
-//									selectionModel.selectedCells.singleOrNull()?.let { currentCell ->
-//										selectionModel.clearAndSelect(currentCell.row)
-//										getNextEditableColumn(it.isShiftDown, editingCell?.tableColumn)
-//									}
-//								}
-//							}
-						}
-
-						setOnMouseReleased { editingPosition = null }
-						columns.forEach {
-							it.setOnEditCancel {
-								editingPosition = null
-							}
-							it.setOnEditCommit {
-								val editingPosition2 = editingPosition
-								val lastKeyEvent = lastKeyEvent
-								if (editingPosition2 != null && lastKeyEvent != null) {
-									if (lastKeyEvent.code == KeyCode.ENTER) {
-										var selectIdx: Int = if (lastKeyEvent.isShiftDown) {
-											editingPosition2.row - 1
-										} else {
-											editingPosition2.row + 1
-										}
-										if (selectIdx < 0) {
-											selectIdx = items.size - 1
-										} else if (selectIdx > items.size - 1) {
-											selectIdx = 0
-										}
-										layout()
-										scrollTo(if (selectIdx == 0) selectIdx else selectIdx - 1)
-										selectionModel.clearAndSelect(selectIdx)
-										edit(selectIdx, editingPosition2.tableColumn)
-									} else if (lastKeyEvent.code == KeyCode.TAB) {
-										getNextEditableColumn(!lastKeyEvent.isShiftDown, editingPosition2.tableColumn)?.let { colToEdit ->
-											layout()
-											scrollToColumn(colToEdit)
-											edit(editingPosition2.getRow(), colToEdit)
-										}
-									}
-
-									editingPosition = null
-								}
-							}
-						}
-
-
-						enableCellEditing()
-						regainFocusAfterEdit()
 
                         selectionModel.selectionMode = SelectionMode.SINGLE
                         selectionModel.selectedItemProperty().addListener { _, _, _ ->
@@ -388,11 +283,16 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
 									}
 								}
 							}
-                            bulkAddNumberProperty.set(0)
-                            bulkAddNumberSpinner.editorProperty().value.selectAll()
-                            bulkAddNumberSpinner.requestFocus()
+                            bulkAddNumberTextField.clear()
+                            bulkAddNumberTextField.requestFocus()
                         }
-						runLater { selectionModel.selectFirst() }
+						runLater {
+                           if(selection != null)
+                               selectionModel.select(items.find { it.item == selection })
+                           else
+                               selectionModel.selectFirst()
+
+						}
                     }
                 }
             }
