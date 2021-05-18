@@ -88,7 +88,7 @@ fun main(args: Array<String>) {
 				it.listFiles()?.asList()?.onEach { println("content $it") }
 						?.filter { it.name.toString().let { it.startsWith("Inventory") && it.endsWith(".csv")} }
 						?.onEach {println("passed filter $it") }
-						?.maxBy { it.lastModified() }
+						?.maxByOrNull { it.lastModified() }
 			} else {
 				it
 			}
