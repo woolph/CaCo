@@ -32,6 +32,8 @@ fun paddingCollectorNumber(collectorNumber: String): String {
     return String.format("%s%0${numberPadding}d%s", prefix, number, suffix)
 }
 
+// TODO import MDFC replacments (STX, KHM, ...)
+// TODO import double sided tokens as they are printed (especially those of the commander precons)
 fun importSet(setCode: String): CardSet {
     println("importing set $setCode")
     Thread.sleep(1000) // delay queries to scryfall api (to prevent overloading service)
