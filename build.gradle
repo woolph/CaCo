@@ -2,21 +2,11 @@
  * gradle build script
  * @author 001121673 Wolfgang Mayer
  */
-
-buildscript {
-	repositories {
-		mavenCentral()
-	}
-	dependencies {
-		classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.3.21'
-	}
+plugins {
+	id 'org.jetbrains.kotlin.jvm' version '1.5.0'
+	id 'application'
+	id 'org.openjfx.javafxplugin' version '0.0.9'
 }
-
-apply plugin: 'idea'
-apply plugin: 'eclipse'
-apply plugin: 'kotlin'
-apply plugin: 'maven'
-apply plugin: 'application'
 
 defaultTasks 'run'
 
@@ -30,21 +20,19 @@ repositories {
 }
 
 dependencies {
-	implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.3.21'
+	implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.5.0'
 
 	compile 'org.jetbrains.exposed:exposed:0.11.2'
 	compile 'org.json:json:20180813'
 	compile 'com.opencsv:opencsv:4.4'
-	compile 'no.tornado:tornadofx:1.7.18'
+	compile 'no.tornado:tornadofx:1.7.20'
 	compile 'javax.xml.bind:jaxb-api:2.1'
 	compile 'com.github.dhorions:boxable:1.5'
 	compile 'org.apache.xmlgraphics:batik-rasterizer:1.7'
 	compile 'org.apache.xmlgraphics:batik-codec:1.7'
-	compile group: 'no.tornado', name: 'tornadofx-controlsfx', version: '0.1'
 	compile group: 'org.jsoup', name: 'jsoup', version: '1.13.1'
 
 	compile 'org.apache.logging.log4j:log4j-core:2.7'
-	compile group: 'no.tornado', name: 'tornadofx', version: '1.7.18'
 	compile 'org.slf4j:slf4j-api:1.7.22'
 	compile 'org.slf4j:slf4j-ext:1.7.22'
 
@@ -63,20 +51,20 @@ test {
 
 project.mainClassName = 'at.woolph.caco.MainGuiKt'
 
-sourceCompatibility = '1.8'
+sourceCompatibility = '1.11'
 compileKotlin.kotlinOptions.jvmTarget = sourceCompatibility
 compileTestKotlin.kotlinOptions.jvmTarget = sourceCompatibility
 compileJava.options.encoding = 'UTF-8'
+
+javafx {
+	version = "11.0.2"
+	modules = [ 'javafx.controls' ]
+}
 
 jar {
 	manifest {
 		attributes 'Main-Class': project.mainClassName
 		//attributes 'SplashScreen-Image': renderSvg.resourceImage['splashScreen']
-	}
- 
-	from {
-		configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
-		configurations.runtime.collect { it.isDirectory() ? it : zipTree(it) }
 	}
 }
 
