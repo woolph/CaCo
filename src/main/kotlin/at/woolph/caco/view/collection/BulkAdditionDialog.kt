@@ -407,10 +407,10 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
                     true
                 }
                 buttonTypeExport -> {
-					chooseFile("Choose File to Export to", arrayOf(FileChooser.ExtensionFilter("CSV", "*.csv")), mode = FileChooserMode.Save).singleOrNull()?.let {
+					chooseFile("Choose File to Export to", arrayOf(FileChooser.ExtensionFilter("CSV", "*.csv")),  mode = FileChooserMode.Save, initialDirectory = File(System.getProperty("user.home"))).singleOrNull()?.let {
 						transaction {
 							it.printWriter().use { out ->
-								out.println("Count,Tradelist Count,Name,Edition,Card Number,CardCondition,Language,Foil,Signed,Artist Proof,Altered Art,Misprint,Promo,Textless,My Price")
+								out.println("Count,Tradelist Count,Name,Edition,Card Number,Condition,Language,Foil,Signed,Artist Proof,Altered Art,Misprint,Promo,Textless,My Price")
 								cards.forEach { cardInfo ->
 									val cardName = cardInfo.item.name
 									val cardNumberInSet = cardInfo.item.numberInSet
