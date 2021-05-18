@@ -17,6 +17,7 @@ object Builds : IntIdTable() {
 	val latestSetConsidered = reference("latestSetConsidered", CardSets).index().nullable()
     val comment = text("comment").nullable()
 
+    val currentlyBuilt = bool("currentlyBuilt").default(false)
 	val archived = bool("archived").default(false)
 }
 
@@ -32,6 +33,7 @@ class Build(id: EntityID<Int>) : IntEntity(id) {
     var latestSetConsidered by Builds.latestSetConsidered
     var comment by Builds.comment
 
+	val currentlyBuilt by Builds.currentlyBuilt
 	val archived by Builds.archived
 
     val cards by DeckCard referrersOn DeckCards.build
@@ -40,5 +42,6 @@ class Build(id: EntityID<Int>) : IntEntity(id) {
     val sideboard get() = cards.filter { it.place == Place.Sideboard }
     val maybeboard get() = cards.filter { it.place == Place.Maybeboard }
 
+    // TODO implement feature to show diff between two builds (to be able to compare)
 	// TODO state isReady (indicates that all cards needed are in the collection) => probably differentiate between paper and arena?!
 }
