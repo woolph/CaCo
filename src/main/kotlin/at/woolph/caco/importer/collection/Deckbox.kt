@@ -74,7 +74,7 @@ fun importDeckbox(file: File) {
                         else -> false
                     }
 					val stampPlaneswalkerSymbol = nextLine[12] == "promo"
-					val markPlaneswalkerSymbol = false // TODO ??
+					val markPlaneswalkerSymbol = nextLine[9] == "proof"
                     val cardNumber = when{
                         token -> "T"
                         else -> ""

@@ -166,6 +166,13 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
 								hGrow = Priority.ALWAYS
 							}
 						}
+                        button("+1") {
+                            action {
+                               tvCards.items.forEach {
+                                   it.bulkAdditionNonPremium.add(1)
+                               }
+                            }
+                        }
 					}
 				}
                 left {
@@ -315,7 +322,7 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
 					chooseFile("Choose File to Export to", arrayOf(FileChooser.ExtensionFilter("CSV", "*.csv")), mode = FileChooserMode.Save).singleOrNull()?.let {
 						transaction {
 							it.printWriter().use { out ->
-								out.println("Count,Tradelist Count,Name,Edition,Card Number,CardCondition,Language,Foil,Signed,Artist Proof,Altered Art,Misprint,Promo,Textless,My Price")
+								out.println("Count,Tradelist Count,Name,Edition,Card Number,Condition,Language,Foil,Signed,Artist Proof,Altered Art,Misprint,Promo,Textless,My Price")
 								cards.forEach { cardInfo ->
 									val cardName = cardInfo.item.name
 									val cardNumberInSet = cardInfo.item.numberInSet

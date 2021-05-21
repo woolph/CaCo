@@ -1,19 +1,14 @@
 package at.woolph.caco
 
-import at.woolph.caco.datamodel.collection.ArenaCardPossessions
-import at.woolph.caco.datamodel.collection.CardLanguage
-import at.woolph.caco.datamodel.collection.CardPossessions
+import at.woolph.caco.datamodel.collection.*
 import at.woolph.caco.datamodel.decks.Builds
 import at.woolph.caco.datamodel.decks.DeckCards
 import at.woolph.caco.datamodel.decks.DeckArchetypes
 import at.woolph.caco.datamodel.decks.DeckVariants
-import at.woolph.caco.datamodel.sets.Cards
-import at.woolph.caco.datamodel.sets.Foil
-import at.woolph.caco.datamodel.sets.CardSet
-import at.woolph.caco.datamodel.sets.CardSets
+import at.woolph.caco.datamodel.sets.*
 import at.woolph.caco.datamodel.sets.Cards.set
-import at.woolph.caco.datamodel.sets.Rarity
 import at.woolph.caco.importer.collection.importDeckbox
+import at.woolph.caco.importer.collection.toLanguageDeckbox
 import at.woolph.caco.importer.sets.importCardsOfSet
 import at.woolph.caco.importer.sets.importPromosOfSet
 import at.woolph.caco.importer.sets.importSet
@@ -40,6 +35,11 @@ const val SHOW_NEEDED_FOIL = "--showNeededCollectionFoil"
 const val SHOW_NEEDED_DECKLIST = "--showNeededDeck"
 const val PRINT_NEEDED_DECKLIST = "--printNeededDeck"
 
+const val REGISTER_CARDS_SET = "--enterSet"
+const val LANGUAGE = "--language="
+const val CONIDTION = "--condition="
+const val MYSTERY = "--pwstamp"
+
 const val PRINT_INVENTORY = "--printInventory="
 const val PRINT_INVENTORY_PDF = "--printInventoryToPdf="
 
@@ -61,6 +61,133 @@ fun main(args: Array<String>) {
 
 	// @TODO wish list sorting (mark specific cards needed for decks or just for collection) => sort by price + modifier based on decklist needs
 	// @TODO decklist => determine wishlist sorting (decklist priority)
+
+	val preferredLanguages = arrayOf(CardLanguage.ENGLISH, CardLanguage.GERMAN) // TODO configurable in collection settings of set?
+
+	if(args.any { it.startsWith(REGISTER_CARDS_SET) }) {
+		// import card database
+		val condition = args.singleOrNull { it.startsWith(CONIDTION) }?.let { CardCondition.valueOf(it.removePrefix(CONIDTION)) } ?: CardCondition.NEAR_MINT
+		val language = args.singleOrNull { it.startsWith(LANGUAGE) }?.let { CardLanguage.valueOf(it.removePrefix(LANGUAGE)) } ?: CardLanguage.ENGLISH
+		val pwstamp = args.any { it.startsWith(MYSTERY) }
+
+		val preferredLanguageIndex = preferredLanguages.indexOf(language)
+		val checkLanguages = (if(preferredLanguageIndex >= 0) preferredLanguages.copyOfRange(0, preferredLanguageIndex+1) else preferredLanguages).asList()
+
+		transaction {
+			File("D:\\mystery.csv").printWriter().use { out ->
+				out.println("Count,Tradelist Count,Name,Edition,Card Number,Condition,Language,Foil,Signed,Artist Proof,Altered Art,Misprint,Promo,Textless,My Price")
+				println("enter set code (or blank to stop)")
+				var setCode = readLine()
+
+				while(!setCode.isNullOrBlank()) {
+					val cardsToBeAdded = mutableMapOf<Triple<Card, Boolean, Boolean>, Int>()
+					try {
+						val cardSet = CardSet.find { CardSets.shortName.eq(setCode!!) }.singleOrNull() ?: importSet(setCode!!).apply {
+							importCardsOfSet()
+							importTokensOfSet()
+							importPromosOfSet()
+						}
+						println("Add to set $setCode $language $condition")
+
+						var card: Triple<Card, Boolean, Boolean>? = null
+						var input = readLine()
+						while(!input.isNullOrBlank()) {
+							if(input == "-") {
+								card?.let{
+									println("Removing ${it.first.name}")
+									cardsToBeAdded[it] = cardsToBeAdded.getOrDefault(it, 1) - 1
+								}
+							}
+							else if(input == "+") {
+								card?.let{
+									println("Add another ${it.first.name}"+if(it.second) "*" else "")
+									cardsToBeAdded[it] = cardsToBeAdded.getOrDefault(it, 0) + 1
+								}
+							}
+							else {
+								val collectorNumber = input.removeSuffix("*").removeSuffix("/")
+								val prereleaseStamp = input.endsWith("/")
+								val foil = input.endsWith("*") || prereleaseStamp
+
+								card = cardSet.cards.singleOrNull { it.numberInSet == collectorNumber }?.let { Triple(it, foil, prereleaseStamp) }
+
+								if(card != null) {
+									val addedTillNow = cardsToBeAdded.getOrDefault(card, 0)
+									if (addedTillNow + CardPossession.find { CardPossessions.card.eq(card.first.id).and(CardPossessions.foil.eq(card.second)).and(CardPossessions.language.inList(checkLanguages))
+													.let { if(!pwstamp) it.and(CardPossessions.markPlaneswalkerSymbol.eq(false)) else it } // check for preferred cards without pw stamp
+											}.count() == 0)
+										println("[NEW] Adding ${card.first.name} "+if(card.second) "*" else "")
+									else
+										println("Adding ${card.first.name}"+if(card.second) "*" else "")
+
+									cardsToBeAdded[card] = addedTillNow + 1
+								}
+								else {
+									println("$input not found")
+								}
+							}
+							input = readLine()
+						}
+
+						cardsToBeAdded.forEach { card, count ->
+							if(count > 0) {
+								val cardName = card.first.name
+								val cardNumberInSet = card.first.numberInSet
+								val token = card.first.token
+								val promo = card.first.promo
+								val condition2 = when (condition) {
+									CardCondition.NEAR_MINT -> "Near Mint"
+									CardCondition.EXCELLENT -> "Good (Lightly Played)"
+									CardCondition.GOOD -> "Played"
+									CardCondition.PLAYED -> "Heavily Played"
+									CardCondition.POOR -> "Poor"
+									else -> throw Exception("unknown condition")
+								}
+								val prereleasePromo = card.third
+								val language2 = language.toLanguageDeckbox()
+								val setName = when {
+									prereleasePromo -> "Prerelease Events: ${cardSet.name}"
+									token -> "Extras: ${cardSet.name}"
+									else -> cardSet.name
+								}
+
+								val foilString = if(card.second) "foil" else ""
+								val proofString = if(pwstamp) "proof" else ""
+								// TODO set names from scryfall to deckbox
+//								Global Series Jiang Yanggu & Mu Yanling	Global Series: Jiang Yanggu and Mu Yanling
+//								Modern Masters 2015	Modern Masters 2015 Edition
+//								Modern Masters 2017	Modern Masters 2017 Edition
+//								GRN Guild Kit	Guilds of Ravnica Guild Kit
+//								RNA Guild Kit	Ravnica Allegiance Guild Kit
+//								Commander 2011	Commander
+//								Magic 2014	Magic 2014 Core Set
+//								Magic 2015	Magic 2015 Core Set
+//								Duel Decks Anthology: Jace vs. Chandra	Duel Decks Anthology, Jace vs. Chandra
+//								alle Duel Decks Anthologies
+								out.println("$count,0,\"$cardName\",\"$setName\",$cardNumberInSet,$condition2,$language2,$foilString,,$proofString,,,,,")
+
+								repeat(count) {
+									CardPossession.new {
+										this.card = card.first
+										this.language = language
+										this.condition = condition
+										this.foil = card.second
+										this.stampPrereleaseDate = card.third
+										this.markPlaneswalkerSymbol = pwstamp
+									}
+								}
+							}
+						}
+					} catch(ex:Exception) {
+						ex.printStackTrace()
+					}
+
+					println("enter set code (or blank to stop)")
+					setCode = readLine()
+				}
+			}
+		}
+	}
 
 	if(args.any { it.startsWith(IMPORT_SET) }) {
 		// import card database
