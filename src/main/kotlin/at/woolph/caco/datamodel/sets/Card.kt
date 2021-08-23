@@ -21,6 +21,12 @@ object Cards : IntIdTable() {
     val token = bool("token").default(false).index()
     val image = varchar("imageURI", length = 256).nullable()
     val cardmarketUri = varchar("cardmarketUri", length = 256).nullable()
+
+    val nonfoilAvailable = bool("nonfoilAvailable").default(true)
+    val foilAvailable = bool("foilAvailable").default(true)
+    val fullArt = bool("fullArt").default(false)
+    val extendedArt = bool("extendedArt").default(false)
+    val specialDeckRestrictions = integer("specialDeckRestrictions").nullable()
     // TODO wanted possession count (overruling the default collectionsettings e.g. for planeswalker deck cards = 0, for "seven dwarves" = 7, for promo cards = 1)
 }
 
@@ -37,6 +43,12 @@ class Card(id: EntityID<Int>) : IntEntity(id) {
     var token by Cards.token
     var image by Cards.image.transform({ it?.toString() }, { it?.let { URI(it) } })
     var cardmarketUri by Cards.cardmarketUri.transform({ it?.toString() }, { it?.let { URI(it) } })
+
+    var nonfoilAvailable by Cards.nonfoilAvailable
+    var foilAvailable by Cards.foilAvailable
+    var fullArt by Cards.fullArt
+    var extendedArt by Cards.extendedArt
+    var specialDeckRestrictions by Cards.specialDeckRestrictions
 
     val possessions by CardPossession referrersOn CardPossessions.card
     val arenaPossessions by ArenaCardPossession referrersOn ArenaCardPossessions.card

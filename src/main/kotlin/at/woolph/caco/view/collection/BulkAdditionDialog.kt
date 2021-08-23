@@ -186,7 +186,7 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
                         button("+1") {
                             action {
                                tvCards.items.forEach {
-                                   it.bulkAdditionNonPremium.add(1)
+                                   it.bulkAdditionNonPremium.set(1)
                                }
                             }
                         }
@@ -204,7 +204,7 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
 						}
                         fieldset("Card Info") {
 							this += find<CardDetailsView>().apply {
-								tornadofx.runLater {
+								runLater {
 									this.cardProperty.bind(tvCards.selectionModel.selectedItemProperty())
 									this.imageLoadingProperty.bind(toggleButtonImageLoading.selectedProperty())
 								}

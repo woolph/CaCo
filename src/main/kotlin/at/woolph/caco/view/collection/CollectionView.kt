@@ -44,7 +44,8 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : View
     val sets = FXCollections.observableArrayList<CardSet>()
 
     val cards = FXCollections.observableArrayList<CardPossessionModel>()
-    val cardsFiltered = cards.filtered { cardInfo -> cardInfo.filterView() }
+    val cardsSorted = cards.sorted()
+    val cardsFiltered = cardsSorted.filtered { cardInfo -> cardInfo.filterView() }
 
     abstract fun CardPossessionModel.filterView(): Boolean
 
@@ -71,10 +72,11 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : View
     }
 
     fun CardSet.reimportSet(): CardSet = apply {
-        importCardsOfSet()
-        importCardsOfSetAdditionalLanguage("german")
-        importTokensOfSet()
-        importPromosOfSet()
+//        LOG.info("reimport current set $this")
+        importCardsOfSet(listOf("german"))
+//        importCardsOfSetAdditionalLanguage("german")
+//        importTokensOfSet()
+//        importPromosOfSet()
 
         updateCards()
     }
@@ -234,27 +236,27 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : View
 							object : TableRow<CardPossessionModel>() {
 								override fun updateItem(cardInfo: CardPossessionModel?, empty: Boolean) {
 									super.updateItem(cardInfo, empty)
-									tooltip = cardInfo?.let { CardImageTooltip(it, toggleButtonImageLoading.selectedProperty()) }
+//									tooltip = cardInfo?.let { CardImageTooltip(it, toggleButtonImageLoading.selectedProperty()) }
 								}
 							}
 						}
 
 						selectionModel.selectionMode = SelectionMode.SINGLE
-						selectionModel.selectedItemProperty().addListener { _, _, _ ->
-							if (toggleButtonImageLoading.isSelected) {
-								tornadofx.runAsync {
-									// precache the next images
-									listOf(tvCards.selectionModel.selectedIndex + 1,
-											tvCards.selectionModel.selectedIndex - 1,
-											tvCards.selectionModel.selectedIndex + 2,
-											tvCards.selectionModel.selectedIndex + 3).forEach {
-										if (0 <= it && it < tvCards.items.size) {
-											tvCards.items[it].getCachedImage()
-										}
-									}
-								}
-							}
-						}
+//						selectionModel.selectedItemProperty().addListener { _, _, _ ->
+//							if (toggleButtonImageLoading.isSelected) {
+//								tornadofx.runAsync {
+//									// precache the next images
+//									listOf(tvCards.selectionModel.selectedIndex + 1,
+//											tvCards.selectionModel.selectedIndex - 1,
+//											tvCards.selectionModel.selectedIndex + 2,
+//											tvCards.selectionModel.selectedIndex + 3).forEach {
+//										if (0 <= it && it < tvCards.items.size) {
+//											tvCards.items[it].getCachedImage()
+//										}
+//									}
+//								}
+//							}
+//						}
 					}
 				}
 			}

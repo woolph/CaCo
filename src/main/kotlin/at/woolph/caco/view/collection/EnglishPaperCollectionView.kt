@@ -23,7 +23,7 @@ import kotlin.math.max
 
 class EnglishPaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
 	companion object {
-		val COLLECTION_SETTINGS = CollectionSettings(4, 1,
+		val COLLECTION_SETTINGS = CollectionSettings(4, 1, 33,
 				{ !it.digitalOnly },
 				{ it.possessions.filter { it.language == CardLanguage.ENGLISH && !it.foil }.count() },
 				{ it.possessions.filter { it.language == CardLanguage.ENGLISH && it.foil }.count() })

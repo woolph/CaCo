@@ -9,4 +9,4 @@
  * in the user guide at https://docs.gradle.org/2.6/userguide/multi_project_builds.html
  */
 
-rootProject.name = 'CaCo'
+rootProject.name = "CaCo"

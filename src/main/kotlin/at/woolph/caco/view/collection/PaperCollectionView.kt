@@ -16,11 +16,13 @@ import org.jetbrains.exposed.sql.count
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
 import tornadofx.*
+import java.awt.Toolkit
+import java.awt.datatransfer.StringSelection
 
 class PaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
 	// TODO collection modification matrix (language, condition, premium)
 	companion object {
-		val COLLECTION_SETTINGS = CollectionSettings(1, 0,
+		val COLLECTION_SETTINGS = CollectionSettings(1, 0, 33,
 				{ !it.digitalOnly },
 				{ it.possessions.filter { !it.foil }.count() },
 				{ it.possessions.filter { it.foil }.count() })
@@ -150,20 +152,32 @@ class PaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
         }
         button("Export Missing") {
             action {
-				// TODO progress dialog
-				chooseFile("Choose File to Wants", arrayOf(FileChooser.ExtensionFilter("Text", "*.txt")), mode = FileChooserMode.Save).singleOrNull()?.let {
-					it.printWriter().use { out ->
-						transaction {
-							set?.cards?.sortedBy { it.numberInSet }?.filter { !it.promo }?.forEach {
-								val neededCount = kotlin.math.max(0, collectionSettings.cardPossesionTargtNonPremium - it.possessions.count())
-								//val n = if(set.cards.count { that -> it.name == that.name } > 1) " (#${it.numberInSet})" else ""
-								if (neededCount > 0) {
-									out.println("${neededCount} ${it.name} (${set?.name})")
-								}
+				Toolkit.getDefaultToolkit()
+					.systemClipboard
+					.setContents(
+						StringSelection(transaction {
+							cardsSorted.asSequence().map {
+								val neededCount = kotlin.math.max(0, it.possessionNonPremiumTarget.value - it.possessionNonPremium.value)
+								Triple(neededCount, it.name.value, it.set.value?.name)
+							}.filter { it.first > 0 }.joinToString("\n") {
+									"${it.first} ${it.second} (${it.third})"
 							}
-						}
-					}
-				}
+						} ?: ""),
+						null)
+//				// TODO progress dialog
+//				chooseFile("Choose File to Wants", arrayOf(FileChooser.ExtensionFilter("Text", "*.txt")), mode = FileChooserMode.Save).singleOrNull()?.let {
+//					it.printWriter().use { out ->
+//						transaction {
+//							set?.cards?.sortedBy { it.numberInSet }?.filter { !it.promo }?.forEach {
+//								val neededCount = kotlin.math.max(0, collectionSettings.cardPossesionTargtNonPremium - it.possessions.count())
+//								//val n = if(set.cards.count { that -> it.name == that.name } > 1) " (#${it.numberInSet})" else ""
+//								if (neededCount > 0) {
+//									out.println("${neededCount} ${it.name} (${set?.name})")
+//								}
+//							}
+//						}
+//					}
+//				}
             }
         }
     }

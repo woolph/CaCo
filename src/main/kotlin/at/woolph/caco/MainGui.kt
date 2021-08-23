@@ -9,27 +9,29 @@ import at.woolph.caco.view.collection.ArenaCollectionView
 import at.woolph.caco.view.collection.PaperCollectionView
 import at.woolph.caco.view.decks.DecksView
 import at.woolph.libs.ktfx.view
+import at.woolph.libs.log.logger
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.joda.time.format.DateTimeFormat
 import javafx.geometry.Side
 import javafx.scene.control.*
 import tornadofx.*
+import kotlin.system.measureTimeMillis
 
-/**
- * @see https://github.com/JetBrains/Exposed
- */
+private val log by logger("at.woolph.caco.MainGui")
+
 fun main(args: Array<String>) {
-	println("starting main")
-	val dtf = DateTimeFormat.forPattern("YYYY-MM-dd")
-	Database.connect("jdbc:h2:~/caco", driver = "org.h2.Driver")
+	log.trace("connecting DB")
+	log.trace("connecting DB took {} ms", measureTimeMillis {
+		Database.connect("jdbc:h2:~/caco", driver = "org.h2.Driver")
+	})
 
-	transaction {
-		SchemaUtils.createMissingTablesAndColumns(CardSets, Cards, CardPossessions, ArenaCardPossessions, DeckArchetypes, Builds, DeckCards)
-		//CardPossessions.deleteAll()
-	}
+	log.trace("createMissingTablesAndColumns took {} ms", measureTimeMillis {
+		transaction {
+			SchemaUtils.createMissingTablesAndColumns(CardSets, Cards, CardPossessions, ArenaCardPossessions, DeckArchetypes, Builds, DeckCards)
+		}
+	})
 
-
+	log.trace("launching UI")
 	launch<MyApp>(*args)
 }
 

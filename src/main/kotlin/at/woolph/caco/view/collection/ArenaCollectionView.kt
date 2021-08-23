@@ -7,7 +7,7 @@ import tornadofx.button
 
 class ArenaCollectionView: CollectionView(COLLECTION_SETTINGS) {
 	companion object {
-		val COLLECTION_SETTINGS = CollectionSettings(4, 0,
+		val COLLECTION_SETTINGS = CollectionSettings(4, 0, 4,
 				{ it.cards.any { it.arenaId != null } },
 				{ it.arenaPossessions.count() },
 				{ it.arenaPossessions.count() })

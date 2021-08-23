@@ -3,68 +3,67 @@
  * @author 001121673 Wolfgang Mayer
  */
 plugins {
-	id 'org.jetbrains.kotlin.jvm' version '1.5.0'
 	id 'application'
-	id 'org.openjfx.javafxplugin' version '0.0.9'
+	id "org.jetbrains.kotlin.jvm" version "1.5.0"
+	id "org.openjfx.javafxplugin" version "0.0.9"
 }
 
-defaultTasks 'run'
-
-project.group = 'at.woolph'
-project.archivesBaseName = 'caco'
-project.version = '0.1.1'
+project.group = "at.woolph"
+project.version = "0.1.1"
 
 repositories {
-	maven {url 'https://dl.bintray.com/kotlin/exposed/' }
 	mavenCentral()
 }
 
 dependencies {
-	implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.5.0'
+	implementation "org.jetbrains.kotlin:kotlin-stdlib:1.5.0"
+	implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.5.0"
+	implementation "org.jetbrains.kotlin:kotlin-reflect:1.5.0"
 
-	implementation 'org.jetbrains.exposed:exposed:0.11.2'
-	implementation 'org.json:json:20180813'
-	implementation 'com.opencsv:opencsv:4.4'
-	implementation 'no.tornado:tornadofx:1.7.20'
-	implementation 'javax.xml.bind:jaxb-api:2.1'
-	implementation 'com.github.dhorions:boxable:1.5'
-	implementation 'org.apache.xmlgraphics:batik-rasterizer:1.7'
-	implementation 'org.apache.xmlgraphics:batik-codec:1.7'
-	implementation 'org.jsoup:jsoup:1.13.1'
+	implementation "org.jetbrains.exposed:exposed:0.17.13"
+	implementation "org.json:json:20180813"
+	implementation "com.opencsv:opencsv:4.4"
+	implementation "no.tornado:tornadofx:1.7.20"
+	implementation "javax.xml.bind:jaxb-api:2.1"
+	implementation "com.github.dhorions:boxable:1.5"
+	implementation "org.apache.xmlgraphics:batik-rasterizer:1.7"
+	implementation "org.apache.xmlgraphics:batik-codec:1.7"
+	implementation "org.jsoup:jsoup:1.13.1"
 
-	implementation 'org.apache.logging.log4j:log4j-core:2.7'
-	implementation 'org.slf4j:slf4j-api:1.7.22'
-	implementation 'org.slf4j:slf4j-ext:1.7.22'
+	implementation "org.slf4j:slf4j-api:1.7.31"
+	implementation "org.slf4j:slf4j-ext:1.7.31"
+	runtimeOnly "ch.qos.logback:logback-classic:1.2.3"
 
-	implementation fileTree(dir: 'libs', include: ['*.jar'])
+
+	implementation fileTree(dir: "libs", include: ["*.jar"])
 
 	//integratedLibs fileTree(dir: 'libs', include: ['*.jar'])
 
-	runtimeOnly 'com.h2database:h2:1.4.197'
+	runtimeOnly "com.h2database:h2:1.4.197"
 
-	testCompileOnly 'junit:junit:4.12'
+	testCompileOnly "junit:junit:4.12"
 }
 
 test {
 	useJUnitPlatform()
 }
 
-project.mainClassName = 'at.woolph.caco.MainGuiKt'
+project.mainClassName = "at.woolph.caco.MainGuiKt"
 
-sourceCompatibility = '1.11'
+sourceCompatibility = JavaVersion.VERSION_11
 compileKotlin.kotlinOptions.jvmTarget = sourceCompatibility
 compileTestKotlin.kotlinOptions.jvmTarget = sourceCompatibility
 compileJava.options.encoding = 'UTF-8'
 
 javafx {
 	version = "11.0.2"
-	modules = [ 'javafx.controls' ]
+	modules = [ "javafx.controls" ]
 }
 
 jar {
 	manifest {
-		attributes 'Main-Class': project.mainClassName
-		//attributes 'SplashScreen-Image': renderSvg.resourceImage['splashScreen']
+		attributes "Main-Class": project.mainClassName
+		//attributes "SplashScreen-Image": renderSvg.resourceImage['splashScreen']
 	}
 }
 
@@ -72,16 +71,3 @@ applicationDefaultJvmArgs = [
 	"-Dapplication.name=${project.name}",
 	"-Dapplication.fullversion=${project.version}",
 ]
-
-run {
-	//args 'opc.tcp://192.168.110.1:4840/'
-	//args 'C:\\c2k\\localstartup\\215310\\1\\backup'
-	//args '--debug'
-	//args '--showNeededCollection=grn'
-	//args '--importBase=AER,AKH,APC,AVR,BFZ,BBD,CHK,6ED,C18,CM2,CN2,M19,DKA,DOM,EMN,EMA,EXO,FRF,5ED,V16,GTC,GPT,GK1,HOU,IMA,ISD,INV,XLN,JOU,KLD,KTK,M11,M13,M14,M15,ORI,MMQ,MIR,MM2,MM3,NEM,OGW,ODY,PLS,PCY,RTR,RIX,SOM,SOI,STH,TMP,UDS,ULG,USG'
-	//args '--importBase=grn,m19,dom,rix,xln,usg,ulg,uds', '--importInventory=C:\\Users\\001121673\\Downloads\\Inventory.csv', '--showNeededCollection'
-	//args '--importInventory=D:\\woolph\\Downloads\\Inventory1.csv'
-	//args '--showNeededDeck'
-	args "--printInventory=rna"
-	//args '--importBase=rna'
-}

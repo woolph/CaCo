@@ -6,18 +6,14 @@ import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.datamodel.decks.Builds
 import at.woolph.caco.datamodel.decks.DeckCards
 import at.woolph.caco.datamodel.decks.DeckArchetypes
-import at.woolph.caco.datamodel.decks.DeckVariants
 import at.woolph.caco.datamodel.sets.Cards
-import at.woolph.caco.datamodel.sets.Foil
 import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.datamodel.sets.CardSets
 import at.woolph.caco.datamodel.sets.Cards.set
 import at.woolph.caco.datamodel.sets.Rarity
 import at.woolph.caco.importer.collection.importDeckbox
-import at.woolph.caco.importer.sets.importCardsOfSet
-import at.woolph.caco.importer.sets.importPromosOfSet
-import at.woolph.caco.importer.sets.importSet
-import at.woolph.caco.importer.sets.importTokensOfSet
+import at.woolph.caco.importer.sets.*
+import at.woolph.libs.log.logger
 import at.woolph.libs.pdf.*
 import be.quodlibet.boxable.BaseTable
 import be.quodlibet.boxable.HorizontalAlignment
@@ -27,11 +23,17 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import java.io.*
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.font.PDType1Font
+import org.joda.time.DateTime
 import java.awt.Color
 import java.nio.file.Paths
+import java.util.*
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.system.measureTimeMillis
 
+private val LOG by logger("at.woolph.caco.Main")
+
+const val IMPORT_SETS = "--importSets"
 const val IMPORT_SET = "--importSet="
 const val IMPORT_INVENTORY = "--importInventory="
 const val SHOW_NEEDED_PLAYSET_ALL = "--showNeededCollection"
@@ -50,7 +52,7 @@ const val ICON_NOT_OWNED_CARD = "\u25a1" // "\u25CB"
 const val ICON_REDUNDANT_OWNED_CARD = "+"
 
 /**
- * @see https://github.com/JetBrains/Exposed
+ *
  */
 fun main(args: Array<String>) {
 	Database.connect("jdbc:h2:~/caco", driver = "org.h2.Driver")
@@ -59,6 +61,20 @@ fun main(args: Array<String>) {
 		SchemaUtils.createMissingTablesAndColumns(CardSets, Cards, CardPossessions, DeckArchetypes, Builds, DeckCards, ArenaCardPossessions)
 	}
 
+	if (args.any { it.startsWith(IMPORT_SETS) }) {
+		LOG.info("importing all sets and cards took {} ms", measureTimeMillis {
+			transaction {
+					importSets()
+//						.filter { it.dateOfRelease.isAfter(DateTime.parse("2020-01-01")) }
+						.forEach {
+						LOG.info("importing cards for set {} cards took {} ms", it.shortName, measureTimeMillis {
+						LOG.debug("${it.shortName} ${it.otherScryfallSetCodes.joinToString(",")}")
+						it.importCardsOfSet()
+						})
+					}
+			}
+		})
+	}
 	// @TODO wish list sorting (mark specific cards needed for decks or just for collection) => sort by price + modifier based on decklist needs
 	// @TODO decklist => determine wishlist sorting (decklist priority)
 
@@ -70,10 +86,8 @@ fun main(args: Array<String>) {
 
 			setCodes.forEach { setCode ->
 				try {
-					importSet(setCode.toLowerCase()).apply {
+					importSet(setCode.lowercase(Locale.getDefault())).apply {
 						importCardsOfSet()
-						importTokensOfSet()
-						importPromosOfSet()
 					}
 				} catch(ex:Exception) {
 					ex.printStackTrace()
@@ -109,7 +123,7 @@ fun main(args: Array<String>) {
 						val neededCount = max(0, 4 - it.possessions.count())
 						val n = if (set.cards.count { that -> it.name == that.name } > 1) " (#${it.numberInSet})" else ""
 						if (neededCount > 0) {
-							println("${neededCount} ${it.name}")
+							println("${neededCount} ${it.name}$n")
 						}
 					}
 				}
@@ -149,19 +163,21 @@ fun main(args: Array<String>) {
 	}
 
 	// get needed cards for decklists
-	if(args.any { it.startsWith(SHOW_NEEDED_DECKLIST) }) {
+	if (args.any { it.startsWith(SHOW_NEEDED_DECKLIST) }) {
 		transaction {
-			val deckNeeds = DeckCards.slice(DeckCards.count.sum(), DeckCards.name).selectAll().groupBy(DeckCards.build, DeckCards.name)
-					.groupingBy { it[DeckCards.name] }.aggregate<ResultRow, String, Long> { _, accumulator: Long?, element, first ->
-						if(first) element.data[0] as Long else max(accumulator!!, element.data[0]!! as Long)
+			val expressionSumOfCardsInDeckNeeded = DeckCards.count.sum()
+			val deckNeeds = DeckCards.slice(expressionSumOfCardsInDeckNeeded, DeckCards.name).selectAll().groupBy(DeckCards.build, DeckCards.name)
+					.groupingBy { it[DeckCards.name] }.aggregate<ResultRow, String, Int> { _, accumulator: Int?, element, first ->
+						if(first) element[expressionSumOfCardsInDeckNeeded]!! else max(accumulator!!, element[expressionSumOfCardsInDeckNeeded]!!)
 					}
 
 			println("needed cards --------------------------------------")
 			deckNeeds.forEach { (cardName, neededCount) ->
 
-				val available = (Cards innerJoin CardPossessions).slice(CardPossessions.card.count())
+				val cardPossessionsCount = CardPossessions.card.count()
+				val available = (Cards innerJoin CardPossessions).slice(cardPossessionsCount)
 						.select { Cards.name eq cardName }.groupBy(Cards.name)
-						.map { it.data[0] as Long }.first()
+						.map { it[cardPossessionsCount] }.first()
 
 				if(neededCount-available>0) {
 					println("${neededCount - available}\t${cardName}")
@@ -170,7 +186,7 @@ fun main(args: Array<String>) {
 		}
 	}
 
-	if(args.any { it.startsWith(PRINT_INVENTORY) }) {
+	if (args.any { it.startsWith(PRINT_INVENTORY) }) {
 		// import card database
 		transaction {
 			val setCodes = args.filter { it.startsWith(PRINT_INVENTORY) }
@@ -193,7 +209,7 @@ fun main(args: Array<String>) {
 
 	val fontTitle = Font(PDType1Font.HELVETICA_BOLD, 10f)
 
-	if(args.any { it.startsWith(PRINT_INVENTORY_PDF) }) {
+	if (args.any { it.startsWith(PRINT_INVENTORY_PDF) }) {
 		// import card database
 		transaction {
 			val setCodes = args.filter { it.startsWith(PRINT_INVENTORY_PDF) }
@@ -247,15 +263,17 @@ fun main(args: Array<String>) {
 	}
 
 	// get needed cards for decklists
-	if(args.any { it.startsWith(PRINT_NEEDED_DECKLIST) }) {
+	if (args.any { it.startsWith(PRINT_NEEDED_DECKLIST) }) {
 		transaction {
+			val expressionSumOfCardsInDeckNeeded = DeckCards.count.sum()
 			val deckNeeds = DeckCards.slice(DeckCards.count.sum(), DeckCards.name).selectAll().groupBy(DeckCards.build, DeckCards.name)
-					.groupingBy { it[DeckCards.name] }.aggregate<ResultRow, String, Long> { _, accumulator: Long?, element, first ->
-						if(first) element.data[0] as Long else max(accumulator!!, element.data[0]!! as Long)
+					.groupingBy { it[DeckCards.name] }.aggregate<ResultRow, String, Int> { _, accumulator: Int?, element, first ->
+						if(first) element[expressionSumOfCardsInDeckNeeded]!! else max(accumulator!!, element[expressionSumOfCardsInDeckNeeded]!!)
 					}.mapNotNull { (cardName, neededCount) ->
-						val available = (Cards innerJoin CardPossessions).slice(CardPossessions.card.count())
+						val cardPossessionsCount = CardPossessions.card.count()
+						val available = (Cards innerJoin CardPossessions).slice(cardPossessionsCount)
 								.select { Cards.name eq cardName }.groupBy(Cards.name)
-								.map { it.data[0] as Long }.first()
+								.map { it[cardPossessionsCount] }.first()
 
 						if(neededCount-available>0) {
 							Pair(cardName, neededCount - available)

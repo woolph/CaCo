@@ -1,11 +1,8 @@
 package at.woolph.libs.log
 
-import org.apache.logging.log4j.Level
-import org.apache.logging.log4j.LogManager
-import org.apache.logging.log4j.core.LoggerContext
-import org.apache.logging.log4j.Logger as Log4jLogger
+import org.slf4j.LoggerFactory
 
-class Logger(private val logger: Log4jLogger) : Log4jLogger by logger {
+class Logger(private val logger: org.slf4j.Logger) : org.slf4j.Logger by logger {
 	fun debug(throwable: Throwable) {
 		if(this.isDebugEnabled)
 			this.debug(null as String?, throwable)
@@ -81,7 +78,7 @@ class Logger(private val logger: Log4jLogger) : Log4jLogger by logger {
 			this.error(message.invoke())
 	}
 
-	override fun <T: Throwable> throwing(throwable: T): T {
+	fun <T: Throwable> throwing(throwable: T): T {
 		if(isDebugEnabled)
 			debug("throwing exception", throwable)
 		return throwable
@@ -105,18 +102,18 @@ class Logger(private val logger: Log4jLogger) : Log4jLogger by logger {
 		}
 	}
 
-	fun activateDebugMode() {
-		val ctx = LogManager.getContext(false) as LoggerContext
-		val loggerConfig = ctx.configuration.getLoggerConfig(name)
-		loggerConfig.level = Level.ALL
-		ctx.updateLoggers()
-	}
+//	fun activateDebugMode() {
+//		val ctx = LogManager.getContext(false) as LoggerContext
+//		val loggerConfig = ctx.configuration.getLoggerConfig(name)
+//		loggerConfig.level = Level.ALL
+//		ctx.updateLoggers()
+//	}
 }
 
 fun <R : Any> R.logger(className: String = this::class.java.name): Lazy<Logger> {
-	return lazy { Logger(LogManager.getLogger(className.removeSuffix("\$Companion"))) }
+	return lazy { Logger(LoggerFactory.getLogger(className.removeSuffix("\$Companion"))) }
 }
 
 fun logger(className: String): Lazy<Logger> {
-	return lazy { Logger(LogManager.getLogger(className.removeSuffix("\$Companion"))) }
+	return lazy { Logger(LoggerFactory.getLogger(className.removeSuffix("\$Companion"))) }
 }
