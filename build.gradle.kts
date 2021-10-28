@@ -37,7 +37,9 @@ dependencies {
 	runtimeOnly("ch.qos.logback:logback-classic:1.2.3")
 	runtimeOnly("com.h2database:h2:1.4.197")
 
-	testCompileOnly("junit:junit:4.12")
+	testImplementation("io.kotest:kotest-property:4.6.1")
+	testImplementation("io.kotest:kotest-runner-junit5-jvm:4.6.1")
+	testImplementation("io.mockk:mockk:1.9.3.kotlin12")
 }
 
 tasks.withType<Test> {
