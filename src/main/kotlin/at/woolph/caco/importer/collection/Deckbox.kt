@@ -129,4 +129,6 @@ val setNameMapping = mapOf(
     "Duel Decks Anthology, Elves vs. Goblins" to "Duel Decks Anthology: Elves vs. Goblins",
     "Duel Decks Anthology, Garruk vs. Liliana" to "Duel Decks Anthology: Garruk vs. Liliana",
     "Time Spiral \"Timeshifted\"" to "Time Spiral Remastered",
+    "Adventures in the Forgotten Realms Commander" to "Forgotten Realms Commander",
+    "Innistrad: Midnight Hunt Commander" to "Midnight Hunt Commander",
 )
