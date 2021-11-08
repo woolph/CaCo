@@ -175,6 +175,7 @@ fun CardSet.importCardsOfSet(additionalLanguages: List<String> = emptyList()) {
                             isToken -> "T" + it.getString("collector_number")
                             else -> it.getString("collector_number")
                         })
+                        val isExtra = !it.getBoolean("booster")
                         val isNonfoilAvailable = it.getBoolean("nonfoil")
                         val isFoilAvailable = it.getBoolean("foil")
                         val isFullArt = it.getBoolean("full_art")
@@ -222,6 +223,7 @@ fun CardSet.importCardsOfSet(additionalLanguages: List<String> = emptyList()) {
                                         it.getJsonObjectArray("card_faces")?.get(0)?.getJsonObject("image_uris")?.getString("png")?.let { URI(it) }
                                 cardmarketUri = it.getJsonObject("purchase_uris")?.getString("cardmarket")?.let { URI(it) }
 
+                                extra = isExtra
                                 nonfoilAvailable = isNonfoilAvailable
                                 foilAvailable = isFoilAvailable
                                 fullArt = isFullArt
@@ -240,6 +242,7 @@ fun CardSet.importCardsOfSet(additionalLanguages: List<String> = emptyList()) {
                                         it.getJsonObjectArray("card_faces")?.get(0)?.getJsonObject("image_uris")?.getString("png")?.let { URI(it) }
                                 cardmarketUri = it.getJsonObject("purchase_uris")?.getString("cardmarket")?.let { URI(it) }
 
+                                extra = isExtra
                                 nonfoilAvailable = isNonfoilAvailable
                                 foilAvailable = isFoilAvailable
                                 fullArt = isFullArt

@@ -20,8 +20,9 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : View
     companion object {
         val FOIL_NOT_IN_POSSESION = "\u2606"
         val FOIL_IN_POSSESION = "\u2605"
-        val CARD_NOT_IN_POSSESION = "\u2B1C"
-        val CARD_IN_POSSESION = "\u2B1B"
+        val NONFOIL_NOT_IN_POSSESION = "\u2B1C"
+        val NONFOIL_IN_POSSESION = "\u2B1B"
+        val CARD_IN_POSSESION = "\u2B24"
         val ICON_REDUNDANT_OWNED_CARD = "+"
     }
 
@@ -31,6 +32,7 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : View
     var set by setProperty
 
     val filterTextProperty = SimpleStringProperty("")
+    val filterCompleteProperty = SimpleBooleanProperty(true)
     val filterNonFoilCompleteProperty = SimpleBooleanProperty(true)
     val filterFoilCompleteProperty = SimpleBooleanProperty(true)
     val filterRarityCommon = SimpleBooleanProperty(true)
@@ -81,9 +83,10 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : View
         updateCards()
     }
 
-    fun setFilter(text: String, nonFoilComplete: Boolean, foilComplete: Boolean, filterRarityCommon: Boolean, filterRarityUncommon: Boolean, filterRarityRare: Boolean, filterRarityMythic: Boolean) {
+    fun setFilter(text: String, complete: Boolean, nonFoilComplete: Boolean, foilComplete: Boolean, filterRarityCommon: Boolean, filterRarityUncommon: Boolean, filterRarityRare: Boolean, filterRarityMythic: Boolean) {
         cardsFiltered.setPredicate { cardInfo -> cardInfo.filterView()
                     && (if(!text.isNullOrBlank()) cardInfo.name.value.contains(text, ignoreCase = true) || cardInfo.nameDE.value?.contains(text, ignoreCase = true) ?: false else true)
+                    && (complete || !cardInfo.completed.get())
                     && (nonFoilComplete || !cardInfo.completedNonPremium.get())
                     && (foilComplete || !cardInfo.completedPremium.get())
                     && (filterRarityCommon || cardInfo.rarity.value != Rarity.COMMON)
@@ -101,10 +104,11 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : View
         setProperty.addListener { _, _, _ -> updateCards() }
 
         val filterChangeListener = ChangeListener<Any> { _, _, _ ->
-            setFilter(filterTextProperty.get(), filterNonFoilCompleteProperty.get(), filterFoilCompleteProperty.get(),
+            setFilter(filterTextProperty.get(), filterCompleteProperty.get(), filterNonFoilCompleteProperty.get(), filterFoilCompleteProperty.get(),
                     filterRarityCommon.get(), filterRarityUncommon.get(), filterRarityRare.get(), filterRarityMythic.get())
         }
         filterTextProperty.addListener(filterChangeListener)
+        filterCompleteProperty.addListener(filterChangeListener)
         filterNonFoilCompleteProperty.addListener(filterChangeListener)
         filterFoilCompleteProperty.addListener(filterChangeListener)
         filterRarityCommon.addListener(filterChangeListener)
@@ -154,8 +158,11 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : View
                     textfield(filterTextProperty) {
 
                     }
+                    togglebutton(CARD_IN_POSSESION) {
+                        filterCompleteProperty.bind(selectedProperty())
+                    }
 					if (collectionSettings.cardPossesionTargtNonPremium > 0) {
-						togglebutton(CARD_IN_POSSESION.repeat(collectionSettings.cardPossesionTargtNonPremium)) {
+						togglebutton(NONFOIL_IN_POSSESION.repeat(collectionSettings.cardPossesionTargtNonPremium)) {
 							filterNonFoilCompleteProperty.bind(selectedProperty())
 						}
 					}

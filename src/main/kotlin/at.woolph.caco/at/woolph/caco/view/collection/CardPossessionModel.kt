@@ -44,10 +44,11 @@ class CardPossessionModel(card: Card, val collectionsSettings: CollectionSetting
 		val plus = if(possessionNonPremium.get()>possessionNonPremiumTarget.value) CollectionView.ICON_REDUNDANT_OWNED_CARD else " "
 		val plusFoil = if(possessionPremium.get()>possessionPremiumTarget.value) CollectionView.ICON_REDUNDANT_OWNED_CARD else " "
 
-		return@stringBinding "${CollectionView.CARD_IN_POSSESION.repeat(ownedCount)}${CollectionView.CARD_NOT_IN_POSSESION.repeat(possessionNonPremiumTarget.value-ownedCount)}$plus\t${CollectionView.FOIL_IN_POSSESION.repeat(ownedCountFoil)}${CollectionView.FOIL_NOT_IN_POSSESION.repeat(possessionPremiumTarget.value-ownedCountFoil)}$plusFoil"
+		return@stringBinding "${CollectionView.NONFOIL_IN_POSSESION.repeat(ownedCount)}${CollectionView.NONFOIL_NOT_IN_POSSESION.repeat(possessionNonPremiumTarget.value-ownedCount)}$plus\t${CollectionView.FOIL_IN_POSSESION.repeat(ownedCountFoil)}${CollectionView.FOIL_NOT_IN_POSSESION.repeat(possessionPremiumTarget.value-ownedCountFoil)}$plusFoil"
 	}
 	val completedNonPremium = possessionNonPremium.greaterThanOrEqualTo(possessionNonPremiumTarget)!!
 	val completedPremium = possessionPremium.greaterThanOrEqualTo(possessionPremiumTarget)!!
+	val completed = Bindings.and(completedNonPremium, completedPremium)
 
 	init {
 		updatePossessions()

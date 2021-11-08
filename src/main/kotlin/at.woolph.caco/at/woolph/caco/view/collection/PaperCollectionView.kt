@@ -156,9 +156,24 @@ class PaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
 					.systemClipboard
 					.setContents(
 						StringSelection(transaction {
-							cardsSorted.asSequence().map {
-								val neededCount = kotlin.math.max(0, it.possessionNonPremiumTarget.value - it.possessionNonPremium.value)
-								Triple(neededCount, it.name.value, it.set.value?.name)
+							cardsSorted.asSequence().map { card ->
+								val neededCount = kotlin.math.max(0, card.possessionNonPremiumTarget.value - card.possessionNonPremium.value)
+								val suffixName = if (cardsSorted.asSequence().filter { it2 ->
+									it2.name.value == card.name.value  && it2.extra.value == card.extra.value
+								}.count() > 1) {
+									val numberInSetWithSameName = cardsSorted.asSequence().filter { it2 ->
+										it2.name.value == card.name.value && it2.extra.value == card.extra.value && it2.numberInSet.value < card.numberInSet.value
+									}.count() + 1
+									" (V.$numberInSetWithSameName)"
+								} else {
+									""
+								}
+								val suffixSet = when {
+									card.promo.value -> ": Promos"
+									card.extra.value -> ": Extras"
+									else -> ""
+								}
+								Triple(neededCount, "${card.name.value}$suffixName", card.set.value?.name?.let { "$it$suffixSet" })
 							}.filter { it.first > 0 }.joinToString("\n") {
 									"${it.first} ${it.second} (${it.third})"
 							}

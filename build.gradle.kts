@@ -5,6 +5,7 @@
 plugins {
 	kotlin("jvm") version "1.5.31"
 	application
+	distribution
 	id("org.openjfx.javafxplugin") version "0.0.10"
 }
 
@@ -17,9 +18,9 @@ repositories {
 }
 
 dependencies {
-	implementation("org.jetbrains.kotlin:kotlin-stdlib:1.5.0")
-	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.5.0")
-	implementation("org.jetbrains.kotlin:kotlin-reflect:1.5.0")
+	implementation("org.jetbrains.kotlin:kotlin-stdlib")
+	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
+	implementation("org.jetbrains.kotlin:kotlin-reflect")
 
 	implementation("org.jetbrains.exposed:exposed:0.17.13")
 	implementation("org.json:json:20180813")
@@ -62,9 +63,13 @@ javafx {
 	modules = listOf("javafx.controls", "javafx.graphics")
 }
 
-tasks.jar {
-	manifest {
-		attributes["Main-Class"] = "at.woolph.caco.MainGuiKt"
-		//attributes "SplashScreen-Image": renderSvg.resourceImage['splashScreen']
-	}
+//tasks.jar {
+//	manifest {
+//		attributes["Main-Class"] = "at.woolph.caco.MainGuiKt"
+//		//attributes "SplashScreen-Image": renderSvg.resourceImage['splashScreen']
+//	}
+//}
+
+application {
+	mainClass.set("at.woolph.caco.MainGuiKt")
 }

@@ -22,6 +22,7 @@ object Cards : IntIdTable() {
     val image = varchar("imageURI", length = 256).nullable()
     val cardmarketUri = varchar("cardmarketUri", length = 256).nullable()
 
+    val extra = bool("extra").default(false)
     val nonfoilAvailable = bool("nonfoilAvailable").default(true)
     val foilAvailable = bool("foilAvailable").default(true)
     val fullArt = bool("fullArt").default(false)
@@ -44,6 +45,7 @@ class Card(id: EntityID<Int>) : IntEntity(id) {
     var image by Cards.image.transform({ it?.toString() }, { it?.let { URI(it) } })
     var cardmarketUri by Cards.cardmarketUri.transform({ it?.toString() }, { it?.let { URI(it) } })
 
+    var extra by Cards.extra
     var nonfoilAvailable by Cards.nonfoilAvailable
     var foilAvailable by Cards.foilAvailable
     var fullArt by Cards.fullArt

@@ -17,6 +17,7 @@ open class CardModel(card: Card): ItemViewModel<Card>(card), Comparable<CardMode
 	val image = bind(Card::image)
 	val cardmarketUri = bind(Card::cardmarketUri)
 
+	val extra = bind(Card::extra)
 	val nonfoilAvailable = bind(Card::nonfoilAvailable)
 	val foilAvailable = bind(Card::foilAvailable)
 	val fullArt = bind(Card::fullArt)
