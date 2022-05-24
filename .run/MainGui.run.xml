@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="MainGui" type="Application" factoryName="Application">
-    <option name="MAIN_CLASS_NAME" value="at.woolph.caco.MainGuiKt" />
+    <option name="MAIN_CLASS_NAME" value="at.woolph.caco.gui.MainKt" />
     <module name="CaCo.main" />
     <method v="2">
       <option name="Make" enabled="true" />

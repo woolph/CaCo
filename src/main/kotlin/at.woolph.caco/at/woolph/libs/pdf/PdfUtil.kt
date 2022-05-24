@@ -2,11 +2,13 @@ package at.woolph.libs.pdf
 
 import be.quodlibet.boxable.HorizontalAlignment
 import be.quodlibet.boxable.VerticalAlignment
-import org.apache.pdfbox.pdmodel.PDPage
 import org.apache.pdfbox.pdmodel.PDDocument
-import org.apache.pdfbox.pdmodel.common.PDRectangle
+import org.apache.pdfbox.pdmodel.PDPage
 import org.apache.pdfbox.pdmodel.PDPageContentStream
+import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.font.PDFont
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject
+import org.apache.pdfbox.util.Matrix
 import java.awt.Color
 import java.io.Closeable
 import java.io.IOException
@@ -15,6 +17,7 @@ import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.min
 import kotlin.math.roundToInt
+
 
 class ColumnSpace(val columnManager: ColumnManager, val column: Int, val line: Int) {
 	fun drawText(text: String, color: Color, lineIndent: Float = 0f) {
@@ -193,10 +196,43 @@ fun Node.drawText(text: String, font: Font, x: Float, y:Float, color: Color) {
 			beginText()
 			setFont(font.family, font.size)
 			// we want to position our text on his baseline
+
+
 			newLineAtOffset(x, y - font.totalHeight)
 			setNonStrokingColor(color)
 			showText(text)
 			endText()
+		}
+	} catch (e: IOException) {
+		throw IllegalStateException("Unable to write text", e)
+	}
+}
+
+fun Node.drawText90(text: String, font: Font, x: Float, y:Float, color: Color) {
+	try {
+		contentStream.apply {
+			beginText()
+			setFont(font.family, font.size)
+			// we want to position our text on his baseline
+
+
+			setTextMatrix(Matrix.getRotateInstance(Math.toRadians(90.0), x, y).apply {
+//				translate(0f, -box.width)
+			})
+//			newLineAtOffset(x, y - font.totalHeight)
+			setNonStrokingColor(color)
+			showText(text)
+			endText()
+		}
+	} catch (e: IOException) {
+		throw IllegalStateException("Unable to write text", e)
+	}
+}
+
+fun Node.drawImage(image: PDImageXObject, x: Float, y:Float, width: Float, height: Float) {
+	try {
+		contentStream.apply {
+			drawImage(image, x, y, width, height)
 		}
 	} catch (e: IOException) {
 		throw IllegalStateException("Unable to write text", e)
@@ -252,6 +288,12 @@ fun Node.drawText(text: String, font: Font, horizontalAlignment: HorizontalAlign
 	}
 	drawText(text, font, startX, color)
 }
+//
+//class Columns(val parentNode: Node, val columnCount: UInt): Node(parentNode.contentStream, parentNode.box) {
+//	var currentColumn = 0u
+//}
+//
+//class Column(val parent: Columns, val columnIndex: UInt): Node(parent.contentStream, box = PDRectangle(parent.box.))
 
 class Frame(val parentNode: Node, box: PDRectangle): Node(parentNode.contentStream, box) {
 }
@@ -270,5 +312,14 @@ fun Node.drawBorder(lineWidth: Float, lineColor: Color) {
 
 		addRect(box.lowerLeftX-lineWidth, box.lowerLeftY-lineWidth, box.width+lineWidth*2, box.height+lineWidth*2)
 		stroke()
+	}
+}
+
+fun Node.drawBackground(backgroundColor: Color) {
+	contentStream.apply {
+		setNonStrokingColor(backgroundColor)
+
+		addRect(box.lowerLeftX, box.lowerLeftY, box.width, box.height)
+		fill()
 	}
 }

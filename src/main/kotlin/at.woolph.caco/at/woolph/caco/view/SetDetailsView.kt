@@ -1,9 +1,8 @@
 package at.woolph.caco.view
 
-import at.woolph.caco.Styles
-import at.woolph.caco.view.collection.CardModel
+import at.woolph.caco.gui.Styles
+import at.woolph.caco.view.collection.CardSetModel
 import at.woolph.libs.ktfx.*
-import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.scene.control.Label
 import javafx.scene.control.ProgressIndicator
@@ -15,22 +14,19 @@ import tornadofx.Fragment
 import tornadofx.*
 import kotlin.math.min
 
-class CardDetailsView(val cardProperty: SimpleObjectProperty<CardModel?> = SimpleObjectProperty(null)) : Fragment() {
-	var card by cardProperty
-
-	val imageLoadingProperty = SimpleBooleanProperty(true)
-	var imageLoading by imageLoadingProperty
+class SetDetailsView(val setProperty: SimpleObjectProperty<CardSetModel?> = SimpleObjectProperty(null)) : Fragment() {
+	var set by setProperty
 
 	private lateinit var labelNumberInSet: Label
 	private lateinit var labelRarity: Label
-	private lateinit var labelCardName: Label
+	private lateinit var labelSetName: Label
 
 	private lateinit var imageView: ImageView
 	private lateinit var imageLoadingProgressIndicatorBackground: Shape
 	private lateinit var imageLoadingProgressIndicator: ProgressIndicator
 
 	override val root =  gridpane {
-		addClass(Styles.cardDetailsView)
+		addClass(Styles.setDetailsView)
 
 		paddingAll = 10.0
 		hgap = 10.0
@@ -39,7 +35,7 @@ class CardDetailsView(val cardProperty: SimpleObjectProperty<CardModel?> = Simpl
 		row {
 			labelNumberInSet = label()
 			labelRarity = label()
-			labelCardName = label()
+			labelSetName = label()
 		}
 
 		row {
@@ -49,8 +45,8 @@ class CardDetailsView(val cardProperty: SimpleObjectProperty<CardModel?> = Simpl
 				}
 
 				imageView = imageview {
-					fitHeight = 312.0
-					fitWidth = 224.0
+					fitHeight = 128.0
+					fitWidth = 128.0
 				}
 
 				imageLoadingProgressIndicatorBackground = rectangle {
@@ -70,34 +66,27 @@ class CardDetailsView(val cardProperty: SimpleObjectProperty<CardModel?> = Simpl
 	}
 
 	init {
-		labelNumberInSet.textProperty().bind(cardProperty.selectNullable { it?.numberInSet }.toStringBinding())
-		labelRarity.textProperty().bind(cardProperty.selectNullable { it?.rarity }.toStringBinding())
-		labelCardName.textProperty().bind(cardProperty.selectNullable { it?.name })
+		labelNumberInSet.textProperty().bind(setProperty.selectNullable { it?.officalCardCount }.toStringBinding())
+		labelSetName.textProperty().bind(setProperty.selectNullable { it?.name })
 
-		cardProperty.addListener { _, _, _ -> loadImage() }
-		imageLoadingProperty.addListener { _, _, _ -> loadImage() }
+		setProperty.addListener { _, _, _ -> loadImage() }
 	}
 
 	fun loadImage() {
-		if(imageLoading) {
-			tornadofx.runAsync {
-				imageLoadingProgressIndicatorBackground.isVisible = true
-				imageLoadingProgressIndicator.isVisible = true
-				card?.getCachedImage()
-			} ui {
-				imageView.image = it
-				imageLoadingProgressIndicator.isVisible = false
-				imageLoadingProgressIndicatorBackground.isVisible = false
-			}
-		} else {
-			imageView.image = null
+		tornadofx.runAsync {
 			imageLoadingProgressIndicatorBackground.isVisible = true
+			imageLoadingProgressIndicator.isVisible = true
+			set?.getCachedImage()
+		} ui {
+			imageView.image = it
+			imageLoadingProgressIndicator.isVisible = false
+			imageLoadingProgressIndicatorBackground.isVisible = false
 		}
 	}
 }
 
-object CardImageCache: ImageCache()
+object SetImageCache: ImageCache()
 
-fun CardModel?.getCachedImage(): Image? {
-	return this?.image?.value?.let { CardImageCache.getImage(it,224.0, 312.0, true, true) }
+fun CardSetModel?.getCachedImage(): Image? {
+	return this?.icon?.value?.let { SetImageCache.getImage(it,128.0, 128.0, true, true) }
 }

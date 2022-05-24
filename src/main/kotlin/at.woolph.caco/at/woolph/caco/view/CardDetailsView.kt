@@ -1,6 +1,6 @@
 package at.woolph.caco.view
 
-import at.woolph.caco.Styles
+import at.woolph.caco.gui.Styles
 import at.woolph.caco.view.collection.CardModel
 import at.woolph.libs.ktfx.*
 import javafx.beans.property.SimpleBooleanProperty

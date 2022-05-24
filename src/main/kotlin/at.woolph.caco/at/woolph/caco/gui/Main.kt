@@ -1,4 +1,4 @@
-package at.woolph.caco
+package at.woolph.caco.gui
 
 import at.woolph.caco.datamodel.collection.ArenaCardPossessions
 import at.woolph.caco.datamodel.collection.CardPossessions

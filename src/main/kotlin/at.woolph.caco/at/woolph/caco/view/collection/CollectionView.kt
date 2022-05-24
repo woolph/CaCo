@@ -15,6 +15,7 @@ import javafx.scene.layout.BorderPane
 import javafx.scene.layout.Priority
 import org.jetbrains.exposed.sql.transactions.transaction
 import tornadofx.*
+import java.util.*
 
 abstract class CollectionView(val collectionSettings: CollectionSettings) : View() {
     companion object {
@@ -54,7 +55,8 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : View
     abstract fun ToolBar.addFeatureButtons()
 
     fun updateSets() {
-        sets.setAll(transaction { CardSet.all().toList().filter { collectionSettings.cardSetFilter(it) }.observable().sorted { t1: CardSet, t2: CardSet ->
+        sets.setAll(transaction { CardSet.all().toList().filter { collectionSettings.cardSetFilter(it) }.asObservable()
+            .sorted { t1: CardSet, t2: CardSet ->
 			-t1.dateOfRelease.compareTo(t2.dateOfRelease)
 		}})
     }
@@ -74,18 +76,17 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : View
     }
 
     fun CardSet.reimportSet(): CardSet = apply {
+        update()
 //        LOG.info("reimport current set $this")
         importCardsOfSet(listOf("german"))
-//        importCardsOfSetAdditionalLanguage("german")
-//        importTokensOfSet()
-//        importPromosOfSet()
 
+        updateSets()
         updateCards()
     }
 
     fun setFilter(text: String, complete: Boolean, nonFoilComplete: Boolean, foilComplete: Boolean, filterRarityCommon: Boolean, filterRarityUncommon: Boolean, filterRarityRare: Boolean, filterRarityMythic: Boolean) {
         cardsFiltered.setPredicate { cardInfo -> cardInfo.filterView()
-                    && (if(!text.isNullOrBlank()) cardInfo.name.value.contains(text, ignoreCase = true) || cardInfo.nameDE.value?.contains(text, ignoreCase = true) ?: false else true)
+                    && (if(!text.isBlank()) cardInfo.name.value.contains(text, ignoreCase = true) || cardInfo.nameDE.value?.contains(text, ignoreCase = true) ?: false else true)
                     && (complete || !cardInfo.completed.get())
                     && (nonFoilComplete || !cardInfo.completedNonPremium.get())
                     && (foilComplete || !cardInfo.completedPremium.get())
@@ -131,7 +132,7 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : View
                                     fitWidth = 24.0
                                 }
                             }
-                            text = item?.let { "${it.shortName.toUpperCase()} - ${it.name}" }
+                            text = item?.let { "${it.shortName.uppercase(Locale.getDefault())} - ${it.name}" }
                         }
                     }
                     button("\u21BB") {
@@ -147,7 +148,7 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : View
                                 AddSetsDialog(this@CollectionView).showAndWait().ifPresent { setCodes ->
 									// TODO progress dialog
 									set = setCodes.split(',').map {
-										addSet(it.trim().toLowerCase())
+										addSet(it.trim().lowercase(Locale.getDefault()))
 									}.last()
                                 }
                             }
@@ -198,20 +199,14 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : View
             }
             center {
 				splitpane {
-					vbox {
-						alignment = Pos.TOP_CENTER
-						this += find<CardDetailsView> {
-							runLater {
-								this.cardProperty.bind(tvCards.selectionModel.selectedItemProperty())
-								this.imageLoadingProperty.bind(toggleButtonImageLoading.selectedProperty())
-							}
-						}
-						this += find<CardPossessionView> {
-							runLater {
-								this.cardProperty.bind(tvCards.selectionModel.selectedItemProperty())
-							}
-						}
-					}
+//                    vbox {
+//                        alignment = Pos.TOP_CENTER
+//                        this += find<SetDetailsView> {
+//                            runLater {
+//                                this.setProperty.bind(this@CollectionView.setProperty.mapBinding { it?.let { CardSetModel(it) } })
+//                            }
+//                        }
+//                    }
 
 					tvCards = tableview(cardsFiltered) {
 						hboxConstraints {
@@ -265,6 +260,21 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : View
 //							}
 //						}
 					}
+
+                    vbox {
+                        alignment = Pos.TOP_CENTER
+                        this += find<CardDetailsView> {
+                            runLater {
+                                this.cardProperty.bind(tvCards.selectionModel.selectedItemProperty())
+                                this.imageLoadingProperty.bind(toggleButtonImageLoading.selectedProperty())
+                            }
+                        }
+                        this += find<CardPossessionView> {
+                            runLater {
+                                this.cardProperty.bind(tvCards.selectionModel.selectedItemProperty())
+                            }
+                        }
+                    }
 				}
 			}
         }

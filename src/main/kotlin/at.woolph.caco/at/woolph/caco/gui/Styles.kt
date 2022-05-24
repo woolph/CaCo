@@ -1,7 +1,6 @@
-package at.woolph.caco
+package at.woolph.caco.gui
 
 import tornadofx.*
-import javafx.scene.paint.Color
 import javafx.scene.text.FontWeight
 
 class Styles : Stylesheet() {
@@ -16,6 +15,7 @@ class Styles : Stylesheet() {
 
 		// css classes
 		val cardDetailsView by cssclass()
+		val setDetailsView by cssclass()
 		val cardPossessionView by cssclass()
 		val sumRow by cssclass()
 	}

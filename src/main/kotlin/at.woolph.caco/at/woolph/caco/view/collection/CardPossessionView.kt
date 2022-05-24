@@ -1,9 +1,8 @@
 package at.woolph.caco.view.collection
 
-import at.woolph.caco.Styles
+import at.woolph.caco.gui.Styles
 import at.woolph.caco.datamodel.collection.CardCondition
 import at.woolph.caco.datamodel.collection.CardLanguage
-import at.woolph.libs.ktfx.toStringBinding
 import javafx.beans.property.SimpleObjectProperty
 import javafx.geometry.HPos
 import javafx.geometry.Rectangle2D

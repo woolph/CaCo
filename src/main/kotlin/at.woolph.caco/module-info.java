@@ -8,5 +8,11 @@ module at.woolph.caco {
     requires boxable;
     requires java.prefs;
     requires java.scripting;
+    requires exposed;
+    requires org.apache.pdfbox;
+    requires spring.shell.standard;
+    requires org.jsoup;
     opens at.woolph.caco.view;
+    opens at.woolph.caco.gui;
+    opens at.woolph.caco.cli;
 }

@@ -131,4 +131,6 @@ val setNameMapping = mapOf(
     "Time Spiral \"Timeshifted\"" to "Time Spiral Remastered",
     "Adventures in the Forgotten Realms Commander" to "Forgotten Realms Commander",
     "Innistrad: Midnight Hunt Commander" to "Midnight Hunt Commander",
+    "Innistrad: Crimson Vow Commander" to "Crimson Vow Commander",
+    "Kamigawa: Neon Dynasty Commander" to "Neon Dynasty Commander",
 )

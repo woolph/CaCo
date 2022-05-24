@@ -79,6 +79,39 @@ fun importSet(setCode: String): CardSet {
     }
 }
 
+fun CardSet.update() {
+    LOG.debug("update set $this")
+    val conn = URL("https://api.scryfall.com/sets/${this.shortName}").openConnection() as HttpURLConnection
+
+    try {
+        conn.requestMethod = "GET"
+        conn.setRequestProperty("Accept", "application/json")
+
+        if (conn.responseCode != 200) {
+            throw Exception("Failed : HTTP error code : ${conn.responseCode}")
+        }
+
+        conn.inputStream.useJsonReader {
+            it.readObject().let {
+                if(it.getString("object") == "set" && !it.getBoolean("digital") && it.getInt("card_count") > 0) {
+                    this@update.apply {
+                        name = it.getString("name")
+                        dateOfRelease = DateTime.parse(it.getString("released_at"))
+                        officalCardCount = it.getInt("card_count")
+                        icon = URI(it.getString("icon_svg_uri"))
+                    }
+                } else {
+                    throw Exception("result is not a set or it's digital or does not have any cards")
+                }
+            }
+        }
+    } catch(ex:Exception) {
+        throw Exception("unable to import sets", ex)
+    } finally {
+        conn.disconnect()
+    }
+}
+
 fun importSets(): Iterable<CardSet> {
     LOG.debug("importing sets")
     val conn = URL("https://api.scryfall.com/sets").openConnection() as HttpURLConnection
@@ -275,7 +308,7 @@ fun CardSet.importCardsOfSet(additionalLanguages: List<String> = emptyList()) {
                             else -> paddingCollectorNumber(it.getString("collector_number"))
                         }
 
-                        if (! (isPromo && promoExclusionList.any { promoExclusion -> it.getJsonArray("promo_types").containsString(promoExclusion) })) {
+                        if (! (isPromo && promoExclusionList.any { promoExclusion -> it.getJsonArray("promo_types")?.containsString(promoExclusion) == true })) {
                             Card.find { Cards.set.eq(this@importCardsOfSet.id).and(Cards.numberInSet.eq(numberInSetImported)) }.singleOrNull()?.apply {
                                 nameDE = it.getPrintedName()
                             }

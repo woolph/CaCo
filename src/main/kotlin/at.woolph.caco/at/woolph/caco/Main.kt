@@ -10,9 +10,10 @@ import at.woolph.caco.datamodel.sets.Cards
 import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.datamodel.sets.CardSets
 import at.woolph.caco.datamodel.sets.Cards.set
-import at.woolph.caco.datamodel.sets.Rarity
 import at.woolph.caco.importer.collection.importDeckbox
 import at.woolph.caco.importer.sets.*
+import at.woolph.caco.view.collection.CardPossessionModel
+import at.woolph.caco.view.collection.PaperCollectionView
 import at.woolph.libs.log.logger
 import at.woolph.libs.pdf.*
 import be.quodlibet.boxable.BaseTable
@@ -23,8 +24,9 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import java.io.*
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.font.PDType1Font
-import org.joda.time.DateTime
 import java.awt.Color
+import java.awt.Toolkit
+import java.awt.datatransfer.StringSelection
 import java.nio.file.Paths
 import java.util.*
 import kotlin.math.max
@@ -112,23 +114,64 @@ fun main(args: Array<String>) {
 
 	// get needed cards for playset collection
 	if(args.any { it.startsWith(SHOW_NEEDED_PLAYSET) }) {
-		transaction {
-			val setCodes = args.filter { it.startsWith(SHOW_NEEDED_PLAYSET) }
-					.flatMap { it.removePrefix(SHOW_NEEDED_PLAYSET).split(",") }
-
-			setCodes.forEach { setCode ->
-				CardSet.find { CardSets.shortName eq setCode.toLowerCase() }.forEach { set ->
+		args.filter { it.startsWith(SHOW_NEEDED_PLAYSET) }.map { it.removePrefix(SHOW_NEEDED_PLAYSET) }.singleOrNull()?.let { setCode ->
+			transaction {
+				CardSet.find { CardSets.shortName eq setCode.lowercase(Locale.getDefault()) }.singleOrNull()?.let { set ->
 					println("${set.name}:")
-					set.cards.sortedBy { it.numberInSet }.filter { !it.promo && (it.rarity == Rarity.COMMON || it.rarity == Rarity.UNCOMMON) }.forEach {
-						val neededCount = max(0, 4 - it.possessions.count())
-						val n = if (set.cards.count { that -> it.name == that.name } > 1) " (#${it.numberInSet})" else ""
-						if (neededCount > 0) {
-							println("${neededCount} ${it.name}$n")
+					val cardsSorted = set.cards.sortedBy { it.numberInSet }.map { CardPossessionModel(it, PaperCollectionView.COLLECTION_SETTINGS) }
+					cardsSorted.asSequence().map { card ->
+						val neededCount = max(0, card.possessionNonPremiumTarget.value - card.possessionNonPremium.value)
+						val suffixName = if (cardsSorted.asSequence().filter { it2 ->
+								it2.name.value == card.name.value  && it2.extra.value == card.extra.value
+							}.count() > 1) {
+							val numberInSetWithSameName = cardsSorted.asSequence().filter { it2 ->
+								it2.name.value == card.name.value && it2.extra.value == card.extra.value && it2.numberInSet.value < card.numberInSet.value
+							}.count() + 1
+							" (V.$numberInSetWithSameName)"
+						} else {
+							""
 						}
+						val suffixSet = when {
+							card.promo.value -> ": Promos"
+							card.extra.value -> ": Extras"
+							else -> ""
+						}
+						Triple(neededCount, "${card.name.value}$suffixName", card.set.value?.name?.let { "$it$suffixSet" })
+					}.filter { it.first > 0 }.joinToString("\n") {
+						"${it.first} ${it.second} (${it.third})"
 					}
 				}
 			}
+		}?.let { string ->
+			println(string)
+			Toolkit.getDefaultToolkit()
+				.systemClipboard
+				.setContents(StringSelection(string), null)
 		}
+
+
+//		Toolkit.getDefaultToolkit()
+//			.systemClipboard
+//			.setContents(
+//				StringSelection( ?: ""),
+//				null)
+//		transaction {
+//			val setCodes = args.filter { it.startsWith(SHOW_NEEDED_PLAYSET) }
+//					.flatMap { it.removePrefix(SHOW_NEEDED_PLAYSET).split(",") }
+//
+//			setCodes.forEach { setCode ->
+//				CardSet.find { CardSets.shortName eq setCode.toLowerCase() }.forEach { set ->
+//					println("${set.name}:")
+//					set.cards.sortedBy { it.numberInSet }.filter { !it.promo && (it.rarity == Rarity.COMMON || it.rarity == Rarity.UNCOMMON) }.forEach {
+//						val neededCount = max(0, 4 - it.possessions.count())
+//						val n = if (set.cards.count { that -> it.name == that.name } > 1) " (#${it.numberInSet})" else ""
+//						if (neededCount > 0) {
+//							println("${neededCount} ${it.name}$n")
+//						}
+//					}
+//				}
+//			}
+//		}
 	} else {
 		// get needed cards for playset collection
 		if(args.any { it.startsWith(SHOW_NEEDED_PLAYSET_ALL) }) {

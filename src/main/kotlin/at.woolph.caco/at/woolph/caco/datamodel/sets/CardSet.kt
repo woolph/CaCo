@@ -41,34 +41,74 @@ class CardSet(id: EntityID<Int>) : IntEntity(id) {
 
     val cards by Card referrersOn Cards.set
 
-    val iconImage by lazy {
-        (icon?.toURL()?.openConnection() as? HttpURLConnection)?.let { conn ->
-            try {
-                conn.requestMethod = "GET"
-                conn.setRequestProperty("Accept", "image/svg+xml")
+    val iconImage by lazy { icon.renderSvg(48f)?.let { Image(ByteArrayInputStream(it)) } }
 
-                if (conn.responseCode != 200) {
-                    throw Exception("Failed : HTTP error code : ${conn.responseCode}")
-                }
+    // TODO consider representing the collection completion in % by filling the set icon with a progress bar style color gradient
+}
 
-                val size = 48.0f
-                val transcoder = PNGTranscoder().apply {
-                    addTranscodingHint(ImageTranscoder.KEY_WIDTH, size)
-                    addTranscodingHint(ImageTranscoder.KEY_HEIGHT, size)
-                }
+fun URI?.renderSvg(size: Float): ByteArray? = (this?.toURL()?.openConnection() as? HttpURLConnection)?.let { conn ->
+    try {
+        conn.requestMethod = "GET"
+        conn.setRequestProperty("Accept", "image/svg+xml")
 
-                val buffered = ByteArrayOutputStream()
-                buffered.use {
-                    transcoder.transcode(TranscoderInput(conn.inputStream), TranscoderOutput(it))
-                }
-
-                return@let Image(ByteArrayInputStream(buffered.toByteArray()))
-            } catch(ex:Exception) {
-                //throw Exception("unable to load svg $icon", ex)
-                return@let null
-            } finally {
-                conn.disconnect()
-            }
+        if (conn.responseCode != 200) {
+            throw Exception("Failed : HTTP error code : ${conn.responseCode}")
         }
+
+        val transcoder = PNGTranscoder().apply {
+            addTranscodingHint(ImageTranscoder.KEY_WIDTH, size)
+            addTranscodingHint(ImageTranscoder.KEY_HEIGHT, size)
+        }
+
+        val buffered = ByteArrayOutputStream()
+        buffered.use {
+            transcoder.transcode(TranscoderInput(conn.inputStream), TranscoderOutput(it))
+        }
+
+        return@let buffered.toByteArray()
+    } catch(ex:Exception) {
+        return null
+//        throw Exception("unable to load svg $this", ex)
+    } finally {
+        conn.disconnect()
+    }
+}
+
+fun URI?.renderSvg(size: Float, strokeColor: String, color1: String, color2: String): ByteArray? = (this?.toURL()?.openConnection() as? HttpURLConnection)?.let { conn ->
+    try {
+        conn.requestMethod = "GET"
+        conn.setRequestProperty("Accept", "image/svg+xml")
+
+        if (conn.responseCode != 200) {
+            throw Exception("Failed : HTTP error code : ${conn.responseCode}")
+        }
+
+        val transcoder = PNGTranscoder().apply {
+            addTranscodingHint(ImageTranscoder.KEY_WIDTH, size)
+            addTranscodingHint(ImageTranscoder.KEY_HEIGHT, size)
+        }
+
+        val svgContent = String(conn.inputStream.readBytes())
+        val styleToBeApplied = "<defs>\n" +
+                "    <linearGradient id=\"uncommon-gradient\" x2=\"0.35\" y2=\"1\">\n" +
+                "        <stop offset=\"0%\" stop-color=\"$color1\" />\n" +
+                "        <stop offset=\"50%\" stop-color=\"$color2\" />\n" +
+                "        <stop offset=\"100%\" stop-color=\"$color1\" />\n" +
+                "      </linearGradient>\n" +
+                "  </defs>\n" +
+                "<path stroke=\"$strokeColor\" stroke-width=\"2%\" style=\"fill:url(#uncommon-gradient)\" ";
+        val inputStream = ByteArrayInputStream(styleToBeApplied.let {
+            svgContent.replace("<path ", it)
+        }.toByteArray())
+        val buffered = ByteArrayOutputStream()
+        buffered.use {
+            transcoder.transcode(TranscoderInput(inputStream), TranscoderOutput(it))
+        }
+
+        return@let buffered.toByteArray()
+    } catch(ex:Exception) {
+        throw Exception("unable to load svg $this", ex)
+    } finally {
+        conn.disconnect()
     }
 }
