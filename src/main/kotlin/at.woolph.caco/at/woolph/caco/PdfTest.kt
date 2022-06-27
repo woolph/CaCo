@@ -69,7 +69,7 @@ open class SimpleSet(override val code: String): MapLabelItem {
 
 	init {
 		val set = transaction {
-			CardSet.find(CardSets.shortName.eq(code)).singleOrNull() ?: throw IllegalArgumentException("no set with code $code found")
+			CardSet.findById(code) ?: throw IllegalArgumentException("no set with code $code found")
 		}
 
 		title = set.name
@@ -86,8 +86,8 @@ class SetWithCommander(override val code: String, override val subCode: String):
 	init {
 		val (mainSet, commanderSet) = transaction {
 			arrayOf(
-				CardSet.find(CardSets.shortName.eq(code)).singleOrNull() ?: throw IllegalArgumentException("no set with code $subCode found"),
-				CardSet.find(CardSets.shortName.eq(subCode)).singleOrNull() ?: throw IllegalArgumentException("no set with code $subCode found"),
+				CardSet.findById(code) ?: throw IllegalArgumentException("no set with code $code found"),
+				CardSet.findById(subCode) ?: throw IllegalArgumentException("no set with code $subCode found"),
 			)
 		}
 
@@ -110,9 +110,9 @@ class SetWithCommanderAndMasterPieces(override val code: String, subCode1: Strin
 	init {
 		val (mainSet, commanderSet, masterpieceSet) = transaction {
 			arrayOf(
-				CardSet.find(CardSets.shortName.eq(code)).singleOrNull() ?: throw IllegalArgumentException("no set with code $code found"),
-				CardSet.find(CardSets.shortName.eq(subCode1)).singleOrNull() ?: throw IllegalArgumentException("no set with code $subCode1 found"),
-				CardSet.find(CardSets.shortName.eq(subCode2)).singleOrNull() ?: throw IllegalArgumentException("no set with code $subCode2 found"),
+				CardSet.findById(code) ?: throw IllegalArgumentException("no set with code $code found"),
+				CardSet.findById(subCode1) ?: throw IllegalArgumentException("no set with code $subCode1 found"),
+				CardSet.findById(subCode2) ?: throw IllegalArgumentException("no set with code $subCode2 found"),
 			)
 		}
 
@@ -136,7 +136,7 @@ class TwoSetBlock(blockTitle: String, code0: String, code1: String): MapLabelIte
 	init {
 		val cardSets = transaction {
 			listOf(code0, code1).map { _code ->
-				CardSet.find(CardSets.shortName.eq(_code)).singleOrNull() ?: throw IllegalArgumentException("no set with code $code found")
+				CardSet.findById(_code) ?: throw IllegalArgumentException("no set with code $code found")
 			}
 		}
 
@@ -158,7 +158,7 @@ class ThreeSetBlock(blockTitle: String, code0: String, code1: String, code2: Str
 	init {
 		val cardSets = transaction {
 			listOf(code0, code1, code2).map { _code ->
-				CardSet.find(CardSets.shortName.eq(_code)).singleOrNull() ?: throw IllegalArgumentException("no set with code $code found")
+				CardSet.findById(_code) ?: throw IllegalArgumentException("no set with code $code found")
 			}
 		}
 
@@ -184,7 +184,7 @@ class FiveSetBlock(blockTitle: String, code0: String, code1: String, code2: Stri
 		val codes = listOf(code0, code1, code2, code3, code4)
 		val cardSets = transaction {
 			codes.map { _code ->
-				CardSet.find(CardSets.shortName.eq(_code)).singleOrNull() ?: throw IllegalArgumentException("no set with code $_code found")
+				CardSet.findById(_code) ?: throw IllegalArgumentException("no set with code $_code found")
 			}
 		}
 

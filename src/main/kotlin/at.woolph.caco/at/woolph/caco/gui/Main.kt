@@ -5,6 +5,7 @@ import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.datamodel.decks.*
 import at.woolph.caco.datamodel.sets.Cards
 import at.woolph.caco.datamodel.sets.CardSets
+import at.woolph.caco.datamodel.sets.ScryfallCardSets
 import at.woolph.caco.view.collection.ArenaCollectionView
 import at.woolph.caco.view.collection.PaperCollectionView
 import at.woolph.caco.view.decks.DecksView
@@ -22,12 +23,12 @@ private val log by logger("at.woolph.caco.MainGui")
 fun main(args: Array<String>) {
 	log.trace("connecting DB")
 	log.trace("connecting DB took {} ms", measureTimeMillis {
-		Database.connect("jdbc:h2:~/caco", driver = "org.h2.Driver")
+		Database.connect("jdbc:h2:./caco", driver = "org.h2.Driver")
 	})
 
 	log.trace("createMissingTablesAndColumns took {} ms", measureTimeMillis {
 		transaction {
-			SchemaUtils.createMissingTablesAndColumns(CardSets, Cards, CardPossessions, ArenaCardPossessions, DeckArchetypes, Builds, DeckCards)
+			SchemaUtils.createMissingTablesAndColumns(CardSets, ScryfallCardSets, Cards, CardPossessions, DeckArchetypes, Builds, DeckCards, ArenaCardPossessions)
 		}
 	})
 

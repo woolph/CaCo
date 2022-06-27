@@ -4,12 +4,15 @@ import at.woolph.libs.json.useJsonReader
 import at.woolph.libs.json.getJsonObjectArray
 import at.woolph.caco.datamodel.sets.*
 import at.woolph.caco.datamodel.sets.CardSet
+import at.woolph.caco.newOrUpdate
 import at.woolph.libs.log.logger
 import org.jetbrains.exposed.sql.and
 import org.joda.time.DateTime
+import tornadofx.getDouble
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
+import java.util.*
 import javax.json.*
 import kotlin.IllegalStateException
 import kotlin.math.max
@@ -53,14 +56,7 @@ fun importSet(setCode: String): CardSet {
         conn.inputStream.useJsonReader {
             it.readObject().let {
                 if(it.getString("object") == "set") {
-                    return CardSet.find { CardSets.shortName.eq(it.getString("code")) }.singleOrNull()?.apply {
-                        name = it.getString("name")
-                        dateOfRelease = DateTime.parse(it.getString("released_at"))
-                        officalCardCount = it.getInt("card_count")
-                        digitalOnly = it.getBoolean("digital")
-                        icon = URI(it.getString("icon_svg_uri"))
-                    } ?: CardSet.new {
-                        shortName = it.getString("code")
+                    return CardSet.newOrUpdate(it.getString("code")) {
                         name = it.getString("name")
                         dateOfRelease = DateTime.parse(it.getString("released_at"))
                         officalCardCount = it.getInt("card_count")
@@ -128,22 +124,27 @@ fun importSets(): Iterable<CardSet> {
             it.readObject().let {
                 if(it.getString("object") == "list") {
                     val sets = it.getJsonArray("data").map(JsonValue::asJsonObject).filter { !it.getBoolean("digital") && it.getInt("card_count") > 0 }
-                    sets.filter {
-                        !it.containsKey("parent_set_code") || !it.getString("code").endsWith(it.getString("parent_set_code"))
-                    }.forEach { // FIXME use the icon uri to identify which set's have the same set icon and group them together!!! (but how to handle cards with the "promo" set symbol? (how do i want to file them in my colleciton anyway?)
-                        CardSet.find { CardSets.shortName.eq(it.getString("code")) }.singleOrNull()?.apply {
+
+                    sets.forEach {
+                        if (!it.containsKey("parent_set_code") || !it.getString("code").endsWith(it.getString("parent_set_code"))) {
+                            CardSet.newOrUpdate(it.getString("code")) {
+                                name = it.getString("name")
+                                dateOfRelease = DateTime.parse(it.getString("released_at"))
+                                officalCardCount = it.getInt("card_count")
+                                icon = URI(it.getString("icon_svg_uri"))
+                            }
+                        }
+                    }
+                    sets.forEach {
+                        val setId = UUID.fromString(it.getString("id"))
+                        val setFound = CardSet.findById(it.getString("code"))
+                            ?: CardSet.findById(it.getString("parent_set_code"))
+                            ?: throw NoSuchElementException("no card set found for code ${it.getString("code")} or ${it.getString("parent_set_code")}")
+
+                        ScryfallCardSet.newOrUpdate(setId) {
+                            setCode = it.getString("code")
                             name = it.getString("name")
-                            dateOfRelease = DateTime.parse(it.getString("released_at"))
-                            officalCardCount = it.getInt("card_count")
-                            icon = URI(it.getString("icon_svg_uri"))
-                            otherScryfallSetCodes = sets.filter { subset -> subset.getString("parent_set_code", null) == it.getString("code") && subset.getString("code").endsWith(subset.getString("parent_set_code")) }.map { it.getString("code") }
-                        } ?: CardSet.new {
-                            shortName = it.getString("code")
-                            name = it.getString("name")
-                            dateOfRelease = DateTime.parse(it.getString("released_at"))
-                            officalCardCount = it.getInt("card_count")
-                            icon = URI(it.getString("icon_svg_uri"))
-                            otherScryfallSetCodes = sets.filter { subset -> subset.getString("parent_set_code", null) == it.getString("code") && subset.getString("code").endsWith(subset.getString("parent_set_code")) }.map { it.getString("code") }
+                            set = setFound
                         }
                     }
                 } else {
@@ -193,18 +194,21 @@ fun CardSet.importCardsOfSet(additionalLanguages: List<String> = emptyList()) {
     LOG.info("import cards of set $this")
     // FIXME i want to represent every card as it is in reality (double sided token from commander or master sets etc.)
     val promoExclusionList = listOf("datestamped", "prerelease", "stamped")
-    listOf(shortName, *otherScryfallSetCodes.toTypedArray()).forEach { setCode ->
+
+    this.scryfallCardSets.map(ScryfallCardSet::setCode).forEach { setCode ->
         try {
             queryPagedData("https://api.scryfall.com/cards/search?q=set%3A${setCode}&unique=prints&order=set") {
                 try {
                     if(it.getString("object") == "card") {
+                        val scryfallCardSet = ScryfallCardSet[UUID.fromString(it.getString("set_id"))]
+                        val cardId = UUID.fromString(it.getString("id"))
                         val cardName = it.getString("name")
                         val isPromo = it.getBoolean("promo") || it.getString("collector_number").contains(patternPromoCollectorNumber)
                         val isToken = it.getString("set_type") == "token"
                         val isMemorabilia = it.getString("set_type") == "memorabilia" // art series, commander special cards (like OC21)
                         val numberInSetImported = paddingCollectorNumber(when {
                             isMemorabilia -> "M" + it.getString("collector_number")
-                            isPromo && this.shortName != it.getString("set") -> it.getString("collector_number")+" P"
+                            isPromo && this.id.value != it.getString("set") -> it.getString("collector_number")+" P"
                             isToken -> "T" + it.getString("collector_number")
                             else -> it.getString("collector_number")
                         })
@@ -246,25 +250,8 @@ fun CardSet.importCardsOfSet(additionalLanguages: List<String> = emptyList()) {
                         val isPrereleaseStamped = it.containsKey("promo_types") && it.getJsonArray("promo_types").containsString("prerelease") && it.getJsonArray("promo_types").containsString("datestamped")
 
                         if (!isPrereleaseStamped && !isStampedPromoPackCard) {
-                            Card.find { Cards.set.eq(this@importCardsOfSet.id).and(Cards.numberInSet.eq(numberInSetImported)) }.singleOrNull()?.apply {
-                                name = cardName
-                                arenaId = it["arena_id"]?.let { (it as? JsonNumber)?.intValue() }
-                                rarity = it.getString("rarity").parseRarity()
-                                promo = isPromo
-                                token = isToken
-                                image = it.getJsonObject("image_uris")?.getString("png")?.let { URI(it) } ?:
-                                        it.getJsonObjectArray("card_faces")?.get(0)?.getJsonObject("image_uris")?.getString("png")?.let { URI(it) }
-                                cardmarketUri = it.getJsonObject("purchase_uris")?.getString("cardmarket")?.let { URI(it) }
-
-                                extra = isExtra
-                                nonfoilAvailable = isNonfoilAvailable
-                                foilAvailable = isFoilAvailable
-                                fullArt = isFullArt
-                                extendedArt = isExtendedArt
-                                this.specialDeckRestrictions = specialDeckRestrictions
-
-                            } ?: Card.new {
-                                set = this@importCardsOfSet
+                            Card.newOrUpdate(cardId) {
+                                set = scryfallCardSet
                                 numberInSet = numberInSetImported
                                 name = cardName
                                 arenaId = it["arena_id"]?.let { (it as? JsonNumber)?.intValue() }
@@ -280,6 +267,16 @@ fun CardSet.importCardsOfSet(additionalLanguages: List<String> = emptyList()) {
                                 foilAvailable = isFoilAvailable
                                 fullArt = isFullArt
                                 extendedArt = isExtendedArt
+
+                                val prices = it.getJsonObject("prices")
+
+                                price = if (prices["eur"]?.valueType == JsonValue.ValueType.STRING)
+                                    prices.getJsonString("eur").string.toDouble()
+                                else null
+                                priceFoil = if (prices["eur_foil"]?.valueType == JsonValue.ValueType.STRING)
+                                        prices.getJsonString("eur_foil").string.toDouble()
+                                    else null
+
                                 this.specialDeckRestrictions = specialDeckRestrictions
                             }
                         }
@@ -293,33 +290,33 @@ fun CardSet.importCardsOfSet(additionalLanguages: List<String> = emptyList()) {
         }
     }
 
-    additionalLanguages.forEach { language ->
-        listOf(shortName).forEach { setCode ->
-            try {
-                queryPagedData("https://api.scryfall.com/cards/search?q=lang%3A$language%20set%3A${setCode}&unique=prints&order=set") {
-                    if(it.getString("object") == "card") {
-                        val isPromo = it.getBoolean("promo") || it.getString("collector_number").contains(patternPromoCollectorNumber)
-                        val isToken = it.getString("set_type") == "token"
-                        val isMemorabilia = it.getString("set_type") == "memorabilia" // art series, commander special cards (like OC21)
-                        val numberInSetImported = when {
-                            isMemorabilia -> paddingCollectorNumber("M" + it.getString("collector_number"))
-                            isPromo -> paddingCollectorNumber(it.getString("collector_number")+" P")
-                            isToken -> paddingCollectorNumber("T" + it.getString("collector_number"))
-                            else -> paddingCollectorNumber(it.getString("collector_number"))
-                        }
-
-                        if (! (isPromo && promoExclusionList.any { promoExclusion -> it.getJsonArray("promo_types")?.containsString(promoExclusion) == true })) {
-                            Card.find { Cards.set.eq(this@importCardsOfSet.id).and(Cards.numberInSet.eq(numberInSetImported)) }.singleOrNull()?.apply {
-                                nameDE = it.getPrintedName()
-                            }
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                LOG.error("exception occured during query for language $language https://api.scryfall.com/cards/search?q=lang%3A$language%20set%3A${setCode}&unique=prints&order=set", e)
-            }
-        }
-    }
+//    additionalLanguages.forEach { language ->
+//        listOf(shortName).forEach { setCode ->
+//            try {
+//                queryPagedData("https://api.scryfall.com/cards/search?q=lang%3A$language%20set%3A${setCode}&unique=prints&order=set") {
+//                    if(it.getString("object") == "card") {
+//                        val isPromo = it.getBoolean("promo") || it.getString("collector_number").contains(patternPromoCollectorNumber)
+//                        val isToken = it.getString("set_type") == "token"
+//                        val isMemorabilia = it.getString("set_type") == "memorabilia" // art series, commander special cards (like OC21)
+//                        val numberInSetImported = when {
+//                            isMemorabilia -> paddingCollectorNumber("M" + it.getString("collector_number"))
+//                            isPromo -> paddingCollectorNumber(it.getString("collector_number")+" P")
+//                            isToken -> paddingCollectorNumber("T" + it.getString("collector_number"))
+//                            else -> paddingCollectorNumber(it.getString("collector_number"))
+//                        }
+//
+//                        if (! (isPromo && promoExclusionList.any { promoExclusion -> it.getJsonArray("promo_types")?.containsString(promoExclusion) == true })) {
+//                            Card.find { Cards.set.eq(this@importCardsOfSet.id).and(Cards.numberInSet.eq(numberInSetImported)) }.singleOrNull()?.apply {
+//                                nameDE = it.getPrintedName()
+//                            }
+//                        }
+//                    }
+//                }
+//            } catch (e: Exception) {
+//                LOG.error("exception occured during query for language $language https://api.scryfall.com/cards/search?q=lang%3A$language%20set%3A${setCode}&unique=prints&order=set", e)
+//            }
+//        }
+//    }
 }
 
 //fun CardSet.importCardsOfSetAdditionalLanguage(language: String): Boolean {

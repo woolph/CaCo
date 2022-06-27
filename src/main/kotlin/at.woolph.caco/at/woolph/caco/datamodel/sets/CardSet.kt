@@ -1,35 +1,52 @@
 package at.woolph.caco.datamodel.sets
 
+import at.woolph.caco.datamodel.sets.CardSets.index
+import at.woolph.caco.datamodel.sets.ScryfallCardSets.index
 import javafx.scene.image.Image
 import org.apache.batik.transcoder.TranscoderInput
 import org.apache.batik.transcoder.TranscoderOutput
 import org.apache.batik.transcoder.image.ImageTranscoder
 import org.apache.batik.transcoder.image.PNGTranscoder
-import org.jetbrains.exposed.dao.EntityID
-import org.jetbrains.exposed.dao.IntEntity
-import org.jetbrains.exposed.dao.IntEntityClass
-import org.jetbrains.exposed.dao.IntIdTable
+import org.jetbrains.exposed.dao.*
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
 import java.net.URI
+import java.util.*
 
-object CardSets : IntIdTable() {
-    val shortName = varchar("shortName", length = 6).index()
+object ScryfallCardSets : IdTable<UUID>() {
+    override val id = uuid("id").entityId()
+
+    val setCode = varchar("setCode", length = 10).index()
+    val set = reference("set", CardSets).index()
+    val name = varchar("name", length = 256).index()
+}
+
+class ScryfallCardSet(id: EntityID<UUID>) : UUIDEntity(id) {
+    companion object : UUIDEntityClass<ScryfallCardSet>(ScryfallCardSets)
+
+    var setCode by ScryfallCardSets.setCode
+    var name by ScryfallCardSets.name
+
+    var set by CardSet referencedOn ScryfallCardSets.set
+
+    val cards by Card referrersOn Cards.set
+}
+
+object CardSets : IdTable<String>() {
+    override val id = varchar("shortName", length = 6).entityId()
     val name = varchar("name", length = 256).index()
     val dateOfRelease = date("dateOfRelease").index()
     val officalCardCount = integer("officalCardCount").default(0)
     val digitalOnly = bool("digitalOnly").default(false).index()
     val icon = varchar("iconURI", length = 256).nullable()
     val specialDeckRestriction = integer("specialDeckRestriction").nullable()
-
-    val otherScryfallSetCodes = varchar("otherScryfallSetCodes", length = 256).default("")
 }
 
-class CardSet(id: EntityID<Int>) : IntEntity(id) {
-    companion object : IntEntityClass<CardSet>(CardSets)
+class CardSet(id: EntityID<String>) : Entity<String>(id) {
+    companion object : EntityClass<String, CardSet>(CardSets)
 
-    var shortName by CardSets.shortName
+    var shortName by CardSets.id
     var name by CardSets.name
     var dateOfRelease by CardSets.dateOfRelease
     var officalCardCount by CardSets.officalCardCount
@@ -37,12 +54,12 @@ class CardSet(id: EntityID<Int>) : IntEntity(id) {
     var icon by CardSets.icon.transform({ it?.toString() }, { it?.let { URI(it) } })
     var specialDeckRestriction by CardSets.specialDeckRestriction
 
-    var otherScryfallSetCodes by CardSets.otherScryfallSetCodes.transform({ it.joinToString(",") }, { if (it.isEmpty()) emptyList() else it.split(",") })
-
-    val cards by Card referrersOn Cards.set
-
     val iconImage by lazy { icon.renderSvg(48f)?.let { Image(ByteArrayInputStream(it)) } }
 
+    val scryfallCardSets by ScryfallCardSet referrersOn ScryfallCardSets.set
+
+    val cards: List<Card>
+        get() = scryfallCardSets.flatMap(ScryfallCardSet::cards)
     // TODO consider representing the collection completion in % by filling the set icon with a progress bar style color gradient
 }
 

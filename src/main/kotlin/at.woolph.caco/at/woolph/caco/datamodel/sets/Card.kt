@@ -4,14 +4,14 @@ import at.woolph.caco.datamodel.collection.ArenaCardPossession
 import at.woolph.caco.datamodel.collection.ArenaCardPossessions
 import at.woolph.caco.datamodel.collection.CardPossession
 import at.woolph.caco.datamodel.collection.CardPossessions
-import org.jetbrains.exposed.dao.EntityID
-import org.jetbrains.exposed.dao.IntEntity
-import org.jetbrains.exposed.dao.IntEntityClass
-import org.jetbrains.exposed.dao.IntIdTable
+import org.jetbrains.exposed.dao.*
 import java.net.URI
+import java.util.*
 
-object Cards : IntIdTable() {
-    val set = reference("set", CardSets).index()
+object Cards : IdTable<UUID>() {
+    override val id = uuid("id").entityId()
+
+    val set = reference("set", ScryfallCardSets).index()
     val numberInSet = varchar("number", length = 10).index()
     val name = varchar("name", length = 256).index()
     val nameDE = varchar("nameDE", length = 256).index().nullable()
@@ -28,13 +28,18 @@ object Cards : IntIdTable() {
     val fullArt = bool("fullArt").default(false)
     val extendedArt = bool("extendedArt").default(false)
     val specialDeckRestrictions = integer("specialDeckRestrictions").nullable()
-    // TODO wanted possession count (overruling the default collectionsettings e.g. for planeswalker deck cards = 0, for "seven dwarves" = 7, for promo cards = 1)
+
+    val manaCost = varchar("manaCost", length = 256).nullable()
+    val type = varchar("type", length = 256).nullable()
+
+    val price = double("price").nullable()
+    val priceFoil = double("priceFoil").nullable()
 }
 
-class Card(id: EntityID<Int>) : IntEntity(id) {
-    companion object : IntEntityClass<Card>(Cards)
+class Card(id: EntityID<UUID>) : UUIDEntity(id) {
+    companion object : UUIDEntityClass<Card>(Cards)
 
-    var set by CardSet referencedOn Cards.set
+    var set by ScryfallCardSet referencedOn Cards.set
     var numberInSet by Cards.numberInSet
     var name by Cards.name
     var nameDE by Cards.nameDE
@@ -51,6 +56,12 @@ class Card(id: EntityID<Int>) : IntEntity(id) {
     var fullArt by Cards.fullArt
     var extendedArt by Cards.extendedArt
     var specialDeckRestrictions by Cards.specialDeckRestrictions
+
+    var manaCost by Cards.manaCost
+    var type by Cards.type
+
+    var price by Cards.price
+    var priceFoil by Cards.priceFoil
 
     val possessions by CardPossession referrersOn CardPossessions.card
     val arenaPossessions by ArenaCardPossession referrersOn ArenaCardPossessions.card

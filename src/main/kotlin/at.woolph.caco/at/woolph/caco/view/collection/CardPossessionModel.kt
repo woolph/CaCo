@@ -50,6 +50,7 @@ class CardPossessionModel(card: Card, val collectionsSettings: CollectionSetting
 	val completedPremium = possessionPremium.greaterThanOrEqualTo(possessionPremiumTarget)!!
 	val completed = Bindings.and(completedNonPremium, completedPremium)
 
+
 	init {
 		updatePossessions()
 	}

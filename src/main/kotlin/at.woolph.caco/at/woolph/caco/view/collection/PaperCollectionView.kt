@@ -173,7 +173,7 @@ class PaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
 									card.extra.value -> ": Extras"
 									else -> ""
 								}
-								Triple(neededCount, "${card.name.value}$suffixName", card.set.value?.name?.let { "$it$suffixSet" })
+								Triple(neededCount, "${card.name.value}$suffixName", card.set.value?.set?.name?.let { "$it$suffixSet" })
 							}.filter { it.first > 0 }.joinToString("\n") {
 									"${it.first} ${it.second} (${it.third})"
 							}

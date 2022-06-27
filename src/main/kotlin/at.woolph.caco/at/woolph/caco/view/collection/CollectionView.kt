@@ -132,7 +132,7 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : View
                                     fitWidth = 24.0
                                 }
                             }
-                            text = item?.let { "${it.shortName.uppercase(Locale.getDefault())} - ${it.name}" }
+                            text = item?.let { "${it.id.value.uppercase(Locale.getDefault())} - ${it.name}" }
                         }
                     }
                     button("\u21BB") {
