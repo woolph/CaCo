@@ -1,0 +1,21 @@
+[versions]
+jvmTarget = "17"
+kotlin = "1.8.0"
+doodle = "0.9.0"
+spring = "3.0.1"
+javafx = "17"
+
+[libraries]
+
+[bundles]
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-spring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotlin" }
+
+javafx = "org.openjfx.javafxplugin:0.0.13"
+
+spring = { id = "org.springframework.boot", version.ref = "spring" }
+buildtoolsNative = "org.graalvm.buildtools.native:0.9.18"
+
+spotless = "com.diffplug.spotless:6.12.0"
