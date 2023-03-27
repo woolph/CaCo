@@ -1,31 +1,106 @@
 package at.woolph.caco.view.collection
 
-import at.woolph.caco.datamodel.sets.*
 import at.woolph.caco.datamodel.sets.CardSet
-import at.woolph.caco.importer.sets.*
-import at.woolph.caco.view.*
+import at.woolph.caco.datamodel.sets.Rarity
+import at.woolph.caco.datamodel.sets.loadSetLogo
+import at.woolph.caco.importer.sets.importCardsOfSet
+import at.woolph.caco.importer.sets.importSet
+import at.woolph.caco.importer.sets.importSets
+import at.woolph.caco.importer.sets.update
+import at.woolph.caco.view.CardDetailsView
+import at.woolph.caco.view.CardImageTooltip
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleStringProperty
 import javafx.collections.FXCollections
 import javafx.geometry.Pos
-import javafx.scene.control.*
+import javafx.scene.control.ButtonBase
+import javafx.scene.control.Dialog
+import javafx.scene.control.SelectionMode
+import javafx.scene.control.TableRow
+import javafx.scene.control.TableView
+import javafx.scene.control.ToggleButton
+import javafx.scene.control.ToolBar
+import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.Priority
-import org.jetbrains.exposed.sql.transactions.transaction
-import tornadofx.*
+import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.javafx.asFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
+import org.slf4j.LoggerFactory
+import tornadofx.ChangeListener
+import tornadofx.View
+import tornadofx.button
+import tornadofx.center
+import tornadofx.column
+import tornadofx.combobox
+import tornadofx.contentWidth
+import tornadofx.getValue
+import tornadofx.hboxConstraints
+import tornadofx.label
+import tornadofx.plusAssign
+import tornadofx.region
+import tornadofx.remainingWidth
+import tornadofx.runLater
+import tornadofx.setValue
+import tornadofx.splitpane
+import tornadofx.tableview
+import tornadofx.textfield
+import tornadofx.togglebutton
+import tornadofx.toolbar
+import tornadofx.top
+import tornadofx.vbox
+import tornadofx.vboxConstraints
+import tornadofx.whenDocked
+import tornadofx.whenUndocked
 import java.util.*
+
+suspend fun <T> Dialog<T>.showAndAwait(): T? = withContext(Dispatchers.Main.immediate) {
+    this@showAndAwait.showAndWait().orElse(null)
+}
+
+fun ButtonBase.action(coroutineScope: CoroutineScope, op: suspend () -> Unit) = setOnAction {
+    coroutineScope.launch(Dispatchers.Main.immediate) {
+        op()
+    }
+}
+val emptyImage = Image(CollectionView::class.java.getResourceAsStream("/empty.png"))
+fun imageViewDelayed(coroutineScope: CoroutineScope, width: Int, height: Int, block: suspend () -> Image?) =
+    ImageView(emptyImage).apply {
+        fitWidth = width.toDouble()
+        fitHeight = height.toDouble()
+        coroutineScope.launch(Dispatchers.IO) {
+            block()?.let {
+                withContext(Dispatchers.Main) {
+                    this@apply.image = it
+                }
+            }
+        }
+    }
 
 abstract class CollectionView(val collectionSettings: CollectionSettings) : View() {
     companion object {
-        val FOIL_NOT_IN_POSSESION = "\u2606"
-        val FOIL_IN_POSSESION = "\u2605"
-        val NONFOIL_NOT_IN_POSSESION = "\u2B1C"
-        val NONFOIL_IN_POSSESION = "\u2B1B"
-        val CARD_IN_POSSESION = "\u2B24"
-        val ICON_REDUNDANT_OWNED_CARD = "+"
+        const val FOIL_NOT_IN_POSSESION = "\u2606"
+        const val FOIL_IN_POSSESION = "\u2605"
+        const val NONFOIL_NOT_IN_POSSESION = "\u2B1C"
+        const val NONFOIL_IN_POSSESION = "\u2B1B"
+        const val CARD_IN_POSSESION = "\u2B24"
+        const val ICON_REDUNDANT_OWNED_CARD = "+"
+
+        val LOG = LoggerFactory.getLogger(CollectionView::class.java)
     }
+    val coroutineScope = CoroutineScope(SupervisorJob() + CoroutineName("CollectionView"))
 
     override val root = BorderPane()
 
@@ -45,6 +120,9 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : View
 	lateinit var toggleButtonImageLoading: ToggleButton
 
     val sets = FXCollections.observableArrayList<CardSet>()
+    val setsSorted = sets.sorted { t1: CardSet, t2: CardSet ->
+        -t1.dateOfRelease.compareTo(t2.dateOfRelease)
+    }
 
     val cards = FXCollections.observableArrayList<CardPossessionModel>()
     val cardsSorted = cards.sorted()
@@ -54,20 +132,40 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : View
 
     abstract fun ToolBar.addFeatureButtons()
 
-    fun updateSets() {
-        sets.setAll(transaction { CardSet.all().toList().filter { collectionSettings.cardSetFilter(it) }.asObservable()
-            .sorted { t1: CardSet, t2: CardSet ->
-			-t1.dateOfRelease.compareTo(t2.dateOfRelease)
-		}})
+    suspend fun updateSets() {
+        val updatedSets = newSuspendedTransaction(Dispatchers.IO) {
+            LOG.trace("updateSets loading from DB")
+            CardSet.all().toList()
+        }.filter { collectionSettings.cardSetFilter(it) }
+        LOG.trace("updateSets loaded from DB")
+
+        updateSetsView(updatedSets)
     }
 
-    fun updateCards() {
-        cards.setAll(transaction {
-            set?.cards?.toList()?.map { CardPossessionModel(it, collectionSettings) }
-        } ?: emptyList())
+    suspend fun updateSetsView(updatedSets: List<CardSet>) = withContext(Dispatchers.Main.immediate) {
+        LOG.trace("updateSets updating view")
+        val oldSetSelected = set
+        sets.setAll(updatedSets)
+        set = oldSetSelected
+        LOG.trace("updateSets view updated")
     }
 
-    fun addSet(setCode: String): CardSet { // TODO Progress dialog
+    suspend fun updateCards() {
+        val updatedCards = newSuspendedTransaction(Dispatchers.IO) {
+            LOG.trace("updateCards loading from DB")
+            set?.cards?.toList()?.map { CardPossessionModel(it, collectionSettings) } ?: emptyList()
+        }
+        LOG.trace("updateCards loaded from DB")
+        updateCardsView(updatedCards)
+    }
+
+    suspend fun updateCardsView(updatedCards: List<CardPossessionModel>) = withContext(Dispatchers.Main.immediate) {
+        LOG.trace("updateCards view updating")
+        cards.setAll(updatedCards)
+        LOG.trace("updateCards view updated")
+    }
+
+    suspend fun addSet(setCode: String): CardSet { // TODO Progress dialog
         val importedSet = importSet(setCode).reimportSet()
 
         updateSets()
@@ -75,12 +173,12 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : View
         return importedSet
     }
 
-    fun importAllSets() {
+    suspend fun importAllSets() {
         importSets()
         updateSets()
     }
 
-    fun CardSet.reimportSet(): CardSet = apply {
+    suspend fun CardSet.reimportSet(): CardSet = apply {
         update()
 //        LOG.info("reimport current set $this")
         importCardsOfSet(listOf("german"))
@@ -105,9 +203,24 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : View
     init {
         title = "CaCo"
 
-        updateSets()
+        whenDocked {
+            coroutineScope.launch(Dispatchers.Main.immediate) {
+                updateSets()
+                LOG.trace("setting the initial value")
+                set = setsSorted.firstOrNull()
+                LOG.trace("setting intial value is done")
+            }
+        }
 
-        setProperty.addListener { _, _, _ -> updateCards() }
+        whenUndocked {
+            coroutineScope.coroutineContext.cancelChildren()
+        }
+
+        setProperty.addListener { _, _, _ ->
+            coroutineScope.launch {
+                updateCards()
+            }
+        }
 
         val filterChangeListener = ChangeListener<Any> { _, _, _ ->
             setFilter(filterTextProperty.get(), filterCompleteProperty.get(), filterNonFoilCompleteProperty.get(), filterFoilCompleteProperty.get(),
@@ -122,46 +235,41 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : View
         filterRarityRare.addListener(filterChangeListener)
         filterRarityMythic.addListener(filterChangeListener)
 
-        set = sets.firstOrNull()
-
         with(root) {
             top {
                 toolbar {
 					toggleButtonImageLoading = togglebutton("\uD83D\uDDBC")
 
-                    combobox(setProperty, sets) {
+                    combobox(setProperty, setsSorted) {
                         cellFormat {
-                            graphic = item?.iconImage?.let {
-                                ImageView(it).apply {
-                                    fitHeight = 24.0
-                                    fitWidth = 24.0
-                                }
+                            graphic = imageViewDelayed(coroutineScope, 24, 24) {
+                                item?.icon?.loadSetLogo(48f)
                             }
                             text = item?.let { "${it.id.value.uppercase(Locale.getDefault())} - ${it.name}" }
                         }
                     }
                     button("\u21BB All") {
-                        action {
-                            transaction {
+                        action(coroutineScope) {
+                            newSuspendedTransaction {
                                 importAllSets()
                             }
                         }
                     }
                     button("\u21BB") {
-                        action {
-                            transaction {
+                        action(coroutineScope) {
+                            newSuspendedTransaction {
                                 set?.reimportSet()
                             }
                         }
                     }
                     button("+") {
-                        action {
-                            transaction {
-                                AddSetsDialog(this@CollectionView).showAndWait().ifPresent { setCodes ->
-									// TODO progress dialog
-									set = setCodes.split(',').map {
-										addSet(it.trim().lowercase(Locale.getDefault()))
-									}.last()
+                        action(coroutineScope) {
+                            AddSetsDialog(this@CollectionView).showAndAwait()?.let { setCodes ->
+                                newSuspendedTransaction {
+                                    // TODO progress dialog
+                                    set = setCodes.split(',').map {
+                                        addSet(it.trim().lowercase(Locale.getDefault()))
+                                    }.last()
                                 }
                             }
                         }
@@ -245,39 +353,57 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : View
 						column("Collection Completion", CardPossessionModel::collectionCompletion) {
 							contentWidth(15.0, useAsMin = true, useAsMax = true)
 						}
+						column("Price", CardPossessionModel::priceString) {
+							contentWidth(5.0, useAsMin = true, useAsMax = true)
+						}
 
 						setRowFactory {
 							object : TableRow<CardPossessionModel>() {
 								override fun updateItem(cardInfo: CardPossessionModel?, empty: Boolean) {
 									super.updateItem(cardInfo, empty)
-//									tooltip = cardInfo?.let { CardImageTooltip(it, toggleButtonImageLoading.selectedProperty()) }
+									tooltip = cardInfo?.let { CardImageTooltip(it, toggleButtonImageLoading.selectedProperty()) }
 								}
 							}
 						}
 
 						selectionModel.selectionMode = SelectionMode.SINGLE
-//						selectionModel.selectedItemProperty().addListener { _, _, _ ->
-//							if (toggleButtonImageLoading.isSelected) {
-//								tornadofx.runAsync {
-//									// precache the next images
-//									listOf(tvCards.selectionModel.selectedIndex + 1,
-//											tvCards.selectionModel.selectedIndex - 1,
-//											tvCards.selectionModel.selectedIndex + 2,
-//											tvCards.selectionModel.selectedIndex + 3).forEach {
-//										if (0 <= it && it < tvCards.items.size) {
-//											tvCards.items[it].getCachedImage()
-//										}
-//									}
-//								}
-//							}
-//						}
+						selectionModel.selectedItemProperty().addListener { _, _, _ ->
+							if (toggleButtonImageLoading.isSelected) {
+                                coroutineScope.launch(Dispatchers.Default) {
+                                    flowOf(+1, -1, +2, +3)
+                                        .map { tvCards.selectionModel.selectedIndex + it }
+                                        .filter { it >= 0 && it < tvCards.items.size }
+                                        .map { tvCards.items[it] }
+                                        .collect {
+                                            coroutineScope.launch(Dispatchers.IO) {
+                                                it.cacheImage()
+                                            }
+                                        }
+                                }
+							}
+						}
+
+//                        coroutineScope.launch(Dispatchers.Default) {
+//                            selectionModel.selectedItemProperty().asFlow()
+//                                .collectLatest {
+//                                    flowOf(+1, -1, +2, +3)
+//                                        .map { tvCards.selectionModel.selectedIndex + it }
+//                                        .filter { it >= 0 && it < tvCards.items.size }
+//                                        .map { tvCards.items[it] }
+//                                        .collect {
+//                                            coroutineScope.launch(Dispatchers.IO) {
+//                                                it.cacheImage()
+//                                            }
+//                                        }
+//                                }
+//                        }
 					}
 
                     vbox {
                         alignment = Pos.TOP_CENTER
                         this += find<CardDetailsView> {
                             runLater {
-                                //this.cardProperty.bind(tvCards.selectionModel.selectedItemProperty())
+                                this.cardProperty.bind(tvCards.selectionModel.selectedItemProperty())
                                 this.imageLoadingProperty.bind(toggleButtonImageLoading.selectedProperty())
                             }
                         }

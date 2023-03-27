@@ -1,22 +1,23 @@
 package at.woolph.caco
 
-import at.woolph.caco.datamodel.collection.ArenaCardPossessions
-import at.woolph.caco.datamodel.collection.CardPossessions
-import at.woolph.caco.datamodel.decks.Builds
-import at.woolph.caco.datamodel.decks.DeckArchetypes
-import at.woolph.caco.datamodel.decks.DeckCards
+import at.woolph.caco.datamodel.Databases
 import at.woolph.caco.datamodel.sets.CardSet
-import at.woolph.caco.datamodel.sets.CardSets
-import at.woolph.caco.datamodel.sets.Cards
 import at.woolph.caco.datamodel.sets.renderSvg
-import at.woolph.libs.pdf.*
+import at.woolph.libs.pdf.Font
+import at.woolph.libs.pdf.Node
+import at.woolph.libs.pdf.Page
+import at.woolph.libs.pdf.createPdfDocument
+import at.woolph.libs.pdf.drawBackground
+import at.woolph.libs.pdf.drawBorder
+import at.woolph.libs.pdf.drawImage
+import at.woolph.libs.pdf.drawText
+import at.woolph.libs.pdf.drawText90
+import at.woolph.libs.pdf.frame
+import at.woolph.libs.pdf.page
 import be.quodlibet.boxable.HorizontalAlignment
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.font.PDType0Font
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.SchemaUtils
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.awt.Color
 import java.net.URI
@@ -210,11 +211,9 @@ val Number.cm get(): Float = this.toFloat()/21f*595f
 
 // a4 842 pt x 595 pt
 fun main(args: Array<String>) {
-//	Database.connect("jdbc:h2:~/caco", driver = "org.h2.Driver")
-	Database.connect("jdbc:h2:./caco", driver = "org.h2.Driver")
+	Databases.init()
 
 	transaction {
-		SchemaUtils.createMissingTablesAndColumns(CardSets, Cards, CardPossessions, ArenaCardPossessions, DeckArchetypes, Builds, DeckCards)
 		createPdfDocument {
 			val titleAdjustment = TitleAdjustment.FONT_SIZE
 			val labelsWide : List<MapLabelItem> = listOf(

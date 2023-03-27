@@ -6,6 +6,22 @@ import at.woolph.caco.datamodel.sets.*
 import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.newOrUpdate
 import at.woolph.libs.log.logger
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
@@ -38,125 +54,103 @@ fun paddingCollectorNumber(collectorNumber: String): String {
 
 // TODO import MDFC replacements (STX, KHM, ...)
 // TODO import double sided tokens as they are printed (especially those of the commander precons)
-fun importSet(setCode: String): CardSet {
-    println("importing set $setCode")
-    Thread.sleep(1) // delay queries to scryfall api (to prevent overloading service)
-    val conn = URL("https://api.scryfall.com/sets/$setCode").openConnection() as HttpURLConnection
+suspend fun importSet(setCode: String): CardSet = withContext(Dispatchers.IO) {
+    HttpClient(CIO).use {
+        val response: HttpResponse = it.get("https://api.scryfall.com/sets/$setCode")
+        println("importing set $setCode")
 
-    try {
-        conn.requestMethod = "GET"
-        conn.setRequestProperty("Accept", "application/json")
+        if (!response.status.isSuccess())
+            throw Exception("request failed with status code ${response.status.description}")
 
-        if (conn.responseCode != 200) {
-            throw Exception("Failed : HTTP error code : ${conn.responseCode}")
+        val scryfallSet = response.body<ScryfallSet>()
+
+        if (scryfallSet.isNonDigitalSetWithCards()) {
+            CardSet.newOrUpdate(scryfallSet.code) { scryfallSet.update(this@newOrUpdate) }
+        } else {
+            throw Exception("result is not a set or it's digital or does not have any cards")
         }
-
-        conn.inputStream.useJsonReader {
-            it.readObject().let {
-                if(it.getString("object") == "set") {
-                    return CardSet.newOrUpdate(it.getString("code")) {
-                        name = it.getString("name")
-                        dateOfRelease = LocalDate.parse(it.getString("released_at"))
-                        officalCardCount = it.getInt("card_count")
-                        digitalOnly = it.getBoolean("digital")
-                        icon = URI(it.getString("icon_svg_uri"))
-                    }
-                } else {
-                    throw Exception("result is not a set")
-                }
-            }
-        }
-    } catch(ex:Exception) {
-        throw Exception("unable to import set $setCode", ex)
-    } finally {
-        conn.disconnect()
     }
 }
 
-fun CardSet.update() {
-    LOG.debug("update set $this")
-    val conn = URL("https://api.scryfall.com/sets/${this.shortName}").openConnection() as HttpURLConnection
+suspend fun CardSet.update() = withContext(Dispatchers.IO) {
+    HttpClient(CIO).use {
+        LOG.debug("update set $this")
+        val response: HttpResponse = it.get("https://api.scryfall.com/sets/${this@update.shortName}")
 
-    try {
-        conn.requestMethod = "GET"
-        conn.setRequestProperty("Accept", "application/json")
+        if (!response.status.isSuccess())
+            throw Exception("request failed with status code ${response.status.description}")
 
-        if (conn.responseCode != 200) {
-            throw Exception("Failed : HTTP error code : ${conn.responseCode}")
+        val scryfallSet = response.body<ScryfallSet>()
+
+        if (scryfallSet.isNonDigitalSetWithCards()) {
+            scryfallSet.update(this@update)
+        } else {
+            throw Exception("result is not a set or it's digital or does not have any cards")
         }
+    }
+}
+@Serializable()
+data class ScryfallSet(
+    val code: String,
+    val parent_set_code: String?,
+    val `object`: String,
+    val id: String,
+    val digital: Boolean,
+    val card_count: Int,
+    val name: String,
+    val released_at: String,
+    val icon_svg_uri: String,
+) {
+    fun isNonDigitalSetWithCards() = `object` == "set" && !digital && card_count > 0
+    fun isRootSet() = parent_set_code == null || code.endsWith(parent_set_code)
+    fun update(cardSet: CardSet) = cardSet.apply {
+        name = this@ScryfallSet.name
+        dateOfRelease = LocalDate.parse(this@ScryfallSet.released_at)
+        officalCardCount = this@ScryfallSet.card_count
+        icon = URI(this@ScryfallSet.icon_svg_uri)
+    }
+}
+@Serializable
+data class ScryfallSetList(
+    val data: List<ScryfallSet>,
+)
 
-        conn.inputStream.useJsonReader {
-            it.readObject().let {
-                if(it.getString("object") == "set" && !it.getBoolean("digital") && it.getInt("card_count") > 0) {
-                    this@update.apply {
-                        name = it.getString("name")
-                        dateOfRelease = LocalDate.parse(it.getString("released_at"))
-                        officalCardCount = it.getInt("card_count")
-                        icon = URI(it.getString("icon_svg_uri"))
-                    }
-                } else {
-                    throw Exception("result is not a set or it's digital or does not have any cards")
-                }
-            }
+private fun importSetsAsIs(): Flow<ScryfallSet> = flow {
+    HttpClient(CIO).use {
+        val list = withContext(Dispatchers.IO) {
+            LOG.debug("importing sets")
+            val response: HttpResponse = it.get("https://api.scryfall.com/sets")
+
+            if (!response.status.isSuccess())
+                throw Exception("request failed with status code ${response.status.description}")
+
+            response.body<ScryfallSetList>()
         }
-    } catch(ex:Exception) {
-        throw Exception("unable to import sets", ex)
-    } finally {
-        conn.disconnect()
+        emitAll(list.data.asFlow()
+            .filter(ScryfallSet::isNonDigitalSetWithCards)
+        )
     }
 }
 
-fun importSets(): Iterable<CardSet> {
-    LOG.debug("importing sets")
-    val conn = URL("https://api.scryfall.com/sets").openConnection() as HttpURLConnection
+fun importSets(): Flow<CardSet> = flow {
+    val sets = importSetsAsIs().toList()
 
-    try {
-        conn.requestMethod = "GET"
-        conn.setRequestProperty("Accept", "application/json")
-
-        if (conn.responseCode != 200) {
-            throw Exception("Failed : HTTP error code : ${conn.responseCode}")
-        }
-
-        conn.inputStream.useJsonReader {
-            it.readObject().let {
-                if(it.getString("object") == "list") {
-                    val sets = it.getJsonArray("data").map(JsonValue::asJsonObject).filter { !it.getBoolean("digital") && it.getInt("card_count") > 0 }
-
-                    sets.forEach {
-                        if (!it.containsKey("parent_set_code") || !it.getString("code").endsWith(it.getString("parent_set_code"))) {
-                            CardSet.newOrUpdate(it.getString("code")) {
-                                name = it.getString("name")
-                                dateOfRelease = LocalDate.parse(it.getString("released_at"))
-                                officalCardCount = it.getInt("card_count")
-                                icon = URI(it.getString("icon_svg_uri"))
-                            }
-                        }
-                    }
-                    sets.forEach {
-                        val setId = UUID.fromString(it.getString("id"))
-                        val setFound = CardSet.findById(it.getString("code"))
-                            ?: CardSet.findById(it.getString("parent_set_code"))
-                            ?: throw NoSuchElementException("no card set found for code ${it.getString("code")} or ${it.getString("parent_set_code")}")
-
-                        ScryfallCardSet.newOrUpdate(setId) {
-                            setCode = it.getString("code")
-                            name = it.getString("name")
-                            set = setFound
-                        }
-                    }
-                } else {
-                    throw Exception("result is not a list of sets")
-                }
-            }
-        }
-    } catch(ex:Exception) {
-        throw Exception("unable to import sets", ex)
-    } finally {
-        conn.disconnect()
+    sets.filter(ScryfallSet::isRootSet).forEach {
+        CardSet.newOrUpdate(it.code) { it.update(this) }
     }
+    sets.forEach {
+        val setId = UUID.fromString(it.id)
+        val setFound = CardSet.findById(it.code)
+            ?: it.parent_set_code?.let { CardSet.findById(it) }
+            ?: throw NoSuchElementException("no card set found for code ${it.code} or ${it.parent_set_code}")
 
-    return CardSet.all()
+        ScryfallCardSet.newOrUpdate(setId) {
+            setCode = it.code
+            name = it.name
+            set = setFound
+        }
+    }
+    emitAll(CardSet.all().asFlow())
 }
 
 fun queryPagedData(startingUri: String, processData: (JsonObject) -> Unit) {

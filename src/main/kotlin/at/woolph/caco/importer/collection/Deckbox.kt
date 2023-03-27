@@ -219,7 +219,6 @@ val setNameMapping = mutableMapOf(
     "Innistrad: Crimson Vow Commander" to "Crimson Vow Commander",
     "Kamigawa: Neon Dynasty Commander" to "Neon Dynasty Commander",
     "Streets of New Capenna Commander" to "New Capenna Commander",
-    "Streets of New Capenna Commander" to "New Capenna Commander",
     "Warhammer 40,000" to "Warhammer 40,000 Commander",
 )
 

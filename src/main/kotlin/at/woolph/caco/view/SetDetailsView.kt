@@ -1,6 +1,8 @@
 package at.woolph.caco.view
 
+import at.woolph.caco.datamodel.sets.renderSvg
 import at.woolph.caco.gui.Styles
+import at.woolph.caco.imagecache.ImageCache
 import at.woolph.caco.view.collection.CardSetModel
 import at.woolph.libs.ktfx.*
 import javafx.beans.property.SimpleObjectProperty
@@ -10,6 +12,14 @@ import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import javafx.scene.paint.Color
 import javafx.scene.shape.Shape
+import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.javafx.asFlow
+import kotlinx.coroutines.launch
 import tornadofx.Fragment
 import tornadofx.*
 import kotlin.math.min
@@ -65,28 +75,25 @@ class SetDetailsView(val setProperty: SimpleObjectProperty<CardSetModel?> = Simp
 		}
 	}
 
+
+	val coroutineScope = CoroutineScope(SupervisorJob() + CoroutineName("SetDetailsView"))
+
 	init {
 		labelNumberInSet.textProperty().bind(setProperty.selectNullable { it?.officalCardCount }.toStringBinding())
 		labelSetName.textProperty().bind(setProperty.selectNullable { it?.name })
 
-		setProperty.addListener { _, _, _ -> loadImage() }
-	}
-
-	fun loadImage() {
-		tornadofx.runAsync {
-			imageLoadingProgressIndicatorBackground.isVisible = true
-			imageLoadingProgressIndicator.isVisible = true
-			set?.getCachedImage()
-		} ui {
-			imageView.image = it
-			imageLoadingProgressIndicator.isVisible = false
-			imageLoadingProgressIndicatorBackground.isVisible = false
+		coroutineScope.launch(Dispatchers.Main.immediate) {
+			setProperty.asFlow()
+				.collectLatest { set ->
+					imageLoadingProgressIndicatorBackground.isVisible = true
+					imageLoadingProgressIndicator.isVisible = true
+					imageView.image = set?.getCachedImage()
+					imageLoadingProgressIndicator.isVisible = false
+					imageLoadingProgressIndicatorBackground.isVisible = false
+				}
 		}
 	}
 }
 
-object SetImageCache: ImageCache()
-
-fun CardSetModel?.getCachedImage(): Image? {
-	return this?.icon?.value?.let { SetImageCache.getImage(it,128.0, 128.0, true, true) }
-}
+suspend fun CardSetModel.getCachedImage(): Image? =
+	ImageCache.getImage(this.icon.value.toString()) { this.icon.value.renderSvg(48.0f) }

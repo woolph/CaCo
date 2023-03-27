@@ -7,24 +7,55 @@ import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.datamodel.sets.Foil
 import at.woolph.caco.datamodel.sets.Rarity
+import at.woolph.caco.importer.collection.setNameMapping
 import at.woolph.caco.importer.collection.toLanguageDeckbox
 import at.woolph.caco.view.CardDetailsView
-import at.woolph.caco.view.getCachedImage
-import at.woolph.libs.ktfx.commitValue
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleIntegerProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleStringProperty
 import javafx.collections.FXCollections
 import javafx.event.EventHandler
-import javafx.scene.control.*
+import javafx.scene.control.ButtonType
+import javafx.scene.control.Dialog
+import javafx.scene.control.SelectionMode
+import javafx.scene.control.TableColumn
+import javafx.scene.control.TableView
+import javafx.scene.control.TextField
+import javafx.scene.control.ToggleButton
 import javafx.scene.input.KeyCode
-import javafx.scene.input.KeyEvent
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.Priority
 import javafx.stage.FileChooser
 import org.jetbrains.exposed.sql.transactions.transaction
-import tornadofx.*
+import tornadofx.ChangeListener
+import tornadofx.FileChooserMode
+import tornadofx.View
+import tornadofx.action
+import tornadofx.button
+import tornadofx.center
+import tornadofx.chooseFile
+import tornadofx.column
+import tornadofx.combobox
+import tornadofx.contentWidth
+import tornadofx.field
+import tornadofx.fieldset
+import tornadofx.find
+import tornadofx.form
+import tornadofx.hboxConstraints
+import tornadofx.label
+import tornadofx.left
+import tornadofx.plusAssign
+import tornadofx.region
+import tornadofx.remainingWidth
+import tornadofx.runLater
+import tornadofx.tableview
+import tornadofx.textfield
+import tornadofx.togglebutton
+import tornadofx.toolbar
+import tornadofx.tooltip
+import tornadofx.top
+import tornadofx.vboxConstraints
 import java.io.File
 
 
@@ -282,17 +313,18 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
                         selectionModel.selectionMode = SelectionMode.SINGLE
                         selectionModel.selectedItemProperty().addListener { _, _, _ ->
 							if(toggleButtonImageLoading.isSelected) {
-								runAsync {
-									// precache the next images
-									listOf(tvCards.selectionModel.selectedIndex + 1,
-											tvCards.selectionModel.selectedIndex - 1,
-											tvCards.selectionModel.selectedIndex + 2,
-											tvCards.selectionModel.selectedIndex + 3).forEach {
-										if (0 <= it && it < tvCards.items.size) {
-											tvCards.items[it].getCachedImage()
-										}
-									}
-								}
+                                // TODO make working again
+//								runAsync {
+//									// precache the next images
+//									listOf(tvCards.selectionModel.selectedIndex + 1,
+//											tvCards.selectionModel.selectedIndex - 1,
+//											tvCards.selectionModel.selectedIndex + 2,
+//											tvCards.selectionModel.selectedIndex + 3).forEach {
+//										if (0 <= it && it < tvCards.items.size) {
+//											tvCards.items[it].getCachedImage()
+//										}
+//									}
+//								}
 							}
                             bulkAddNumberTextField.clear()
                             bulkAddNumberTextField.requestFocus()
@@ -337,11 +369,13 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
 									}
 									val prereleasePromo = false
 									val language = languageProperty.value.toLanguageDeckbox()
-									val setName = when {
-										prereleasePromo -> "Prerelease Events: ${set.name}"
-										token -> "Extras: ${set.name}"
-										else -> set.name
-									}
+                                    val setName = setNameMapping.asSequence().firstOrNull { it.value == set.name }?.key ?: set.name?.let {
+                                        when {
+                                            prereleasePromo -> "Prerelease Events: ${it}"
+                                            token -> "Extras: ${it}"
+                                            else -> it
+                                        }
+                                    }
 
 									cardInfo.bulkAdditionNonPremium.value.let { toBeAdded ->
 										if (toBeAdded > 0) {

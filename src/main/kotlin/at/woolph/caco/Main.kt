@@ -1,15 +1,27 @@
 package at.woolph.caco
 
+import at.woolph.caco.datamodel.Databases
 import at.woolph.caco.datamodel.collection.ArenaCardPossessions
 import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.datamodel.decks.Builds
-import at.woolph.caco.datamodel.decks.DeckCards
 import at.woolph.caco.datamodel.decks.DeckArchetypes
-import at.woolph.caco.datamodel.sets.*
+import at.woolph.caco.datamodel.decks.DeckCards
+import at.woolph.caco.datamodel.sets.Card
+import at.woolph.caco.datamodel.sets.CardSet
+import at.woolph.caco.datamodel.sets.CardSets
+import at.woolph.caco.datamodel.sets.Cards
 import at.woolph.caco.datamodel.sets.Cards.set
+import at.woolph.caco.datamodel.sets.ScryfallCardSet
+import at.woolph.caco.datamodel.sets.ScryfallCardSets
+import at.woolph.caco.datamodel.sets.parseRarity
 import at.woolph.caco.importer.collection.importDeckbox
-import at.woolph.caco.importer.sets.*
+import at.woolph.caco.importer.sets.containsString
+import at.woolph.caco.importer.sets.importCardsOfSet
+import at.woolph.caco.importer.sets.importSet
+import at.woolph.caco.importer.sets.importSets
+import at.woolph.caco.importer.sets.paddingCollectorNumber
+import at.woolph.caco.importer.sets.patternPromoCollectorNumber
 import at.woolph.caco.view.collection.CardPossessionModel
 import at.woolph.caco.view.collection.PaperCollectionView
 import at.woolph.libs.files.bufferedWriter
@@ -18,22 +30,30 @@ import at.woolph.libs.files.path
 import at.woolph.libs.json.getJsonObjectArray
 import at.woolph.libs.json.useJsonReader
 import at.woolph.libs.log.logger
-import at.woolph.libs.pdf.*
+import at.woolph.libs.pdf.Font
+import at.woolph.libs.pdf.PagePosition
+import at.woolph.libs.pdf.columns
+import at.woolph.libs.pdf.createPdfDocument
+import at.woolph.libs.pdf.drawText
+import at.woolph.libs.pdf.frame
+import at.woolph.libs.pdf.page
 import be.quodlibet.boxable.BaseTable
 import be.quodlibet.boxable.HorizontalAlignment
 import be.quodlibet.boxable.VerticalAlignment
-import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.transactions.transaction
-import java.io.*
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.font.PDType1Font
 import org.jetbrains.exposed.dao.Entity
 import org.jetbrains.exposed.dao.EntityClass
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import tornadofx.getDouble
+import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.SchemaUtils
+import org.jetbrains.exposed.sql.count
+import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.sum
+import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
+import org.jetbrains.exposed.sql.transactions.transaction
 import java.awt.Color
-import java.awt.Toolkit
-import java.awt.datatransfer.StringSelection
+import java.io.File
 import java.net.URI
 import java.nio.file.Paths
 import java.util.*
@@ -75,12 +95,8 @@ data class Quadruple<T1, T2, T3, T4>(val t1: T1, val t2: T2, val t3: T3, val t4:
 /**
  *
  */
-fun main(args: Array<String>) {
-	Database.connect("jdbc:h2:./caco", driver = "org.h2.Driver")
-
-	transaction {
-		SchemaUtils.createMissingTablesAndColumns(CardSets, ScryfallCardSets, Cards, CardPossessions, DeckArchetypes, Builds, DeckCards, ArenaCardPossessions)
-	}
+suspend fun main(args: Array<String>) {
+	Databases.init()
 
 	if (args.any { it.startsWith(EXPORT_VALUE_TRADEABLES) }) {
 		path("./export-value-tradeables.txt").bufferedWriter().use { writer ->
@@ -264,10 +280,10 @@ fun main(args: Array<String>) {
 
 	if (args.any { it.startsWith(IMPORT_SETS) }) {
 		LOG.info("importing all sets and cards took {} ms", measureTimeMillis {
-			transaction {
+			newSuspendedTransaction {
 					importSets()
 //						.filter { it.dateOfRelease.isAfter(DateTime.parse("2020-01-01")) }
-						.forEach {
+						.collect {
 						LOG.info("importing cards for set {} cards took {} ms", it.shortName, measureTimeMillis {
 						it.importCardsOfSet()
 						})
@@ -280,19 +296,18 @@ fun main(args: Array<String>) {
 
 	if(args.any { it.startsWith(IMPORT_SET) }) {
 		// import card database
-		transaction {
-			val setCodes = args.filter { it.startsWith(IMPORT_SET) }
-					.flatMap { it.removePrefix(IMPORT_SET).split(",") }
-
-			setCodes.forEach { setCode ->
-				try {
-					importSet(setCode.lowercase(Locale.getDefault())).apply {
-						importCardsOfSet()
+		newSuspendedTransaction {
+			args.filter { it.startsWith(IMPORT_SET) }
+				.flatMap { it.removePrefix(IMPORT_SET).split(",") }
+				.forEach { setCode ->
+					try {
+						importSet(setCode.lowercase(Locale.getDefault())).apply {
+							importCardsOfSet()
+						}
+					} catch(ex:Exception) {
+						ex.printStackTrace()
 					}
-				} catch(ex:Exception) {
-					ex.printStackTrace()
 				}
-			}
 		}
 	}
 

@@ -3,7 +3,10 @@ package at.woolph.caco.view.collection
 import at.woolph.caco.gui.Styles
 import at.woolph.caco.datamodel.collection.CardCondition
 import at.woolph.caco.datamodel.collection.CardLanguage
+import at.woolph.libs.ktfx.mapBinding
+import at.woolph.libs.ktfx.mapStringBinding
 import javafx.beans.property.SimpleObjectProperty
+import javafx.beans.property.StringProperty
 import javafx.geometry.HPos
 import javafx.geometry.Rectangle2D
 import javafx.scene.control.Label
@@ -12,9 +15,6 @@ import javafx.scene.image.ImageView
 import tornadofx.Fragment
 import tornadofx.*
 
-fun <K,V> generateMap(keys: Collection<K>, valueGenerator: (K)->V) = keys.map { it to valueGenerator(it) }.toMap()
-fun <K,V> generateMap(keys: Array<K>, valueGenerator: (K)->V) = keys.map { it to valueGenerator(it) }.toMap()
-
 class IconCollection(val image: Image, val iconWidth: Double, val iconHeight: Double) {
 	operator fun get(row: Int, column: Int) = ImageView(image).apply {
 		viewport = Rectangle2D(iconWidth*column,iconHeight*row,iconWidth, iconHeight)
@@ -22,16 +22,25 @@ class IconCollection(val image: Image, val iconWidth: Double, val iconHeight: Do
 }
 
 class CardPossessionView(val cardProperty: SimpleObjectProperty<CardPossessionModel?> = SimpleObjectProperty(null)) : Fragment() {
-	private val languages = CardLanguage.values().filter { it != CardLanguage.UNKNOWN }
-	private val conditions = CardCondition.values().filter { it != CardCondition.UNKNOWN }
-	private val possessions = generateMap(languages) { language ->
-		generateMap(conditions) { condition ->
-			cardProperty.stringBinding { it?.getPaperPossessionsString(language, condition) }
+	private val languages = CardLanguage.values().filter { it != CardLanguage.UNKNOWN }.toSet()
+	private val conditions = CardCondition.values().filter { it != CardCondition.UNKNOWN }.toSet()
+
+	private val possessionMap = cardProperty.mapBinding { it?.getPaperPossessionsMap(languages, conditions) ?: emptyMap() }
+	private val possessions = languages.associateWith { language ->
+		conditions.associateWith { condition ->
+			possessionMap.mapStringBinding { it?.get(language)?.get(condition)?.let(CardPossessionModel.Possession::asString) ?: "" }
 		}
 	}
-	private val sums = generateMap(languages) { language ->
-		cardProperty.stringBinding { it?.getPaperPossessionsString(language) }
+
+	private val sums = languages.associateWith { language ->
+		possessionMap.mapStringBinding {
+			it?.get(language)?.values
+				?.fold(CardPossessionModel.Possession(0,0), CardPossessionModel.Possession.Companion::fold)
+				?.let(CardPossessionModel.Possession::asString) ?: "" }
 	}
+
+	private fun possessionsStringBinding(cardLanguage: CardLanguage, cardCondition: CardCondition) =
+		possessions[cardLanguage]?.get(cardCondition) ?: throw IllegalStateException()
 
 	private val iconCollection = IconCollection(resources.image("mkm-icons.png"), 16.0, 16.0)
 
@@ -91,7 +100,7 @@ class CardPossessionView(val cardProperty: SimpleObjectProperty<CardPossessionMo
 
 				languages.forEach { cl ->
 					label {
-						textProperty().bind(possessions[cl]?.get(cc))
+						textProperty().bind(possessionsStringBinding(cl, cc))
 					}
 				}
 			}

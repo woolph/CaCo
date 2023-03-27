@@ -62,18 +62,27 @@ class CardPossessionModel(card: Card, val collectionsSettings: CollectionSetting
 		}
 	}
 
-	fun getPaperPossessions(language: CardLanguage, condition: CardCondition)
-			= transaction { item.possessions.filter { it.language == language && it.condition == condition }.count() }
+	data class Possession(val count: Int, val foilCount: Int) {
+		fun asString() : String = when {
+			foilCount > 0 -> "$count*$foilCount"
+			count > 0  -> "$count"
+			else -> ""
+		}
 
-	fun getPaperPossessionsString2(language: CardLanguage, condition: CardCondition? = null)
-			= transaction { String.format("%d/%d★",
-			item.possessions.filter { it.language == language && (condition == null || it.condition == condition) }.count(),
-			item.possessions.filter { it.language == language && (condition == null || it.condition == condition) && it.foil }.count())
+		companion object {
+			fun fold(a: Possession, b: Possession) =
+				Possession(a.count+b.count, a.foilCount+b.foilCount)
+		}
 	}
-	fun getPaperPossessionsString(language: CardLanguage, condition: CardCondition? = null): String {
-		val list = transaction { item.possessions.filter { it.language == language && (condition == null || it.condition == condition) } }
-		val count = list.count()
-		val foilCount = list.count { it.foil }
-		return if(count>0) count.toString()+"'".repeat(foilCount) else ""
+	fun getPaperPossessionsMap(languages: Set<CardLanguage>, conditions: Set<CardCondition>): Map<CardLanguage, Map<CardCondition, Possession>> {
+		val possessions = transaction { item.possessions.toList() }
+
+		return languages.associateWith { language ->
+			conditions.associateWith { condition ->
+				val count = possessions.count { it.language == language && (condition == null || it.condition == condition) && !it.foil }
+				val foilCount = possessions.count { it.language == language && (condition == null || it.condition == condition) && it.foil }
+				Possession(count, foilCount)
+			}
+		}
 	}
 }

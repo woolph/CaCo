@@ -2,18 +2,42 @@ package at.woolph.caco.view
 
 import at.woolph.caco.gui.Styles
 import at.woolph.caco.view.collection.CardModel
-import at.woolph.libs.ktfx.*
+import at.woolph.libs.ktfx.selectNullable
+import at.woolph.libs.ktfx.toStringBinding
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleObjectProperty
-import javafx.concurrent.Task
 import javafx.scene.control.Label
 import javafx.scene.control.ProgressIndicator
-import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import javafx.scene.paint.Color
 import javafx.scene.shape.Shape
+import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.javafx.asFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.slf4j.LoggerFactory
 import tornadofx.Fragment
-import tornadofx.*
+import tornadofx.addClass
+import tornadofx.getValue
+import tornadofx.gridpane
+import tornadofx.gridpaneConstraints
+import tornadofx.imageview
+import tornadofx.label
+import tornadofx.paddingAll
+import tornadofx.progressindicator
+import tornadofx.rectangle
+import tornadofx.row
+import tornadofx.setValue
+import tornadofx.stackpane
+import tornadofx.whenDocked
+import tornadofx.whenUndocked
 import kotlin.math.min
 
 class CardDetailsView(val cardProperty: SimpleObjectProperty<CardModel?> = SimpleObjectProperty(null)) : Fragment() {
@@ -70,37 +94,48 @@ class CardDetailsView(val cardProperty: SimpleObjectProperty<CardModel?> = Simpl
 		}
 	}
 
+	val coroutineScope = CoroutineScope(SupervisorJob() + CoroutineName("CardDetailsView"))
+
 	init {
 		labelNumberInSet.textProperty().bind(cardProperty.selectNullable { it?.numberInSet }.toStringBinding())
 		labelRarity.textProperty().bind(cardProperty.selectNullable { it?.rarity }.toStringBinding())
 		labelCardName.textProperty().bind(cardProperty.selectNullable { it?.name })
 
-		cardProperty.addListener { _, _, _ -> loadImage() }
-		imageLoadingProperty.addListener { _, _, _ -> loadImage() }
-	}
-	var imageLoaderTask: Task<Image?>? = null
+//		cardProperty.addListener { _, _, _ -> loadImage() }
+//		imageLoadingProperty.addListener { _, _, _ -> loadImage() }
 
-	fun loadImage() {
-		if(imageLoading) {
-			imageLoaderTask?.cancel()
-			imageLoaderTask = tornadofx.runAsync {
-				imageLoadingProgressIndicatorBackground.isVisible = true
-				imageLoadingProgressIndicator.isVisible = true
-				card?.getCachedImage()
-			} ui {
-				imageView.image = it
-				imageLoadingProgressIndicator.isVisible = false
-				imageLoadingProgressIndicatorBackground.isVisible = false
+		whenDocked {
+			coroutineScope.launch(Dispatchers.Default) {
+				combine(
+					cardProperty.asFlow().onEach { LOG.trace("selected card changed to $it") },
+					imageLoadingProperty.asFlow(),
+				) { cardModel, imageLoading -> Pair(cardModel, imageLoading) }
+					.collectLatest { (cardModel, imageLoading) ->
+						withContext(Dispatchers.Main.immediate) {
+							if (imageLoading) {
+								LOG.trace("loading image for $cardModel")
+								imageLoadingProgressIndicatorBackground.isVisible = true
+								imageLoadingProgressIndicator.isVisible = true
+								imageView.image = cardModel?.getCachedImage()
+								imageLoadingProgressIndicator.isVisible = false
+								imageLoadingProgressIndicatorBackground.isVisible = false
+								LOG.trace("loaded image for $cardModel")
+							} else {
+								imageView.image = null
+								imageLoadingProgressIndicatorBackground.isVisible = true
+							}
+						}
+					}
 			}
-		} else {
-			imageView.image = null
-			imageLoadingProgressIndicatorBackground.isVisible = true
+		}
+
+		whenUndocked {
+			coroutineScope.coroutineContext.cancelChildren()
 		}
 	}
+
+	companion object {
+	    val LOG = LoggerFactory.getLogger(this::class.java.declaringClass)
+	}
 }
 
-object CardImageCache: ImageCache()
-
-fun CardModel?.getCachedImage(): Image? {
-	return this?.image?.value?.let { CardImageCache.getImage(it,224.0, 312.0, true, true) }
-}

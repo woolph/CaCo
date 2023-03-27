@@ -3,6 +3,8 @@ plugins {
 	alias(libs.plugins.javafx)
 	application
 	distribution
+
+	id("com.diffplug.spotless") version "6.15.0"
 }
 
 project.group = "at.woolph"
@@ -17,6 +19,15 @@ dependencies {
 	implementation("org.jetbrains.kotlin:kotlin-stdlib")
 	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
+
+	implementation("io.ktor:ktor-client-core:2.2.4")
+	implementation("io.ktor:ktor-client-cio:2.2.4")
+	implementation("io.ktor:ktor-client-content-negotiation:2.2.4")
+	implementation("io.ktor:ktor-serialization-kotlinx-json:2.2.4")
+
+	implementation(platform("org.jetbrains.kotlinx:kotlinx-coroutines-bom:1.6.4"))
+	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
+	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-javafx")
 
 	implementation("org.jetbrains.exposed:exposed-dao:0.40.1")
 	implementation("org.jetbrains.exposed:exposed-java-time:0.40.1")
@@ -65,3 +76,13 @@ javafx {
 application {
 	mainClass.set("at.woolph.caco.gui.MainKt")
 }
+//
+//spotless {
+//	kotlin {
+//		ktlint("0.48.2")
+//		licenseHeader("/* Copyright \$YEAR Wolfgang Mayer */")
+//	}
+//	kotlinGradle {
+//		ktlint("0.48.2")
+//	}
+//}

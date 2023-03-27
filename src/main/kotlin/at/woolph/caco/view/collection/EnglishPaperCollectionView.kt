@@ -12,6 +12,7 @@ import at.woolph.caco.importer.collection.toLanguageDeckbox
 import at.woolph.libs.pdf.*
 import javafx.scene.control.ToolBar
 import javafx.stage.FileChooser
+import kotlinx.coroutines.launch
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.font.PDType1Font
 import org.jetbrains.exposed.sql.count
@@ -35,8 +36,10 @@ class EnglishPaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
         button("Import Collection") {
             action {
 				chooseFile("Open Image", arrayOf(FileChooser.ExtensionFilter("Deckbox Export", "*.csv"))).singleOrNull()?.let {
-					importDeckbox(it)
-					updateCards()
+					coroutineScope.launch {
+						importDeckbox(it)
+						updateCards()
+					}
 				}
 				// TODO progress dialog with console output
             }

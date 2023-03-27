@@ -14,6 +14,7 @@ import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.font.PDType1Font
 import org.jetbrains.exposed.sql.count
 import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.transactions.transaction
 import tornadofx.*
 import java.awt.Toolkit
@@ -22,20 +23,24 @@ import java.awt.datatransfer.StringSelection
 class PaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
 	// TODO collection modification matrix (language, condition, premium)
 	companion object {
-		val COLLECTION_SETTINGS = CollectionSettings(1, 0, 33,
-				{ !it.digitalOnly },
-				{ it.possessions.filter { !it.foil }.count() },
-				{ it.possessions.filter { it.foil }.count() })
+		val COLLECTION_SETTINGS = CollectionSettings(
+			1,
+			0,
+			33,
+			{ !it.digitalOnly },
+			{ it.possessions.count { !it.foil } },
+			{ it.possessions.count { it.foil } },
+		)
 	}
 
     override fun CardPossessionModel.filterView(): Boolean = true
 
     override fun ToolBar.addFeatureButtons() {
         button("Bulk Add") {
-            action {
+            action(coroutineScope) {
 				set?.let {
-					transaction {
-						BulkAdditionDialog(it, this@PaperCollectionView, toggleButtonImageLoading.isSelected, tvCards.selectedItem?.item).showAndWait().ifPresent {
+					newSuspendedTransaction {
+						BulkAdditionDialog(it, this@PaperCollectionView, toggleButtonImageLoading.isSelected, tvCards.selectedItem?.item).showAndAwait()?.let {
 							updateCards()
 						}
 					}
@@ -43,7 +48,7 @@ class PaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
             }
         }
         button("Import Collection") {
-            action {
+            action(coroutineScope) {
 				// TODO progress dialog
 				chooseFile("Open Image", arrayOf(FileChooser.ExtensionFilter("Deckbox Export", "*.csv"))).singleOrNull()?.let {
 					importDeckbox(it)
@@ -52,7 +57,8 @@ class PaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
             }
         }
         button("Print Inventory") {
-            action {
+
+            action(coroutineScope) {
 				chooseFile("Choose File to Print Inventory", arrayOf(FileChooser.ExtensionFilter("PDF", "*.pdf")), mode = FileChooserMode.Save).singleOrNull()?.let {
 					// TODO progress dialog
 					val fontTitle = Font(PDType1Font.HELVETICA_BOLD, 10f)
@@ -105,7 +111,7 @@ class PaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
             }
         }
         button("Export Collection") {
-            action {
+            action(coroutineScope) {
 				// TODO progress dialog
 				chooseFile("Choose File to Export to", arrayOf(FileChooser.ExtensionFilter("CSV", "*.csv")), mode = FileChooserMode.Save).singleOrNull()?.let {
 					it.printWriter().use { out ->
@@ -177,7 +183,7 @@ class PaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
 							}.filter { it.first > 0 }.joinToString("\n") {
 									"${it.first} ${it.second} (${it.third})"
 							}
-						} ?: ""),
+						}),
 						null)
 //				// TODO progress dialog
 //				chooseFile("Choose File to Wants", arrayOf(FileChooser.ExtensionFilter("Text", "*.txt")), mode = FileChooserMode.Save).singleOrNull()?.let {

@@ -1,11 +1,11 @@
 package at.woolph.libs.ktfx
 
 import javafx.event.EventTarget
-import kotlin.reflect.KClass
 import javafx.scene.control.Spinner
-import javafx.scene.image.Image
-import tornadofx.*
-import java.net.URI
+import tornadofx.UIComponent
+import tornadofx.add
+import tornadofx.find
+import kotlin.reflect.KClass
 
 fun <T: UIComponent> EventTarget.view(type: KClass<T>) {
 	val t = find(type)
@@ -20,12 +20,3 @@ fun <T> Spinner<T>.commitValue() {
 	}
 }
 
-open class ImageCache {
-	private val cache = mutableMapOf<URI, Image>()
-
-	fun getImage(uri: URI, requestedWidth: Double, requestedHeight: Double, preserveRatio: Boolean = true, smooth: Boolean = true): Image {
-		return cache[uri] ?:  Image(uri.toString(), requestedWidth, requestedHeight, preserveRatio, smooth).apply {
-			cache[uri] = this
-		}
-	}
-}

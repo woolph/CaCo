@@ -1,11 +1,20 @@
 package at.woolph.caco.datamodel.sets
 
-import javafx.scene.image.Image
+import at.woolph.caco.imagecache.ImageCache
+import io.ktor.client.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.apache.batik.transcoder.TranscoderInput
 import org.apache.batik.transcoder.TranscoderOutput
 import org.apache.batik.transcoder.image.ImageTranscoder
 import org.apache.batik.transcoder.image.PNGTranscoder
-import org.jetbrains.exposed.dao.*
+import org.jetbrains.exposed.dao.Entity
+import org.jetbrains.exposed.dao.EntityClass
+import org.jetbrains.exposed.dao.UUIDEntity
+import org.jetbrains.exposed.dao.UUIDEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.javatime.date
@@ -58,14 +67,34 @@ class CardSet(id: EntityID<String>) : Entity<String>(id) {
     var icon by CardSets.icon.transform({ it?.toString() }, { it?.let { URI(it) } })
     var specialDeckRestriction by CardSets.specialDeckRestriction
 
-    val iconImage by lazy { icon.renderSvg(48f)?.let { Image(ByteArrayInputStream(it)) } }
-
     val scryfallCardSets by ScryfallCardSet referrersOn ScryfallCardSets.set
 
     val cards: List<Card>
         get() = scryfallCardSets.flatMap(ScryfallCardSet::cards)
     // TODO consider representing the collection completion in % by filling the set icon with a progress bar style color gradient
 }
+
+suspend fun URI?.renderSvg2(size: Float): ByteArray? = this@renderSvg2?.toURL()?.let { url ->
+    val byteArray = withContext(Dispatchers.IO) {
+        HttpClient(CIO).use {
+             it.request(url).readBytes()
+        }
+    }
+
+    withContext(Dispatchers.Default) {
+        val transcoder = PNGTranscoder().apply {
+            addTranscodingHint(ImageTranscoder.KEY_WIDTH, size)
+            addTranscodingHint(ImageTranscoder.KEY_HEIGHT, size)
+        }
+        val buffered = ByteArrayOutputStream()
+        buffered.use {
+            transcoder.transcode(TranscoderInput(ByteArrayInputStream(byteArray)), TranscoderOutput(it))
+        }
+        return@withContext buffered.toByteArray()
+    }
+}
+
+suspend fun URI.loadSetLogo(size: Float) = ImageCache.getImage(toString()) { renderSvg(size) }
 
 fun URI?.renderSvg(size: Float): ByteArray? = (this?.toURL()?.openConnection() as? HttpURLConnection)?.let { conn ->
     try {
