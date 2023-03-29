@@ -5,10 +5,8 @@ import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.parseRarity
 import at.woolph.caco.newOrUpdate
-import at.woolph.libs.json.getJsonObjectArray
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.serialization.Contextual
@@ -24,8 +22,6 @@ import kotlinx.serialization.modules.SerializersModule
 import java.net.URI
 import java.time.LocalDate
 import java.util.*
-import javax.json.JsonNumber
-import javax.json.JsonValue
 
 object LocalDateSerializer : KSerializer<LocalDate> {
     override val descriptor = PrimitiveSerialDescriptor("LocalDate", PrimitiveKind.STRING)
@@ -94,21 +90,27 @@ data class ScryfallRelatedCard(
 data class ScryfallCardFace(
     @SerialName("object") val objectType: String,
     val name: String,
-    val printed_name: String? = null,
+    val cmc: Double? = null,
     val mana_cost: String,
-    val type_line: String,
+    val type_line: String? = null,
+    @Contextual val oracle_id: UUID? = null,
     val oracle_text: String,
-    val colors: Set<MtgColor>,
+    val layout: String? = null,
+    val printed_name: String? = null,
+    val printed_text: String? = null,
+    val printed_type_line: String? = null,
+    val colors: Set<MtgColor> ? = null,
+    val color_indicator: Set<MtgColor> ? = null,
     val power: String? = null,
     val toughness: String? = null,
     val loyalty: String? = null,
     val flavor_text: String? = null,
     val flavor_name: String? = null,
     val watermark: String? = null,
-    val artist: String,
+    val artist: String? = null,
     @Contextual val artist_id: UUID,
-    @Contextual val illustration_id: UUID,
-    val image_uris: Map<String, @Contextual URI>,
+    @Contextual val illustration_id: UUID? = null,
+    val image_uris: Map<String, @Contextual URI>? = null,
 ): ScryfallBase {
     override fun isValid() = objectType == "card_face"
 }
@@ -153,6 +155,7 @@ data class ScryfallCard(
     val loyalty: String? = null,
     val colors: Set<MtgColor>? = null,
     val color_identity: Set<MtgColor>,
+    val color_indicator: Set<MtgColor> ? = null,
     val keywords: Set<String>,
     val produced_mana: Set<MtgColor>? = null,
     val all_parts: List<ScryfallRelatedCard> = emptyList(),
@@ -167,6 +170,7 @@ data class ScryfallCard(
     val promo_types: Set<String> = emptySet(),
     val reprint: Boolean,
     val variation: Boolean,
+    @Contextual val variation_of: UUID? = null,
     @Contextual val set_id: UUID,
     val set: String,
     val set_name: String,
@@ -200,6 +204,8 @@ data class ScryfallCard(
     val prices: Map<String, String?>,
     val related_uris: Map<String, @Contextual URI>,
     val purchase_uris: Map<String, @Contextual URI> = emptyMap(),
+    val content_warning: Boolean = false,
+    val attraction_lights: Set<Int>? = null,
 ): ScryfallBase {
     override fun isValid() = objectType == "card"
 
@@ -269,10 +275,10 @@ data class ScryfallCard(
         }
 }
 
-internal fun CardSet.loadCardsFromScryfall(language: String? = null): Flow<ScryfallCard> =
+internal fun CardSet.loadCardsFromScryfall(language: String? = null, optional: Boolean = false): Flow<ScryfallCard> =
     scryfallCardSets.asFlow().flatMapConcat {
         LOG.trace("loadCardsFromScryfall for $this for language $language")
-        paginatedDataRequest("https://api.scryfall.com/cards/search?q=${ language?.let {"lang%3A$it%20"} ?: "" }set%3A${it.setCode}&unique=prints&order=set")
+        paginatedDataRequest("https://api.scryfall.com/cards/search?q=${ language?.let {"lang%3A$it%20"} ?: "" }set%3A${it.setCode}&unique=prints&order=set", optional)
     }
 
 suspend fun CardSet.importCardsOfSet(additionalLanguages: List<String> = emptyList()) {
@@ -287,7 +293,7 @@ suspend fun CardSet.importCardsOfSet(additionalLanguages: List<String> = emptyLi
         }
 
     additionalLanguages.forEach { language ->
-        loadCardsFromScryfall(language)
+        loadCardsFromScryfall(language, true)
             .filter(ScryfallCard::isNoPromoPackStampedAndNoPrereleasePackStampedVersion)
             .collect {
                 Card.findById(it.id)?.apply {

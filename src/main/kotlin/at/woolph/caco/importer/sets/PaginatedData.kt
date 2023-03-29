@@ -30,7 +30,7 @@ data class PaginatedData<T: ScryfallBase>(
     override fun isValid() = objectType == "list"
 }
 
-internal inline fun <reified T: ScryfallBase> paginatedDataRequest(initialQuery: String, progressIndicator: ProgressIndicator? = null): Flow<T> = flow {
+internal inline fun <reified T: ScryfallBase> paginatedDataRequest(initialQuery: String, optional: Boolean = false, progressIndicator: ProgressIndicator? = null): Flow<T> = flow {
     var currentQuery: String? = initialQuery
 
     HttpClient(CIO) {
@@ -42,19 +42,26 @@ internal inline fun <reified T: ScryfallBase> paginatedDataRequest(initialQuery:
             LOG.debug("importing paginated data from $currentQuery")
             val response: HttpResponse = it.get(currentQuery!!)
 
-            if (!response.status.isSuccess())
-                throw Exception("request failed with status code ${response.status.description}")
+            if (response.status.isSuccess()) {
+                val paginatedData = response.body<PaginatedData<T>>()
 
-            val paginatedData = response.body<PaginatedData<T>>()
+                currentQuery = if (paginatedData.has_more) paginatedData.next_page else null
 
-            currentQuery = if (paginatedData.has_more) paginatedData.next_page else null
-
-            emitAll(
-                paginatedData.data.asFlow()
-                    .updateProgressIndicator(progressIndicator, paginatedData.total_cards ?: paginatedData.data.size)
-                    .filter { it.isValid() }
+                emitAll(
+                    paginatedData.data.asFlow()
+                        .updateProgressIndicator(
+                            progressIndicator,
+                            paginatedData.total_cards ?: paginatedData.data.size
+                        )
+                        .filter { it.isValid() }
 //                    .onEach { LOG.trace("emitting $it") }
-            )
+                )
+            } else {
+                if (!optional)
+                    throw Exception("request failed with status code ${response.status.description}")
+                else
+                    currentQuery = null
+            }
         }
         progressIndicator?.finished()
     }
