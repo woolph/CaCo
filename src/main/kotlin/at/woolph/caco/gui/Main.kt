@@ -2,6 +2,7 @@ package at.woolph.caco.gui
 
 import at.woolph.caco.datamodel.Databases
 import at.woolph.caco.view.collection.PaperCollectionView
+import at.woolph.caco.view.decks.DecksView
 import at.woolph.libs.ktfx.view
 import at.woolph.libs.log.logger
 import javafx.geometry.Side
@@ -40,10 +41,10 @@ class MyView : View() {
 //				view(ArenaCollectionView::class)
 //			}
 
-//			tab("Decks") {
-//				isClosable = false
-//				view(DecksView::class)
-//			}
+			tab("Decks") {
+				isClosable = false
+				view(DecksView::class)
+			}
 		}
 	}
 

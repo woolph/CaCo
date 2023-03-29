@@ -16,10 +16,12 @@ import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.ScryfallCardSets
 import at.woolph.caco.datamodel.sets.parseRarity
 import at.woolph.caco.importer.collection.importDeckbox
-import at.woolph.caco.importer.sets.containsString
+import at.woolph.caco.importer.sets.ScryfallCard
+import at.woolph.caco.importer.sets.ScryfallSet
 import at.woolph.caco.importer.sets.importCardsOfSet
 import at.woolph.caco.importer.sets.importSet
 import at.woolph.caco.importer.sets.importSets
+import at.woolph.caco.importer.sets.jsonSerializer
 import at.woolph.caco.importer.sets.paddingCollectorNumber
 import at.woolph.caco.importer.sets.patternPromoCollectorNumber
 import at.woolph.caco.view.collection.CardPossessionModel
@@ -40,6 +42,11 @@ import at.woolph.libs.pdf.page
 import be.quodlibet.boxable.BaseTable
 import be.quodlibet.boxable.HorizontalAlignment
 import be.quodlibet.boxable.VerticalAlignment
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.filter
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeToSequence
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.font.PDType1Font
 import org.jetbrains.exposed.dao.Entity
@@ -144,137 +151,33 @@ suspend fun main(args: Array<String>) {
 
 	if (args.any { it.startsWith(IMPORT_FROM_FILE) }) {
 		args.filter { it.startsWith(IMPORT_FROM_FILE) }.map { it.removePrefix(IMPORT_FROM_FILE) }.singleOrNull()?.let { importFile ->
-			transaction {
+			newSuspendedTransaction {
 				importSets()
-				path(importFile).inputStream().useJsonReader { rootObject ->
-					rootObject.readArray().map(JsonValue::asJsonObject).forEach {
-						if (it.getString("object") == "card") {
-							ScryfallCardSet.findById(UUID.fromString(it.getString("set_id")))?.let { cardSet ->
-								try {
-									val cardId = UUID.fromString(it.getString("id"))
-									val cardName = it.getString("name")
-									val isPromo = it.getBoolean("promo") || it.getString("collector_number")
-										.contains(patternPromoCollectorNumber)
-									val isToken = it.getString("set_type") == "token"
-									val isMemorabilia =
-										it.getString("set_type") == "memorabilia" // art series, commander special cards (like OC21)
-									val numberInSetImported = paddingCollectorNumber(
-										when {
-											isMemorabilia -> "M" + it.getString("collector_number")
-											isPromo && cardSet.set.shortName.value != it.getString("set") -> it.getString(
-												"collector_number"
-											) + " P"
-											isToken -> "T" + it.getString("collector_number")
-											else -> it.getString("collector_number")
-										}
-									)
-									val isExtra = !it.getBoolean("booster")
-									val isNonfoilAvailable = it.getBoolean("nonfoil")
-									val isFoilAvailable = it.getBoolean("foil")
-									val isFullArt = it.getBoolean("full_art")
-									val isExtendedArt =
-										it.getJsonArray("frame_effects")?.containsString("extendedart") ?: false
-
-									val patternSpecialDeckRestrictions =
-										Regex("A deck can have (any number of cards|only one card|up to (\\w+) cards) named $cardName\\.")
-									val specialDeckRestrictions = it.getString("oracle_text", null)?.let { oracleText ->
-										patternSpecialDeckRestrictions.find(oracleText)?.let {
-											if (it.groupValues[1] == "any number of cards")
-												Int.MAX_VALUE // TODO
-											else if (it.groupValues[1] == "only one card")
-												1
-											else when (it.groupValues[2]) {
-												"one" -> 1
-												"two" -> 2
-												"three" -> 3
-												"four" -> 4
-												"five" -> 5
-												"six" -> 6
-												"seven" -> 7
-												"eight" -> 8
-												"nine" -> 9
-												"ten" -> 10
-												"eleven" -> 11
-												"twelve" -> 12
-												"thirteen" -> 13
-												"fourteen" -> 14
-												"fifteen" -> 15
-												else -> throw IllegalStateException("the following value is not recognized currently: " + it.groupValues[2])
-											}
-										}
-									}
-
-									val isStampedPromoPackCard =
-										it.containsKey("promo_types") && it.getJsonArray("promo_types")
-											.containsString("promopack") && it.getJsonArray("promo_types")
-											.containsString("stamped")
-									val isPrereleaseStamped =
-										it.containsKey("promo_types") && it.getJsonArray("promo_types")
-											.containsString("prerelease") && it.getJsonArray("promo_types")
-											.containsString("datestamped")
-
-									if (!isPrereleaseStamped && !isStampedPromoPackCard) {
-										Card.newOrUpdate(cardId) {
-											set = cardSet
-											numberInSet = numberInSetImported
-											name = cardName
-											arenaId = it["arena_id"]?.let { (it as? JsonNumber)?.intValue() }
-											rarity = it.getString("rarity").parseRarity()
-											promo = isPromo
-											token = isToken
-											image = it.getJsonObject("image_uris")?.getString("png")?.let { URI(it) }
-												?: it.getJsonObjectArray("card_faces")?.get(0)
-													?.getJsonObject("image_uris")?.getString("png")?.let { URI(it) }
-											cardmarketUri = it.getJsonObject("purchase_uris")?.getString("cardmarket")
-												?.let { URI(it) }
-
-											manaCost = it.getString("mana_cost", null)
-											type = it.getString("type_line", null)
-											extra = isExtra
-											nonfoilAvailable = isNonfoilAvailable
-											foilAvailable = isFoilAvailable
-											fullArt = isFullArt
-											extendedArt = isExtendedArt
-
-											val prices = it.getJsonObject("prices")
-
-											price =
-												if (prices["eur"]?.valueType == JsonValue.ValueType.STRING) prices.getJsonString(
-													"eur"
-												).string.toDouble() else null
-											priceFoil =
-												if (prices["eur_foil"]?.valueType == JsonValue.ValueType.STRING) prices.getJsonString(
-													"eur_foil"
-												).string.toDouble() else null
-
-											this.specialDeckRestrictions = specialDeckRestrictions
-										}
-									}
-								} catch (e: Exception) {
-									LOG.warn("skip card $it due to exception", e)
-								}
-							}
+				jsonSerializer.decodeToSequence<ScryfallCard>(path(importFile).inputStream()).asFlow()
+					.filter(ScryfallCard::isNoPromoPackStampedAndNoPrereleasePackStampedVersion)
+					.collect {
+						Card.newOrUpdate(it.id) {
+							it.update(this)
 						}
 					}
-				}
 			}
 		}
 	}
 
 	if (args.any { it.startsWith(IMPORT_PRICES) }) {
 		args.filter { it.startsWith(IMPORT_PRICES) }.map { it.removePrefix(IMPORT_PRICES) }.singleOrNull()?.let { importFile ->
-			path(importFile).inputStream().useJsonReader { rootObject ->
-				rootObject.readArray().map(JsonValue::asJsonObject).forEach {
-					if(it.getString("object") == "card") {
-						Card.findById(UUID.fromString(it.getString("id")))?.apply {
-							cardmarketUri = it.getJsonObject("purchase_uris")?.getString("cardmarket")?.let { URI(it) }
 
-							price = it.getJsonObject("prices").getString("eur").toDouble()
-							priceFoil = it.getJsonObject("prices").getString("eur_foil").toDouble()
-						}
+			jsonSerializer.decodeToSequence<ScryfallCard>(path(importFile).inputStream()).asFlow()
+				.filter(ScryfallCard::isNoPromoPackStampedAndNoPrereleasePackStampedVersion)
+				.collect {
+					Card.newOrUpdate(it.id) {
+						it.update(this)
+						cardmarketUri = it.purchase_uris["cardmarket"]
+
+						price = it.prices["eur"]?.toDouble()
+						priceFoil = it.prices["eur_foil"]?.toDouble()
 					}
 				}
-			}
 		}
 	}
 

@@ -1,22 +1,29 @@
 package at.woolph.caco.cli
 
-import at.woolph.caco.binderlabels.*
-import at.woolph.caco.datamodel.collection.ArenaCardPossessions
-import at.woolph.caco.datamodel.collection.CardPossessions
-import at.woolph.caco.datamodel.decks.Builds
-import at.woolph.caco.datamodel.decks.DeckArchetypes
-import at.woolph.caco.datamodel.decks.DeckCards
-import at.woolph.caco.datamodel.sets.CardSets
-import at.woolph.caco.datamodel.sets.Cards
+import at.woolph.caco.binderlabels.BlankLabel
+import at.woolph.caco.binderlabels.MapLabelItem
+import at.woolph.caco.binderlabels.SetWithCommander
+import at.woolph.caco.binderlabels.SetWithCommanderAndAncillary
+import at.woolph.caco.binderlabels.SimpleSet
+import at.woolph.caco.binderlabels.darkLabels
+import at.woolph.caco.datamodel.Databases
 import at.woolph.caco.drawAsImage
 import at.woolph.caco.toPDImage
-import at.woolph.libs.pdf.*
+import at.woolph.libs.pdf.Font
+import at.woolph.libs.pdf.Node
+import at.woolph.libs.pdf.Page
+import at.woolph.libs.pdf.createPdfDocument
+import at.woolph.libs.pdf.drawBackground
+import at.woolph.libs.pdf.drawBorder
+import at.woolph.libs.pdf.drawImage
+import at.woolph.libs.pdf.drawText
+import at.woolph.libs.pdf.drawText90
+import at.woolph.libs.pdf.frame
+import at.woolph.libs.pdf.page
 import be.quodlibet.boxable.HorizontalAlignment
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.font.PDType0Font
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.awt.Color
 
@@ -29,10 +36,9 @@ class BinderLabels(
 //    val output: OutputStream,
 ) {
     fun printLabel(file: String) {
-        Database.connect("jdbc:h2:./caco", driver = "org.h2.Driver")
+        Databases.init()
 
         transaction {
-            SchemaUtils.createMissingTablesAndColumns(CardSets, Cards, CardPossessions, ArenaCardPossessions, DeckArchetypes, Builds, DeckCards)
             createPdfDocument {
                 val titleAdjustment = TitleAdjustment.FONT_SIZE
                 val labelsWide : List<MapLabelItem> = listOf(

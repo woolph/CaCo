@@ -40,6 +40,8 @@ open class CardModel(card: Card): ItemViewModel<Card>(card), Comparable<CardMode
 	val extendedArt = bind(Card::extendedArt)
 	val specialDeckRestrictions: Property<Int?> = bind(Card::specialDeckRestrictions, defaultValue = null)
 
+	val names: Sequence<String>
+		get() = sequenceOf(name, nameDE).mapNotNull { it.value }
 
 	override fun compareTo(other: CardModel): Int {
 		// TODO dateOfRelease not reachable

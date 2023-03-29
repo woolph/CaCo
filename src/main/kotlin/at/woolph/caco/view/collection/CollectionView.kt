@@ -9,11 +9,17 @@ import at.woolph.caco.importer.sets.importSets
 import at.woolph.caco.importer.sets.update
 import at.woolph.caco.view.CardDetailsView
 import at.woolph.caco.view.CardImageTooltip
+import at.woolph.caco.view.filteredBy
+import javafx.beans.binding.Bindings
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleStringProperty
+import javafx.beans.value.ObservableValue
 import javafx.collections.FXCollections
+import javafx.collections.ObservableList
+import javafx.collections.transformation.FilteredList
 import javafx.geometry.Pos
+import javafx.scene.Node
 import javafx.scene.control.ButtonBase
 import javafx.scene.control.Dialog
 import javafx.scene.control.SelectionMode
@@ -30,6 +36,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOf
@@ -39,7 +46,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.slf4j.LoggerFactory
-import tornadofx.ChangeListener
 import tornadofx.View
 import tornadofx.button
 import tornadofx.center
@@ -65,6 +71,8 @@ import tornadofx.vboxConstraints
 import tornadofx.whenDocked
 import tornadofx.whenUndocked
 import java.util.*
+import java.util.concurrent.CancellationException
+import java.util.function.Predicate
 
 suspend fun <T> Dialog<T>.showAndAwait(): T? = withContext(Dispatchers.Main.immediate) {
     this@showAndAwait.showAndWait().orElse(null)
@@ -89,7 +97,26 @@ fun imageViewDelayed(coroutineScope: CoroutineScope, width: Int, height: Int, bl
         }
     }
 
-abstract class CollectionView(val collectionSettings: CollectionSettings) : View() {
+abstract class CoroutineScopedView @JvmOverloads constructor(title: String? = null, icon: Node? = null): View(title, icon) {
+    val coroutineScopedViewName = "CoroutineScopedView(\"$title\")"
+    val coroutineScope = CoroutineScope(SupervisorJob() + CoroutineName(coroutineScopedViewName))
+    abstract val jobs: List<suspend (CoroutineScope) -> Unit>
+
+    init {
+        whenUndocked {
+            coroutineScope.coroutineContext.cancelChildren(CancellationException("undocking $coroutineScopedViewName"))
+        }
+        whenDocked {
+            jobs.forEach {
+                coroutineScope.launch(Dispatchers.Main.immediate) {
+                    it(this)
+                }
+            }
+        }
+    }
+}
+
+abstract class CollectionView(val collectionSettings: CollectionSettings) : CoroutineScopedView() {
     companion object {
         const val FOIL_NOT_IN_POSSESION = "\u2606"
         const val FOIL_IN_POSSESION = "\u2605"
@@ -100,7 +127,6 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : View
 
         val LOG = LoggerFactory.getLogger(CollectionView::class.java)
     }
-    val coroutineScope = CoroutineScope(SupervisorJob() + CoroutineName("CollectionView"))
 
     override val root = BorderPane()
 
@@ -126,7 +152,25 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : View
 
     val cards = FXCollections.observableArrayList<CardPossessionModel>()
     val cardsSorted = cards.sorted()
-    val cardsFiltered = cardsSorted.filtered { cardInfo -> cardInfo.filterView() }
+    val cardsFiltered = cardsSorted.filteredBy(listOf(
+        filterTextProperty,
+        filterCompleteProperty,
+        filterNonFoilCompleteProperty,
+        filterFoilCompleteProperty,
+        filterRarityCommon,
+        filterRarityUncommon,
+        filterRarityRare,
+        filterRarityMythic,
+    )) { cardInfo -> cardInfo.filterView()
+        && (filterTextProperty.get().isBlank() || cardInfo.names.any { it.contains(filterTextProperty.get(), ignoreCase = true) })
+        && (filterCompleteProperty.get() || !cardInfo.completed.get())
+        && (filterNonFoilCompleteProperty.get() || !cardInfo.completedNonPremium.get())
+        && (filterFoilCompleteProperty.get() || !cardInfo.completedPremium.get())
+        && (filterRarityCommon.get() || cardInfo.rarity.value != Rarity.COMMON)
+        && (filterRarityUncommon.get() || cardInfo.rarity.value != Rarity.UNCOMMON)
+        && (filterRarityRare.get() || cardInfo.rarity.value != Rarity.RARE)
+        && (filterRarityMythic.get() || cardInfo.rarity.value != Rarity.MYTHIC)
+    }
 
     abstract fun CardPossessionModel.filterView(): Boolean
 
@@ -144,9 +188,9 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : View
 
     suspend fun updateSetsView(updatedSets: List<CardSet>) = withContext(Dispatchers.Main.immediate) {
         LOG.trace("updateSets updating view")
-        val oldSetSelected = set
+        val oldSetSelected = set?.name
         sets.setAll(updatedSets)
-        set = oldSetSelected
+        set = sets.find { it.name == oldSetSelected }
         LOG.trace("updateSets view updated")
     }
 
@@ -187,53 +231,26 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : View
         updateCards()
     }
 
-    fun setFilter(text: String, complete: Boolean, nonFoilComplete: Boolean, foilComplete: Boolean, filterRarityCommon: Boolean, filterRarityUncommon: Boolean, filterRarityRare: Boolean, filterRarityMythic: Boolean) {
-        cardsFiltered.setPredicate { cardInfo -> cardInfo.filterView()
-                    && (if(!text.isBlank()) cardInfo.name.value.contains(text, ignoreCase = true) || cardInfo.nameDE.value?.contains(text, ignoreCase = true) ?: false else true)
-                    && (complete || !cardInfo.completed.get())
-                    && (nonFoilComplete || !cardInfo.completedNonPremium.get())
-                    && (foilComplete || !cardInfo.completedPremium.get())
-                    && (filterRarityCommon || cardInfo.rarity.value != Rarity.COMMON)
-                    && (filterRarityUncommon || cardInfo.rarity.value != Rarity.UNCOMMON)
-                    && (filterRarityRare || cardInfo.rarity.value != Rarity.RARE)
-                    && (filterRarityMythic || cardInfo.rarity.value != Rarity.MYTHIC)
+    suspend fun initSets() {
+        updateSets()
+        LOG.trace("setting the initial value")
+        withContext(Dispatchers.Main.immediate) {
+            set = setsSorted.firstOrNull()
         }
+        LOG.trace("setting intial value is done")
     }
+
+    suspend fun updateCardsOnSetChange() {
+        setProperty.asFlow().collectLatest { updateCards() }
+    }
+
+    override val jobs: List<suspend (CoroutineScope) -> Unit> = listOf(
+        { initSets() },
+        { updateCardsOnSetChange() },
+    )
 
     init {
         title = "CaCo"
-
-        whenDocked {
-            coroutineScope.launch(Dispatchers.Main.immediate) {
-                updateSets()
-                LOG.trace("setting the initial value")
-                set = setsSorted.firstOrNull()
-                LOG.trace("setting intial value is done")
-            }
-        }
-
-        whenUndocked {
-            coroutineScope.coroutineContext.cancelChildren()
-        }
-
-        setProperty.addListener { _, _, _ ->
-            coroutineScope.launch {
-                updateCards()
-            }
-        }
-
-        val filterChangeListener = ChangeListener<Any> { _, _, _ ->
-            setFilter(filterTextProperty.get(), filterCompleteProperty.get(), filterNonFoilCompleteProperty.get(), filterFoilCompleteProperty.get(),
-                    filterRarityCommon.get(), filterRarityUncommon.get(), filterRarityRare.get(), filterRarityMythic.get())
-        }
-        filterTextProperty.addListener(filterChangeListener)
-        filterCompleteProperty.addListener(filterChangeListener)
-        filterNonFoilCompleteProperty.addListener(filterChangeListener)
-        filterFoilCompleteProperty.addListener(filterChangeListener)
-        filterRarityCommon.addListener(filterChangeListener)
-        filterRarityUncommon.addListener(filterChangeListener)
-        filterRarityRare.addListener(filterChangeListener)
-        filterRarityMythic.addListener(filterChangeListener)
 
         with(root) {
             top {

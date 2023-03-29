@@ -8,6 +8,7 @@ import javafx.scene.layout.BorderPane
 import javafx.scene.layout.Priority
 import org.jetbrains.exposed.sql.transactions.transaction
 import tornadofx.*
+import java.time.LocalDate
 
 class DecksView : View() {
     override val root = BorderPane()
@@ -162,6 +163,8 @@ class DecksView : View() {
 					this.archetype = archetype
 					this.version = subname
 					this.comment = comment// TODO
+					this.dateOfCreation = LocalDate.now()
+					this.dateOfLastModification = LocalDate.now()
 				}
 				updateDecks()
 			}

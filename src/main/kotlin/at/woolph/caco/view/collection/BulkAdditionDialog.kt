@@ -10,6 +10,7 @@ import at.woolph.caco.datamodel.sets.Rarity
 import at.woolph.caco.importer.collection.setNameMapping
 import at.woolph.caco.importer.collection.toLanguageDeckbox
 import at.woolph.caco.view.CardDetailsView
+import at.woolph.caco.view.filteredBy
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleIntegerProperty
 import javafx.beans.property.SimpleObjectProperty
@@ -89,8 +90,6 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
     val foilProperty = SimpleObjectProperty(Foil.NONFOIL)
 
     val filterTextProperty = SimpleStringProperty("")
-    val filterNonFoilCompleteProperty = SimpleBooleanProperty(true)
-    val filterFoilCompleteProperty = SimpleBooleanProperty(true)
     val filterRarityCommon = SimpleBooleanProperty(true)
     val filterRarityUncommon = SimpleBooleanProperty(true)
     val filterRarityRare = SimpleBooleanProperty(true)
@@ -102,7 +101,19 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
 
     val cards = FXCollections.observableArrayList<CardModel>()
     val cardsSorted = cards.sorted()
-    val cardsFiltered = cardsSorted.filtered { true }
+    val cardsFiltered = cardsSorted.filteredBy(listOf(
+        filterTextProperty,
+        filterRarityCommon,
+        filterRarityUncommon,
+        filterRarityRare,
+        filterRarityMythic,
+    )) { cardInfo -> true
+            && (filterTextProperty.get().isBlank() || cardInfo.names.any { it.contains(filterTextProperty.get(), ignoreCase = true) })
+            && (filterRarityCommon.get() || cardInfo.rarity.value != Rarity.COMMON)
+            && (filterRarityUncommon.get() || cardInfo.rarity.value != Rarity.UNCOMMON)
+            && (filterRarityRare.get() || cardInfo.rarity.value != Rarity.RARE)
+            && (filterRarityMythic.get() || cardInfo.rarity.value != Rarity.MYTHIC)
+    }
 
     val buttonTypeExport = ButtonType("Export")
 
@@ -158,26 +169,10 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
         }
     }
 
-    fun setFilter(filterRarityCommon: Boolean, filterRarityUncommon: Boolean, filterRarityRare: Boolean, filterRarityMythic: Boolean) {
-        cardsFiltered.setPredicate { cardInfo ->
-                (filterRarityCommon || cardInfo.rarity.value != Rarity.COMMON)
-                && (filterRarityUncommon || cardInfo.rarity.value != Rarity.UNCOMMON)
-                && (filterRarityRare || cardInfo.rarity.value != Rarity.RARE)
-                && (filterRarityMythic || cardInfo.rarity.value != Rarity.MYTHIC)
-        }
-    }
-
     init {
         initOwner(owner.primaryStage)
 
         updateCards()
-        val filterChangeListener = ChangeListener<Any> { _, _, _ ->
-            setFilter(filterRarityCommon.get(), filterRarityUncommon.get(), filterRarityRare.get(), filterRarityMythic.get())
-        }
-        filterRarityCommon.addListener(filterChangeListener)
-        filterRarityUncommon.addListener(filterChangeListener)
-        filterRarityRare.addListener(filterChangeListener)
-        filterRarityMythic.addListener(filterChangeListener)
 
         isResizable = true
         title = "Bulk Addition: ${set.name}"

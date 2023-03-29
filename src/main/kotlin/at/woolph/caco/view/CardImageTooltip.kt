@@ -1,11 +1,9 @@
 package at.woolph.caco.view
 
-import at.woolph.caco.imagecache.ImageCache
 import at.woolph.caco.view.collection.CardModel
 import javafx.beans.value.ObservableBooleanValue
 import javafx.scene.control.ProgressIndicator
 import javafx.scene.control.Tooltip
-import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import javafx.scene.layout.StackPane
 import kotlinx.coroutines.CoroutineName
@@ -14,8 +12,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.launch
-import org.slf4j.LoggerFactory
-import tornadofx.*
+import tornadofx.imageview
+import tornadofx.progressindicator
 import kotlin.math.min
 
 class CardImageTooltip(val card: CardModel, val imageLoadingProperty: ObservableBooleanValue): Tooltip() {
