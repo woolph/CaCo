@@ -10,14 +10,10 @@ import at.woolph.caco.importer.sets.update
 import at.woolph.caco.view.CardDetailsView
 import at.woolph.caco.view.CardImageTooltip
 import at.woolph.caco.view.filteredBy
-import javafx.beans.binding.Bindings
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleStringProperty
-import javafx.beans.value.ObservableValue
 import javafx.collections.FXCollections
-import javafx.collections.ObservableList
-import javafx.collections.transformation.FilteredList
 import javafx.geometry.Pos
 import javafx.scene.Node
 import javafx.scene.control.ButtonBase
@@ -36,7 +32,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOf
@@ -72,7 +67,6 @@ import tornadofx.whenDocked
 import tornadofx.whenUndocked
 import java.util.*
 import java.util.concurrent.CancellationException
-import java.util.function.Predicate
 
 suspend fun <T> Dialog<T>.showAndAwait(): T? = withContext(Dispatchers.Main.immediate) {
     this@showAndAwait.showAndWait().orElse(null)
@@ -115,6 +109,8 @@ abstract class CoroutineScopedView @JvmOverloads constructor(title: String? = nu
         }
     }
 }
+
+
 
 abstract class CollectionView(val collectionSettings: CollectionSettings) : CoroutineScopedView() {
     companion object {

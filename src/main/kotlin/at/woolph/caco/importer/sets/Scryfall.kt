@@ -55,9 +55,13 @@ fun paddingCollectorNumber(collectorNumber: String): String {
 // TODO import MDFC replacements (STX, KHM, ...)
 // TODO import double sided tokens as they are printed (especially those of the commander precons)
 suspend fun importSet(setCode: String): CardSet = withContext(Dispatchers.IO) {
-    HttpClient(CIO).use {
+    HttpClient(CIO) {
+        install(ContentNegotiation) {
+            json(jsonSerializer)
+        }
+    }.use {
         val response: HttpResponse = it.get("https://api.scryfall.com/sets/$setCode")
-        println("importing set $setCode")
+        LOG.info("importing set $setCode")
 
         if (!response.status.isSuccess())
             throw Exception("request failed with status code ${response.status.description}")
@@ -78,7 +82,7 @@ suspend fun CardSet.update() = withContext(Dispatchers.IO) {
             json(jsonSerializer)
         }
     }.use {
-        LOG.debug("update set $this")
+        LOG.debug("update set ${this@update}")
         val response: HttpResponse = it.get("https://api.scryfall.com/sets/${this@update.shortName}")
 
         if (!response.status.isSuccess())

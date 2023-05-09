@@ -8,6 +8,8 @@ enum class CardRole {
     BOARD_WIPE,
     COMMANDER,
     HIDDEN_COMMANDER,
+    OATHBREAKER,
+    SIGNATURE_SPELL,
     PAYOFF,
     ENABLER,
     ENHANCER,

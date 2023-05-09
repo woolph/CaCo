@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.isActive
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -37,10 +36,10 @@ internal inline fun <reified T: ScryfallBase> paginatedDataRequest(initialQuery:
         install(ContentNegotiation) {
             json(jsonSerializer)
         }
-    }.use {
+    }.use { client ->
         while (currentQuery != null && currentCoroutineContext().isActive) {
             LOG.debug("importing paginated data from $currentQuery")
-            val response: HttpResponse = it.get(currentQuery!!)
+            val response: HttpResponse = client.get(currentQuery!!)
 
             if (response.status.isSuccess()) {
                 val paginatedData = response.body<PaginatedData<T>>()

@@ -5,9 +5,10 @@ enum class Format(val shortName: String) {
 	Standard("STD"),
 	Historic("HSC"),
 	Commander("CMD"),
+	Oathbreaker("OBR"),
 	Modern("MDN"),
 	Pauper("PPR"),
 	Legacy("LGC"),
 	Vintage("VTG"),
-	Pioneer("PNR")
+	Pioneer("PNR"),
 }

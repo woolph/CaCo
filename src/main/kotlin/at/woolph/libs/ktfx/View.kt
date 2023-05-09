@@ -7,10 +7,8 @@ import tornadofx.add
 import tornadofx.find
 import kotlin.reflect.KClass
 
-fun <T: UIComponent> EventTarget.view(type: KClass<T>) {
-	val t = find(type)
-	this.add(t.root)
-}
+inline fun <reified T: UIComponent> EventTarget.view(block: T.() -> Unit = {}) =
+	add(find(T::class).apply(block).root)
 
 fun <T> Spinner<T>.commitValue() {
 	if(isEditable) {

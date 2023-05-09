@@ -3,10 +3,56 @@ package at.woolph.caco.view.collection
 import javafx.beans.property.SimpleStringProperty
 import javafx.scene.control.ButtonType
 import javafx.scene.control.Dialog
-import javafx.scene.layout.BorderPane
+import javafx.scene.control.DialogPane
 import javafx.scene.layout.Priority
-import tornadofx.*
+import tornadofx.View
+import tornadofx.borderpane
+import tornadofx.center
+import tornadofx.field
+import tornadofx.fieldset
+import tornadofx.form
+import tornadofx.getValue
+import tornadofx.hgrow
+import tornadofx.runLater
+import tornadofx.textfield
+import java.util.*
 
+fun <R> Dialog<R>.dialogPane(block: DialogPane.() -> Unit) = dialogPane.apply(block)
+
+fun <R> Dialog<R>.buttons(block: DialogButtonsBuilder<R>.() -> Unit) =
+	DialogButtonsBuilder(this).apply(block).apply()
+
+class DialogButtonsBuilder<R>(val dialog: Dialog<R>) {
+	protected var defaultConverter: () -> R = { throw IllegalStateException("no default action defined") }
+	fun defaultAction(block: () -> R) {
+		defaultConverter = block
+	}
+	inner class DialogButtonBuilder(val buttonTyoe: ButtonType) {
+		private var converter: ((ButtonType) -> R)? = null
+
+		fun action(block: (ButtonType) -> R) {
+			converter = block
+		}
+
+		internal fun doAction() =
+			converter?.let { it(buttonTyoe) } ?: defaultConverter()
+	}
+	private val buttonBuilers = mutableListOf<DialogButtonBuilder>()
+
+	fun button(buttonTyoe: ButtonType, builder: DialogButtonBuilder.() -> Unit = {}) {
+		buttonBuilers += DialogButtonBuilder(buttonTyoe).apply(builder)
+	}
+
+	fun button(buttonText: String, builder: DialogButtonBuilder.() -> Unit = {}) =
+		button(ButtonType(buttonText), builder)
+
+	internal fun apply() {
+		dialog.dialogPane.buttonTypes.setAll(buttonBuilers.map { it.buttonTyoe })
+		dialog.setResultConverter { buttonTyoe ->
+			buttonBuilers.firstOrNull { it.buttonTyoe === buttonTyoe }?.doAction()
+		}
+	}
+}
 
 class AddSetsDialog(val owner: View): Dialog<String?>() {
 	val messages
@@ -22,8 +68,8 @@ class AddSetsDialog(val owner: View): Dialog<String?>() {
 		title = "Adding Sets"
 		headerText = "Add one or more sets (separated by commas)"
 
-		dialogPane.apply {
-			content = BorderPane().apply {
+		dialogPane {
+			content = borderpane {
 				center {
 					form {
 						fieldset {
@@ -37,16 +83,16 @@ class AddSetsDialog(val owner: View): Dialog<String?>() {
 					}
 				}
 			}
-
-			buttonTypes.setAll(ButtonType.APPLY, ButtonType.CANCEL)
 		}
 
-		setResultConverter { button ->
-			// TODO data validation check
-			when (button) {
-				ButtonType.APPLY -> setCode.toLowerCase()
-				else -> null
+		buttons {
+			button(ButtonType.APPLY) {
+				action {
+					setCode.lowercase(Locale.getDefault())
+				}
 			}
+			button(ButtonType.CANCEL)
+			defaultAction { null }
 		}
 	}
 }

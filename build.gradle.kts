@@ -2,10 +2,9 @@ plugins {
 	alias(libs.plugins.kotlin.jvm)
 	alias(libs.plugins.kotlin.serialization)
 	alias(libs.plugins.javafx)
+	alias(libs.plugins.spotless)
 	application
 	distribution
-
-	id("com.diffplug.spotless") version "6.15.0"
 }
 
 project.group = "at.woolph"

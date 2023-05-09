@@ -1,6 +1,6 @@
 [versions]
 jvmTarget = "17"
-kotlin = "1.8.0"
+kotlin = "1.8.21"
 doodle = "0.9.0"
 javafx = "17"
 
