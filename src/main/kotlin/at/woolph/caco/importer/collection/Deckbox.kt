@@ -40,6 +40,14 @@ fun CardLanguage.toLanguageDeckbox(): String = when (this) {
     CardLanguage.CHINESE_TRADITIONAL -> "Traditional Chinese"
     else -> throw Exception("unknown language")
 }
+fun CardCondition.toDeckboxCondition(): String = when (this) {
+    CardCondition.NEAR_MINT -> "Near Mint"
+    CardCondition.EXCELLENT -> "Good (Lightly Played)"
+    CardCondition.GOOD -> "Played"
+    CardCondition.PLAYED -> "Heavily Played"
+    CardCondition.POOR -> "Poor"
+    else -> throw Exception("unknown condition")
+}
 
 fun importDeckbox(file: File) {
     println("importing deckbox collection export file $file")
@@ -47,74 +55,76 @@ fun importDeckbox(file: File) {
         CardPossessions.deleteAll()
 
         val reader = CSVReader(FileReader(file))
-        if (reader.readNext() != null) { // skip header
-            var nextLine: Array<String>? = reader.readNext()
-            while (nextLine != null) {
-                try {
-                    val count = nextLine[0].toInt()
-                    val cardName = nextLine[2]
+        val header = reader.readNext().withIndex().associate { it.value to it.index }
+        operator fun Array<String>.get(column: String): String? = header[column]?.let {this[it] }
 
-                    val setName = mapSetName(nextLine[3].removePrefix("Prerelease Events: ").removePrefix("Extras: ").removePrefix("Promos: ").removePrefix("Promo Pack: "))
-                    val token = nextLine[3].startsWith("Extras: ")
-                    val language = nextLine[6].parseLanguageDeckbox()
-                    val condition = when (nextLine[5]) {
-                        "Mint", "Near Mint" -> CardCondition.NEAR_MINT
-                        "Good (Lightly Played)" -> CardCondition.EXCELLENT
-                        "Played" -> CardCondition.GOOD
-                        "Heavily Played" -> CardCondition.PLAYED
-                        "Poor" -> CardCondition.POOR
-                        else -> CardCondition.UNKNOWN
-                    }
-                    val isPromo = nextLine[3].startsWith("Promos: ") || nextLine[3].startsWith("Promo Pack: ")
-					val stampPrereleaseDate = nextLine[3].startsWith("Prerelease Events: ")
-                    val foil = when {
-						stampPrereleaseDate -> true
-                        nextLine[7] == "foil" -> true
-                        else -> false
-                    }
-					val stampPlaneswalkerSymbol = nextLine[12] == "promo"
-					val markPlaneswalkerSymbol = nextLine[9] == "proof"
-                    val cardNumber = mapSetNumber(nextLine[4], setName).let {paddingCollectorNumber(when {
-                        token -> "T$it"
-                        setName == "War of the Spark Japanese Alternate Art" -> "$it★ P"
-                        setName == "Jumpstart Front Cards" -> "M$it"
+        var nextLine: Array<String>? = reader.readNext()
+        while (nextLine != null) {
+            try {
+                val count = nextLine["Count"]!!.toInt()
+                val cardName = nextLine["Name"]!!
+                val edition = nextLine["Edition"]!!
+                val setName = mapSetName(edition.removePrefix("Prerelease Events: ").removePrefix("Extras: ").removePrefix("Promos: ").removePrefix("Promo Pack: "))
+                val token = edition.startsWith("Extras: ")
+                val setCode = nextLine["Edition Code"]!!.uppercase()
+                val language = nextLine["Language"]!!.parseLanguageDeckbox()
+                val condition = when (nextLine["Condition"]) {
+                    "Mint", "Near Mint" -> CardCondition.NEAR_MINT
+                    "Good (Lightly Played)" -> CardCondition.EXCELLENT
+                    "Played" -> CardCondition.GOOD
+                    "Heavily Played" -> CardCondition.PLAYED
+                    "Poor" -> CardCondition.POOR
+                    else -> CardCondition.UNKNOWN
+                }
+                val isPromo = edition.startsWith("Promos: ") || edition.startsWith("Promo Pack: ")
+                val stampPrereleaseDate = edition.startsWith("Prerelease Events: ")
+                val foil = when {
+                    stampPrereleaseDate -> true
+                    nextLine["Foil"] == "foil" -> true
+                    else -> false
+                }
+                val stampPlaneswalkerSymbol = nextLine["Promo"] == "promo"
+                val markPlaneswalkerSymbol = nextLine["Artist Proof"] == "proof"
+                val cardNumber = mapSetNumber(nextLine["Card Number"]!!, setName).let { paddingCollectorNumber(when {
+                    token -> "T$it"
+                    setName == "War of the Spark Japanese Alternate Art" -> "$it★ P"
+                    setName == "Jumpstart Front Cards" -> "M$it"
 //                        isMemorabilia -> "M" + it.getString("collector_number")
-                        isPromo -> "$it P"
-                        else -> it
-                    })
-                    }
-//                    val type = nextLine.getOrNull(15)
-                    val manaCost = nextLine.getOrNull(16)
-                    val rarity = nextLine.getOrNull(17)?.let { when(it) {
-                        "MythicRare" -> Rarity.MYTHIC
-                        "Rare" -> Rarity.RARE
-                        "Uncommon" -> Rarity.UNCOMMON
-                        "Common" -> Rarity.COMMON
-                        else -> null
-                    } }
+                    isPromo -> "$it P"
+                    else -> it
+                })
+                }
+//                    val type = nextLine["Type"]
+                val manaCost = nextLine["Cost"]
+                val rarity = nextLine["Rarity"]?.let { when(it) {
+                    "MythicRare" -> Rarity.MYTHIC
+                    "Rare" -> Rarity.RARE
+                    "Uncommon" -> Rarity.UNCOMMON
+                    "Common" -> Rarity.COMMON
+                    else -> null
+                } }
 
-                    if (cardName.startsWith("Art Card:")) {
-                        println("skipping $cardName because it is an Art Card")
-                    } else {
-                        val card = getCard(setName, cardNumber, token, cardName, rarity, manaCost, interactiveMode = false)
+                if (cardName.startsWith("Art Card:")) {
+                    println("skipping $cardName because it is an Art Card")
+                } else {
+                    val card = getCard(setCode, setName, cardNumber, token, cardName, rarity, manaCost, interactiveMode = false)
 
-                        repeat(count) {
-                            CardPossession.new {
-                                this.card = card
-                                this.language = language
-                                this.condition = condition
-                                this.foil = foil
-                                this.stampPrereleaseDate = stampPrereleaseDate
-                                this.stampPlaneswalkerSymbol = stampPlaneswalkerSymbol
-                                this.markPlaneswalkerSymbol = markPlaneswalkerSymbol
-                            }
+                    repeat(count) {
+                        CardPossession.new {
+                            this.card = card
+                            this.language = language
+                            this.condition = condition
+                            this.foil = foil
+                            this.stampPrereleaseDate = stampPrereleaseDate
+                            this.stampPlaneswalkerSymbol = stampPlaneswalkerSymbol
+                            this.markPlaneswalkerSymbol = markPlaneswalkerSymbol
                         }
                     }
-                } catch (e: Exception) {
-                    println("unable to import: ${e.message}")
                 }
-                nextLine = reader.readNext()
+            } catch (e: Exception) {
+                println("unable to import: ${e.message}")
             }
+            nextLine = reader.readNext()
         }
     }
 
@@ -124,7 +134,7 @@ fun importDeckbox(file: File) {
     println("\t)")
 }
 
-fun getCard(setName: String, cardNumber: String, token: Boolean, cardName: String, rarity: Rarity?, manaCost: String?, interactiveMode: Boolean): Card {
+fun getCard(setCode: String, setName: String, cardNumber: String, token: Boolean, cardName: String, rarity: Rarity?, manaCost: String?, interactiveMode: Boolean): Card {
 //    val cardSetJoin = Join(ScryfallCardSets, CardSets,
 //        onColumn = ScryfallCardSets.set, otherColumn = CardSets.id,
 //        joinType = JoinType.INNER,
@@ -142,9 +152,9 @@ fun getCard(setName: String, cardNumber: String, token: Boolean, cardName: Strin
 //        return@mapNotNull Card.findById(it[Cards.id])
 //    }.map{it.name}.toList()
 
-
     val cards = (Cards innerJoin ScryfallCardSets innerJoin CardSets).slice(Cards.id).select {
-         CardSets.name.eq(setName) and Cards.numberInSet.eq(cardNumber)
+        CardSets.name.eq(setName) and (Cards.numberInSet.eq(cardNumber))
+        // TODO use setCode (does not work out of the box)
     }.mapNotNull {
         return@mapNotNull Card.findById(it[Cards.id])
     }.toList()
@@ -220,6 +230,8 @@ val setNameMapping = mutableMapOf(
     "Kamigawa: Neon Dynasty Commander" to "Neon Dynasty Commander",
     "Streets of New Capenna Commander" to "New Capenna Commander",
     "Warhammer 40,000" to "Warhammer 40,000 Commander",
+    "The Lord of the Rings: Tales of Middle-earth Commander" to "Tales of Middle-earth Commander",
+    "The Lost Caverns of Ixalan Commander" to "Lost Caverns of Ixalan Commander",
 )
 
 val setNumberMapping = mutableMapOf<String, Map<IntRange, Int>>(

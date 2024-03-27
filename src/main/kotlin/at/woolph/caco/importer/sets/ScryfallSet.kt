@@ -1,6 +1,8 @@
 package at.woolph.caco.importer.sets
 
 import at.woolph.caco.datamodel.sets.CardSet
+import at.woolph.caco.datamodel.sets.ScryfallCardSet
+import at.woolph.caco.newOrUpdate
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -40,5 +42,11 @@ data class ScryfallSet(
         dateOfRelease = this@ScryfallSet.released_at
         officalCardCount = this@ScryfallSet.card_count
         icon = this@ScryfallSet.icon_svg_uri
+    }.also { updatedCardSet ->
+        ScryfallCardSet.newOrUpdate(this@ScryfallSet.id) {
+            setCode = this@ScryfallSet.code
+            name = this@ScryfallSet.name
+            set = updatedCardSet
+        }
     }
 }

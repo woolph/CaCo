@@ -323,3 +323,16 @@ fun Node.drawBackground(backgroundColor: Color) {
 		fill()
 	}
 }
+
+fun ByteArray.toPDImage(page: Page) = PDImageXObject.createFromByteArray(page.document, this ,null)
+
+fun Node.drawAsImage(subIcon: PDImageXObject, maximumWidth: Float, desiredHeight: Float, i: Int, columnWidth: Float, xOffsetIcons: Float, yOffsetIcons: Float) {
+	val heightScale = desiredHeight/subIcon.height
+	val desiredWidth = subIcon.width*heightScale
+	val (actualWidth, actualHeight) = if (desiredWidth > maximumWidth) {
+		maximumWidth to subIcon.height*maximumWidth/subIcon.width
+	} else {
+		desiredWidth to desiredHeight
+	}
+	drawImage(subIcon, columnWidth*0.5f + xOffsetIcons + columnWidth*i - actualWidth*0.5f, yOffsetIcons+(desiredHeight-actualHeight)*0.5f, actualWidth, actualHeight)
+}

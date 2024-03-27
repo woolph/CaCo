@@ -39,7 +39,11 @@ object URISerializer : KSerializer<URI> {
     override val descriptor = PrimitiveSerialDescriptor("URI", PrimitiveKind.STRING)
 
     override fun deserialize(decoder: Decoder): URI {
-        return URI.create(decoder.decodeString())
+        try {
+            return URI.create(decoder.decodeString())
+        } catch (t: Throwable) {
+            return URI.create("about://version")
+        }
     }
 
     override fun serialize(encoder: Encoder, value: URI) {
@@ -65,6 +69,7 @@ val jsonSerializer = Json {
     }
 }
 
+@Serializable
 enum class MtgColor {
     @SerialName("W") White,
     @SerialName("U") Blue,
@@ -104,6 +109,7 @@ data class ScryfallCardFace(
     val power: String? = null,
     val toughness: String? = null,
     val loyalty: String? = null,
+    val defense: String? = null,
     val flavor_text: String? = null,
     val flavor_name: String? = null,
     val watermark: String? = null,
@@ -126,7 +132,7 @@ data class ScryfallPreviewInfo(
 data class ScryfallCard(
     @SerialName("object") val objectType: String,
     @Contextual val id: UUID,
-    @Contextual val oracle_id: UUID,
+    @Contextual val oracle_id: UUID? = null,
     val multiverse_ids: Set<Int>,
     val mtgo_id: Int? = null,
     val arena_id: Int? = null,
@@ -145,8 +151,8 @@ data class ScryfallCard(
     val image_uris: Map<String, @Contextual URI>? = null,
     val card_faces: List<ScryfallCardFace>? = null,
     val mana_cost: String? = null,
-    val cmc: Double,
-    val type_line: String,
+    val cmc: Double? = null,
+    val type_line: String? = null,
     val printed_type_line: String? = null,
     val oracle_text: String? = null,
     val printed_text: String? = null,
@@ -188,7 +194,7 @@ data class ScryfallCard(
     val flavor_name: String? = null,
     @Contextual val card_back_id: UUID? = null,
     val artist: String,
-    val artist_ids: Set<@Contextual UUID>,
+    val artist_ids: Set<@Contextual UUID> = emptySet(),
     @Contextual val illustration_id: UUID? = null,
     val border_color: String,
     val frame: String,

@@ -1,9 +1,7 @@
 package at.woolph.caco.importer.sets
 
-import at.woolph.libs.json.useJsonReader
-import at.woolph.libs.json.getJsonObjectArray
-import at.woolph.caco.datamodel.sets.*
 import at.woolph.caco.datamodel.sets.CardSet
+import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.newOrUpdate
 import at.woolph.libs.log.logger
 import io.ktor.client.*
@@ -15,20 +13,8 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.asFlow
-import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
-import java.net.HttpURLConnection
-import java.net.URI
-import java.net.URL
-import java.util.*
-import javax.json.*
-import kotlin.IllegalStateException
 import kotlin.math.max
 import kotlin.math.min
 

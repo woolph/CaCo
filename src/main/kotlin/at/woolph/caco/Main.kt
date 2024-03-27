@@ -1,71 +1,43 @@
 package at.woolph.caco
 
 import at.woolph.caco.datamodel.Databases
-import at.woolph.caco.datamodel.collection.ArenaCardPossessions
+import at.woolph.caco.datamodel.collection.CardCondition
 import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.collection.CardPossessions
-import at.woolph.caco.datamodel.decks.Builds
-import at.woolph.caco.datamodel.decks.DeckArchetypes
 import at.woolph.caco.datamodel.decks.DeckCards
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.CardSet
-import at.woolph.caco.datamodel.sets.CardSets
 import at.woolph.caco.datamodel.sets.Cards
 import at.woolph.caco.datamodel.sets.Cards.set
-import at.woolph.caco.datamodel.sets.ScryfallCardSet
-import at.woolph.caco.datamodel.sets.ScryfallCardSets
-import at.woolph.caco.datamodel.sets.parseRarity
 import at.woolph.caco.importer.collection.importDeckbox
-import at.woolph.caco.importer.sets.ScryfallCard
-import at.woolph.caco.importer.sets.ScryfallSet
-import at.woolph.caco.importer.sets.importCardsOfSet
-import at.woolph.caco.importer.sets.importSet
-import at.woolph.caco.importer.sets.importSets
-import at.woolph.caco.importer.sets.jsonSerializer
-import at.woolph.caco.importer.sets.paddingCollectorNumber
-import at.woolph.caco.importer.sets.patternPromoCollectorNumber
+import at.woolph.caco.importer.collection.setNameMapping
+import at.woolph.caco.importer.collection.toDeckboxCondition
+import at.woolph.caco.importer.collection.toLanguageDeckbox
+import at.woolph.caco.importer.sets.*
 import at.woolph.caco.view.collection.CardPossessionModel
 import at.woolph.caco.view.collection.PaperCollectionView
 import at.woolph.libs.files.bufferedWriter
 import at.woolph.libs.files.inputStream
 import at.woolph.libs.files.path
-import at.woolph.libs.json.getJsonObjectArray
-import at.woolph.libs.json.useJsonReader
 import at.woolph.libs.log.logger
-import at.woolph.libs.pdf.Font
-import at.woolph.libs.pdf.PagePosition
-import at.woolph.libs.pdf.columns
-import at.woolph.libs.pdf.createPdfDocument
-import at.woolph.libs.pdf.drawText
-import at.woolph.libs.pdf.frame
-import at.woolph.libs.pdf.page
+import at.woolph.libs.pdf.*
 import be.quodlibet.boxable.BaseTable
 import be.quodlibet.boxable.HorizontalAlignment
 import be.quodlibet.boxable.VerticalAlignment
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.filter
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeToSequence
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.font.PDType1Font
 import org.jetbrains.exposed.dao.Entity
 import org.jetbrains.exposed.dao.EntityClass
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.SchemaUtils
-import org.jetbrains.exposed.sql.count
-import org.jetbrains.exposed.sql.select
-import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.sum
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.awt.Color
 import java.io.File
-import java.net.URI
 import java.nio.file.Paths
 import java.util.*
-import javax.json.JsonNumber
-import javax.json.JsonValue
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.system.measureTimeMillis
@@ -73,6 +45,7 @@ import kotlin.system.measureTimeMillis
 private val LOG by logger("at.woolph.caco.Main")
 
 const val EXPORT_VALUE_TRADEABLES = "--exportValueTradeables"
+const val ENTER_CARDS = "--enterCardsOfSet="
 const val IMPORT_FROM_FILE = "--importFile="
 const val IMPORT_PRICES = "--importPrices="
 const val IMPORT_SETS = "--importSets"
@@ -207,6 +180,102 @@ suspend fun main(args: Array<String>) {
 						importSet(setCode.lowercase(Locale.getDefault())).apply {
 							importCardsOfSet()
 						}
+					} catch(ex:Exception) {
+						ex.printStackTrace()
+					}
+				}
+		}
+	}
+
+	if(args.any { it.startsWith(ENTER_CARDS) }) {
+		// import card database
+		newSuspendedTransaction {
+			args.filter { it.startsWith(ENTER_CARDS) }
+				.map { it.removePrefix(ENTER_CARDS) }
+				.forEach { setCode ->
+					try {
+						val cardSet = CardSet.findById(setCode.lowercase())!!
+						println("enter cards for ${cardSet.name}")
+
+						File("./import-$setCode.stdin").printWriter().use { stdinPrint ->
+							print("language=")
+							val selectedLanguage = CardLanguage.parse(readln().also {
+								stdinPrint.println(it)
+							})
+
+							data class PossessionUpdate(
+								val count: Int = 1,
+							) {
+								fun increment() = PossessionUpdate(count + 1)
+							}
+
+							val cardPossessionUpdates = mutableMapOf<Pair<Card, Boolean>, Int>()
+
+							print("setnumber=")
+							lateinit var prevSetNumber: String
+							var setNumber = readln().also {
+								stdinPrint.println(it)
+							}
+							while (setNumber.isNotBlank()) {
+								fun add(setNumber: String) {
+									val foil = setNumber.endsWith("*")
+									val setNumber2 = setNumber.removeSuffix("*").toInt().toString().padStart(3, '0')
+									val card = cardSet.cards.first { it.numberInSet == setNumber2 }
+									print("add \"${card.name}\" ${if (foil) " in \u001B[38:5:0m\u001B[48:5:214mf\u001B[48:5:215mo\u001B[48:5:216mi\u001B[48:5:217ml\u001B[0m" else ""}")
+									cardPossessionUpdates.compute(card to foil) { _, possessionUpdate ->
+										(possessionUpdate ?: 0.also {
+											print(" \u001b[31mNeeded for collection!\u001b[0m")
+										}) + 1
+									}
+									println()
+								}
+								fun remove(setNumber: String) {
+									val foil = setNumber.endsWith("*")
+									val setNumber2 = setNumber.removeSuffix("*").toInt().toString().padStart(3, '0')
+									val card = cardSet.cards.first { it.numberInSet == setNumber2 }
+									print("removed \"${card.name}\" ${if (foil) " in \u001B[38:5:0m\u001B[48:5:214mf\u001B[48:5:215mo\u001B[48:5:216mi\u001B[48:5:217ml\u001B[0m" else ""}")
+									cardPossessionUpdates.computeIfPresent(card to foil) { _, possessionUpdate ->
+										possessionUpdate - 1
+									}
+									println()
+								}
+								when (setNumber) {
+									"+" -> add(prevSetNumber)
+									"-" -> remove(prevSetNumber)
+									else -> add(setNumber)
+								}
+								print("setnumber=")
+								prevSetNumber = setNumber
+								setNumber = readln().also {
+									stdinPrint.println(it)
+								}
+							}
+
+							File("./import-$setCode.csv").printWriter().use { out ->
+								out.println("Count,Tradelist Count,Name,Edition,Card Number,Condition,Language,Foil,Signed,Artist Proof,Altered Art,Misprint,Promo,Textless,My Price")
+								cardPossessionUpdates.forEach { (x, possessionUpdate) ->
+									val (cardInfo, foil) = x
+									val cardName = cardInfo.name
+									val cardNumberInSet = cardInfo.numberInSet
+									val token = cardInfo.token
+									val promo = cardInfo.promo
+									val condition = CardCondition.NEAR_MINT.toDeckboxCondition()
+									val prereleasePromo = false
+									val language = selectedLanguage.toLanguageDeckbox()
+									val setName = setNameMapping.asSequence().firstOrNull { it.value == cardSet.name }?.key ?: cardSet.name.let {
+										when {
+											prereleasePromo -> "Prerelease Events: ${it}"
+											token -> "Extras: ${it}"
+											else -> it
+										}
+									}
+									if (possessionUpdate > 0) {
+										out.println("${possessionUpdate},0,\"$cardName\",\"$setName\",$cardNumberInSet,$condition,$language,${if (foil) "foil" else ""},,,,,,,")
+									}
+								}
+							}
+						}
+
 					} catch(ex:Exception) {
 						ex.printStackTrace()
 					}

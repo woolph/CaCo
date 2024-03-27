@@ -19,4 +19,21 @@ enum class CardLanguage {
 		KOREAN -> "ko"
 		else -> "?"
 	}
+
+	companion object {
+		fun parse(languageCode: String) = when(languageCode) {
+			"en" -> ENGLISH
+			"de" -> GERMAN
+			"ru" -> RUSSIAN
+			"ja" -> JAPANESE
+			"es" -> SPANISH
+			"pt" -> PORTUGUESE
+			"it" -> ITALIAN
+			"fr" -> FRENCH
+			"zhs" -> CHINESE
+			"zht" -> CHINESE_TRADITIONAL
+			"ko" -> KOREAN
+			else -> UNKNOWN
+		}
+	}
 }

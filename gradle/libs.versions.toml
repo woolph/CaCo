@@ -1,8 +1,8 @@
 [versions]
-jvmTarget = "17"
-kotlin = "1.8.21"
+jvmTarget = "21"
+kotlin = "1.9.21"
 doodle = "0.9.0"
-javafx = "17"
+javafx = "21"
 
 [libraries]
 
@@ -12,6 +12,6 @@ javafx = "17"
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 
-javafx = "org.openjfx.javafxplugin:0.0.13"
+javafx = "org.openjfx.javafxplugin:0.1.0"
 
 spotless = "com.diffplug.spotless:6.15.0"

@@ -1,14 +1,9 @@
 package at.woolph.caco.cli
 
-import at.woolph.caco.binderlabels.*
 import at.woolph.caco.datamodel.Databases
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.CardSet
-import at.woolph.caco.datamodel.sets.CardSets
-import at.woolph.caco.drawAsImage
 import at.woolph.caco.imagecache.ImageCache
-import at.woolph.caco.toPDImage
-import at.woolph.caco.view.collection.CardModel
 import at.woolph.libs.pdf.*
 import be.quodlibet.boxable.HorizontalAlignment
 import kotlinx.coroutines.runBlocking
@@ -35,6 +30,10 @@ class CollectionPagePreview {
 
         createPdfDocument {
             val pageFormat = PDRectangle(PDRectangle.A4.height, PDRectangle.A4.width)
+
+            val fontColor = Color.BLACK
+            val fontFamily72Black = PDType0Font.load(this, javaClass.getResourceAsStream("/fonts/72-Black.ttf"))
+            val fontCode = Font(fontFamily72Black, 10f)
 
             val mtgCardBack = PDImageXObject.createFromFile("./card-back.jpg", this)
 
@@ -87,29 +86,39 @@ class CollectionPagePreview {
                         pageOffset * page.toFloat() +
                         cardOffset * Position(column.toFloat(), rows - row.toFloat() - 1)
             }
-            collectionPages.forEach { pageContent ->
+            collectionPages.forEachIndexed { pageNumber, pageContent ->
                 page(pageFormat) {
+                    val minNumberInSet = pageContent.minOf { it.map { it.numberInSet }.orElse("Z") }
+                    val maxNumberInSet = pageContent.maxOf { it.map { it.numberInSet }.orElse("0") }
+                    drawText(minNumberInSet, fontCode, HorizontalAlignment.LEFT, pageFormat.upperRightY, fontColor)
+                    drawText(maxNumberInSet, fontCode, HorizontalAlignment.RIGHT, pageFormat.upperRightY, fontColor)
+                    if (pageNumber > 0) {
+                        drawText("%02dB".format(pageNumber), fontCode, HorizontalAlignment.LEFT, 10f, fontColor)
+                    }
+                    drawText("%02dF".format(pageNumber+1), fontCode, HorizontalAlignment.RIGHT, 10f, fontColor)
+
                     pageContent.forEachIndexed { index, cardOptional ->
                         cardOptional.ifPresent { card ->
                             val cardPosition = position(index)
                             try {
-                                println("card #$${card.numberInSet} ${card.name} image is being downloaded")
                                 val byteArray = runBlocking {
                                     ImageCache.getImageByteArray(card.image.toString()) {
                                         try {
+                                            print("card #$${card.numberInSet} ${card.name} image downloading\r")
                                             card.image?.toURL()?.readBytes()
                                         } catch (t: Throwable) {
-                                            println("unable to load")
+                                            print("card #\$${card.numberInSet} ${card.name} image is not loaded\r")
                                             null
                                         }
                                     }
                                 }!!
                                 val cardImage = PDImageXObject.createFromByteArray(this@createPdfDocument, byteArray, card.name)
+                                print("card #\$${card.numberInSet} ${card.name} image rendering\r")
                                 drawImage(cardImage, cardPosition.x, cardPosition.y, cardSize.x, cardSize.y)
-                                println("card #\$${card.numberInSet} ${card.name} image is rendered")
+                                print("card #\$${card.numberInSet} ${card.name} image rendered\r")
                             } catch (t: Throwable) {
                                 drawImage(mtgCardBack, cardPosition.x, cardPosition.y, cardSize.x, cardSize.y)
-                                println("card #\$${card.numberInSet} ${card.name} cardback rendered")
+                                print("card #\$${card.numberInSet} ${card.name} cardback rendered\r")
                             }
                         }
                     }
@@ -122,6 +131,6 @@ class CollectionPagePreview {
 }
 
 suspend fun main() {
-    CollectionPagePreview().printLabel("mom", "C:\\Users\\001121673\\mom.pdf")
-    CollectionPagePreview().printLabel("one", "C:\\Users\\001121673\\one.pdf")
+    CollectionPagePreview().printLabel("4ed", "C:\\Users\\001121673\\4ed.pdf")
+    CollectionPagePreview().printLabel("6ed", "C:\\Users\\001121673\\6ed.pdf")
 }

@@ -8,6 +8,7 @@ import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.datamodel.sets.Foil
 import at.woolph.caco.datamodel.sets.Rarity
 import at.woolph.caco.importer.collection.setNameMapping
+import at.woolph.caco.importer.collection.toDeckboxCondition
 import at.woolph.caco.importer.collection.toLanguageDeckbox
 import at.woolph.caco.view.CardDetailsView
 import at.woolph.caco.view.filteredBy
@@ -339,14 +340,7 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
                                     val cardNumberInSet = cardInfo.item.numberInSet
                                     val token = cardInfo.item.token
                                     val promo = cardInfo.item.promo
-                                    val condition = when (conditionProperty.value) {
-                                        CardCondition.NEAR_MINT -> "Near Mint"
-                                        CardCondition.EXCELLENT -> "Good (Lightly Played)"
-                                        CardCondition.GOOD -> "Played"
-                                        CardCondition.PLAYED -> "Heavily Played"
-                                        CardCondition.POOR -> "Poor"
-                                        else -> throw Exception("unknown condition")
-                                    }
+                                    val condition = conditionProperty.value.toDeckboxCondition()
                                     val prereleasePromo = false
                                     val language = languageProperty.value.toLanguageDeckbox()
                                     val setName = setNameMapping.asSequence().firstOrNull { it.value == set.name }?.key ?: set.name?.let {
