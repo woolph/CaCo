@@ -219,10 +219,11 @@ class BinderLabels(
                         page(pageFormat) {
                             println("column label page #$pageIndex")
                             mapLabelItems.forEachIndexed { i, set ->
-                                if (set != BlankLabel) {
-                                    frame(columnWidth*i+1f, 0f, (columnWidth)*(columns-i-1)+1f, 0f) {
+                                val borderWidth = 2f
+                                frame(columnWidth*i+borderWidth, 0f, (columnWidth)*(columns-i-1)+borderWidth, 0f) {
+                                    drawBorder(borderWidth, fontColor)
+                                    if (set != BlankLabel) {
                                         backgroundColor?.let { drawBackground(it) }
-                                        drawBorder(2f, fontColor)
 
                                         drawImage(mtgLogo, magicLogoHPadding + columnWidth*i, magicLogoYPosition, mtgLogoWidth, mtgLogoHeight)
 
