@@ -4,11 +4,9 @@ import at.woolph.caco.binderlabels.*
 import at.woolph.caco.datamodel.Databases
 import at.woolph.libs.pdf.Font
 import at.woolph.libs.pdf.createPdfDocument
-import at.woolph.libs.pdf.drawBackground
 import at.woolph.libs.pdf.drawBorder
 import at.woolph.libs.pdf.drawImage
 import at.woolph.libs.pdf.drawText
-import at.woolph.libs.pdf.drawText90
 import at.woolph.libs.pdf.frame
 import at.woolph.libs.pdf.page
 import be.quodlibet.boxable.HorizontalAlignment
@@ -18,18 +16,13 @@ import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.awt.Color
 
-class BinderLabels(
-//    val inputReader: LineReader,
-//    val output: OutputStream,
-) {
+class PileSeparators {
     fun printLabel(file: String) {
         Databases.init()
 
         transaction {
             createPdfDocument {
-                val labelsWide : List<MapLabelItem> = listOf(
-                )
-                val labelsNarrow: List<MapLabelItem> = listOf(
+                val separators: List<MapLabelItem> = listOf(
                     PromosLabel,
                     SetWithCommander("neo", "nec"),
                     SetWithCommander("khm", "khc"),
@@ -95,6 +88,7 @@ class BinderLabels(
                     SimpleSet("ori"),
                     SimpleSet("c17"),
                     SimpleSet("snc"),
+                    SimpleSet("clb"),
                     SimpleSet("c16"),
                     SimpleSet("c15"),
                     SimpleSet("c14"),
@@ -142,12 +136,11 @@ class BinderLabels(
                     SetWithCommanderAndAncillary("bro", "brc", "brr"),
                     SetWithCommander("one", "onc"),
                     SimpleSet("who"),
+                    SimpleSet("ltr"),
                     SimpleSet("ltc"),
                     SimpleSet("cmm"),
                     SimpleSet("scd"),
-                    SimpleSet("otc"),
-                    SimpleSet("ltr"),
-                    SimpleSet("clb"),
+                    BlankLabel,
                     SetWithCommanderAndAncillary("mom", "mat", "mul"),
                     SimpleSet("moc"),
                     SetWithCommander("lci",  "rex"),
@@ -162,14 +155,8 @@ class BinderLabels(
                     SimpleSet("spg"),
                 )
 
-                val mapLabels = mapOf(
-//                    4 to labelsWide,
-                    6 to labelsNarrow,
-                )
-
-                val fontColor = if (darkLabels) Color.WHITE else Color.BLACK
-                val fontSubColor = if (darkLabels) Color.LIGHT_GRAY else Color.GRAY
-                val backgroundColor: Color? = if (darkLabels) Color.BLACK else null
+                val fontColor = Color.BLACK
+                val fontSubColor = Color.GRAY
 
                 val mtgLogo = PDImageXObject.createFromFile("./mtg.png", this)
 
@@ -182,95 +169,68 @@ class BinderLabels(
                 val fontCodeCommanderSubset = Font(fontFamily72Black, 14f)
 
                 val pageFormat = PDRectangle.A4
+                val columns = 3
+                val rows = 2
+                val itemsPerPage = columns * rows
 
-                mapLabels.forEach { (columns, labels) ->
-                    val columnWidth = pageFormat.width/columns
+                val columnWidth = pageFormat.width/columns
+                val rowHeight = pageFormat.height/rows
 
-                    val titleXPosition = (columnWidth + fontTitle.size)*0.5f - 10f //64f
-                    val titleYPosition = 164f
-                    val subTitleXPosition = titleXPosition+22f
-                    val subTitleYPosition = titleYPosition+30f
+                val titleXPosition = (columnWidth + fontTitle.size)*0.5f - 10f //64f
+                val titleYPosition = 164f
+                val subTitleXPosition = titleXPosition+22f
+                val subTitleYPosition = titleYPosition+30f
 
-                    val maximumWidth = columnWidth-20f
-                    val desiredHeight = 64f
-                    val marginTop = 15f
-                    val marginBottom = marginTop
+                val maximumWidth = columnWidth-20f
+                val desiredHeight = 64f
+                val marginTop = 15f
+                val marginBottom = marginTop
 
-                    val magicLogoHPadding = 10f
-                    val magicLogoVPadding = marginTop
-                    val mtgLogoWidth = columnWidth-2*magicLogoHPadding
-                    val mtgLogoHeight = mtgLogo.height.toFloat()/mtgLogo.width.toFloat()*mtgLogoWidth
-                    val magicLogoYPosition = 842f-magicLogoVPadding-mtgLogoHeight
+                val magicLogoHPadding = 10f
+                val magicLogoVPadding = marginTop
+                val mtgLogoWidth = columnWidth-2*magicLogoHPadding
+                val mtgLogoHeight = mtgLogo.height.toFloat()/mtgLogo.width.toFloat()*mtgLogoWidth
+                val magicLogoYPosition = 842f-magicLogoVPadding-mtgLogoHeight
 
-                    val maxTitleWidth = magicLogoYPosition-titleYPosition-5f
+                val maxTitleWidth = magicLogoYPosition-titleYPosition
 
-                    val subCodeYPos = marginBottom + fontCodeCommanderSubset.height
-                    val codeYPos = subCodeYPos + fontCode.height
-                    val mainIconYPos = codeYPos + 17f
+                val subCodeYPos = marginBottom + fontCodeCommanderSubset.height
+                val codeYPos = subCodeYPos + fontCode.height
+                val mainIconYPos = codeYPos + 17f
 
-                    labels.chunked(columns).forEachIndexed { pageIndex, mapLabelItems ->
-                        page(pageFormat) {
-                            println("column label page #$pageIndex")
-                            mapLabelItems.forEachIndexed { i, set ->
-                                val borderWidth = 2f
-                                frame(columnWidth*i+borderWidth, 0f, (columnWidth)*(columns-i-1)+borderWidth, 0f) {
-                                    drawBorder(borderWidth, fontColor)
-                                    if (set != BlankLabel) {
-                                        backgroundColor?.let { drawBackground(it) }
+                separators.chunked(itemsPerPage).forEachIndexed { pageIndex, separatorItems ->
+                    page(pageFormat) {
+                        println("column separator page #$pageIndex")
+                        separatorItems.forEachIndexed { i, set ->
+                            val borderWidth = 2f
+                            frame(columnWidth*i+borderWidth, 0f, (columnWidth)*(columns-i-1)+borderWidth, 0f) {
+                                drawBorder(borderWidth, fontColor)
+                                if (set != BlankLabel) {
+                                    drawImage(mtgLogo, magicLogoHPadding + columnWidth*i, magicLogoYPosition, mtgLogoWidth, mtgLogoHeight)
 
-                                        drawImage(mtgLogo, magicLogoHPadding + columnWidth*i, magicLogoYPosition, mtgLogoWidth, mtgLogoHeight)
-
-                                        set.subTitle?.let { _subTitle ->
-                                            adjustTextToFitWidth(_subTitle, fontSubTitle, maxTitleWidth, 10f).let { (title, font) ->
-                                                drawText90(title, font, subTitleXPosition + columnWidth*i, subTitleYPosition, fontSubColor)
-                                            }
+                                    frame(5f, 842f-120f+15f, 5f, 5f) {
+                                        drawText(set.code.uppercase(), fontCode, HorizontalAlignment.CENTER, codeYPos, fontColor)
+                                        set.subCode?.let { subCode ->
+                                            drawText(subCode.uppercase(), fontCodeCommanderSubset, HorizontalAlignment.CENTER, subCodeYPos, fontSubColor)
                                         }
 
-                                        adjustTextToFitWidth(set.title, fontTitle, maxTitleWidth, 36f).let { (title, font) ->
-                                            drawText90(title, font, titleXPosition + columnWidth*i, titleYPosition, fontColor)
-                                        }
+                                        val maximumWidthSub = 20f
+                                        val desiredHeightSub = 20f
+                                        val xOffsetIcons = 27f
+                                        val yOffsetIcons = mainIconYPos - 10f
 
-//                                        when(titleAdjustment) {
-//                                            TitleAdjustment.TEXT_CUT -> {
-//                                                var title = set.title
-//                                                while (fontTitle.getWidth(title) > maxTitleWidth) {
-//                                                    title = title.substring(0, title.length-4) + "..."
-//                                                }
-//                                                drawText90(title, fontTitle, titleXPosition + columnWidth*i, titleYPosition, fontColor)
-//                                            }
-//                                            TitleAdjustment.FONT_SIZE -> {
-//                                                var fontTitleAdjusted = fontTitle
-//                                                while (fontTitleAdjusted.getWidth(set.title) > maxTitleWidth) {
-//                                                    fontTitleAdjusted = fontTitleAdjusted.relative(0.95f)
-//                                                }
-//                                                drawText90(set.title, fontTitleAdjusted, titleXPosition + columnWidth*i, titleYPosition, fontColor)
-//                                            }
-//                                        }
+                                        set.subIconRight?.toPDImage(this@page)?.let { drawAsImage(it, maximumWidthSub, desiredHeightSub, i, columnWidth, xOffsetIcons, yOffsetIcons) }
+                                        set.subIconLeft?.toPDImage(this@page)?.let { drawAsImage(it, maximumWidthSub, desiredHeightSub, i, columnWidth, -xOffsetIcons, yOffsetIcons) }
 
-                                        frame(5f, 842f-120f+15f, 5f, 5f) {
-                                            drawText(set.code.uppercase(), fontCode, HorizontalAlignment.CENTER, codeYPos, fontColor)
-                                            set.subCode?.let { subCode ->
-                                                drawText(subCode.uppercase(), fontCodeCommanderSubset, HorizontalAlignment.CENTER, subCodeYPos, fontSubColor)
-                                            }
+                                        val xOffsetIcons2 = 32f+15f
+                                        val yOffsetIcons2 = mainIconYPos + 15f
 
-                                            val maximumWidthSub = 20f
-                                            val desiredHeightSub = 20f
-                                            val xOffsetIcons = 27f
-                                            val yOffsetIcons = mainIconYPos - 10f
-
-                                            set.subIconRight?.toPDImage(this@page)?.let { drawAsImage(it, maximumWidthSub, desiredHeightSub, i, columnWidth, xOffsetIcons, yOffsetIcons) }
-                                            set.subIconLeft?.toPDImage(this@page)?.let { drawAsImage(it, maximumWidthSub, desiredHeightSub, i, columnWidth, -xOffsetIcons, yOffsetIcons) }
-
-                                            val xOffsetIcons2 = 32f+15f
-                                            val yOffsetIcons2 = mainIconYPos + 15f
-
-                                            set.subIconRight2?.toPDImage(this@page)?.let { drawAsImage(it, maximumWidthSub, desiredHeightSub, i, columnWidth, xOffsetIcons2, yOffsetIcons2) }
-                                            set.subIconLeft2?.toPDImage(this@page)?.let { drawAsImage(it, maximumWidthSub, desiredHeightSub, i, columnWidth, -xOffsetIcons2, yOffsetIcons2) }
-                                        }
-
-                                        set.mainIcon?.toPDImage(this@page)?.let { drawAsImage(it, maximumWidth, desiredHeight, i, columnWidth, 0f, mainIconYPos) }
-
+                                        set.subIconRight2?.toPDImage(this@page)?.let { drawAsImage(it, maximumWidthSub, desiredHeightSub, i, columnWidth, xOffsetIcons2, yOffsetIcons2) }
+                                        set.subIconLeft2?.toPDImage(this@page)?.let { drawAsImage(it, maximumWidthSub, desiredHeightSub, i, columnWidth, -xOffsetIcons2, yOffsetIcons2) }
                                     }
+
+                                    set.mainIcon?.toPDImage(this@page)?.let { drawAsImage(it, maximumWidth, desiredHeight, i, columnWidth, 0f, mainIconYPos) }
+
                                 }
                             }
                         }
@@ -283,5 +243,5 @@ class BinderLabels(
 }
 
 fun main() {
-    BinderLabels().printLabel("C:\\Users\\001121673\\BinderLabels.pdf")
+    PileSeparators().printLabel("C:\\Users\\001121673\\CardSeparators.pdf")
 }

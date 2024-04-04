@@ -25,7 +25,6 @@ class LegoBinderLabels(
 ) {
     fun printLabel(file: String) {
         createPdfDocument {
-            val titleAdjustment = TitleAdjustment.FONT_SIZE
             val labelsWide : List<MapLabelItem> = listOf(
                 GenericLabel("01", "BAUANLEITUNGEN", "Ninjago & Marvel"),
                 GenericLabel("02", "BAUANLEITUNGEN", "Minecraft & Super Mario"),
@@ -45,7 +44,6 @@ class LegoBinderLabels(
             val fontTitle = Font(fontFamilyPlanewalker, 64f)
             val fontSubTitle = Font(fontFamily72Black, 16f)
             val fontCode = Font(fontFamily72Black, 28f)
-            val fontCodeCommanderSubset = Font(fontFamily72Black, 14f)
 
             val mapLabels = mapOf(4 to labelsWide)
 
@@ -60,8 +58,6 @@ class LegoBinderLabels(
                 val subTitleXPosition = titleXPosition+22f
                 val subTitleYPosition = titleYPosition+30f
 
-                val maximumWidth = columnWidth-20f
-                val desiredHeight = 64f
                 val logoYPosition = 48f
 
                 val mtgLogoWidth = columnWidth-2*magicLogoHPadding
@@ -85,67 +81,19 @@ class LegoBinderLabels(
 //                                        drawImage(mtgLogo, magicLogoHPadding + columnWidth*i, magicLogoYPosition, mtgLogoWidth, mtgLogoHeight)
 
                                         set.subTitle?.let { _subTitle ->
-                                            when(titleAdjustment) {
-                                                TitleAdjustment.TEXT_CUT -> {
-                                                    var title = _subTitle
-                                                    while (fontTitle.getWidth(title) > maxTitleWidth) {
-                                                        title = title.substring(0, title.length-4) + "..."
-                                                    }
-                                                    drawText90(title, fontSubTitle, subTitleXPosition + columnWidth*i, subTitleYPosition, fontSubColor)
-                                                }
-                                                TitleAdjustment.FONT_SIZE -> {
-                                                    var fontSubTitleAdjusted = fontSubTitle
-                                                    while (fontSubTitleAdjusted.getWidth(_subTitle) > maxTitleWidth) {
-                                                        fontSubTitleAdjusted = fontSubTitleAdjusted.relative(0.95f)
-                                                    }
-                                                    drawText90(_subTitle, fontSubTitleAdjusted, subTitleXPosition + columnWidth*i, subTitleYPosition, fontSubColor)
-                                                }
+                                            adjustTextToFitWidth(_subTitle, fontSubTitle, maxTitleWidth, 10f).let { (title, font) ->
+                                                drawText90(title, font, subTitleXPosition + columnWidth*i, subTitleYPosition, fontSubColor)
                                             }
                                         }
 
-                                        when(titleAdjustment) {
-                                            TitleAdjustment.TEXT_CUT -> {
-                                                var title = set.title
-                                                while (fontTitle.getWidth(title) > maxTitleWidth) {
-                                                    title = title.substring(0, title.length-4) + "..."
-                                                }
-                                                drawText90(title, fontTitle, titleXPosition + columnWidth*i, titleYPosition, fontColor)
-                                            }
-                                            TitleAdjustment.FONT_SIZE -> {
-                                                var fontTitleAdjusted = fontTitle
-                                                while (fontTitleAdjusted.getWidth(set.title) > maxTitleWidth) {
-                                                    fontTitleAdjusted = fontTitleAdjusted.relative(0.95f)
-                                                }
-                                                drawText90(set.title, fontTitleAdjusted, titleXPosition + columnWidth*i, titleYPosition, fontColor)
-                                            }
+                                        adjustTextToFitWidth(set.title, fontTitle, maxTitleWidth, 36f).let { (title, font) ->
+                                            drawText90(title, font, titleXPosition + columnWidth*i, titleYPosition, fontColor)
                                         }
-
 
                                         drawImage(mtgLogo, magicLogoHPadding + columnWidth*i, logoYPosition, mtgLogoWidth, mtgLogoHeight)
-//                                        set.mainIcon?.toPDImage(this@page)?.let { drawAsImage(it, maximumWidth, desiredHeight, i, columnWidth, 0f, 68f) }
 
                                         frame(5f, 842f-120f+15f, 5f, 5f) {
-                                            //								drawBackground(Color.WHITE)
-                                            //								drawBorder(1f, Color.BLACK)
                                             drawText(set.code.uppercase(), fontCode, HorizontalAlignment.CENTER, 40f, fontColor)
-//                                            set.subCode?.let { subCode ->
-//                                                //											drawText("&", fontCodeCommanderSubset.relative(0.75f), HorizontalAlignment.CENTER, 32f, fontSubColor)
-//                                                drawText(subCode.uppercase(), fontCodeCommanderSubset, HorizontalAlignment.CENTER, 25f, fontSubColor)
-//                                            }
-//
-//                                            val maximumWidthSub = 20f
-//                                            val desiredHeightSub = 20f
-//                                            val xOffsetIcons = 32f
-//                                            val yOffsetIcons = 58f
-//
-//                                            set.subIconRight?.toPDImage(this@page)?.let { drawAsImage(it, maximumWidthSub, desiredHeightSub, i, columnWidth, xOffsetIcons, yOffsetIcons) }
-//                                            set.subIconLeft?.toPDImage(this@page)?.let { drawAsImage(it, maximumWidthSub, desiredHeightSub, i, columnWidth, -xOffsetIcons, yOffsetIcons) }
-//
-//                                            val xOffsetIcons2 = 32f+15f
-//                                            val yOffsetIcons2 = 58f+25f
-//
-//                                            set.subIconRight2?.toPDImage(this@page)?.let { drawAsImage(it, maximumWidthSub, desiredHeightSub, i, columnWidth, xOffsetIcons2, yOffsetIcons2) }
-//                                            set.subIconLeft2?.toPDImage(this@page)?.let { drawAsImage(it, maximumWidthSub, desiredHeightSub, i, columnWidth, -xOffsetIcons2, yOffsetIcons2) }
                                         }
                                     }
                                 }

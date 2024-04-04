@@ -92,10 +92,16 @@ class DeckBuildingListPrinter {
                 "Swamp",
                 "Mountain",
                 "Forest",
-                "Arcane Signet",
                 "Command Tower",
                 "Exotic Orchard",
+                "Evolving Wilds",
+                "Terramorphic Expanse",
+                "Myriad Landscape",
+                "Arcane Signet",
                 "Sol Ring",
+                "Commander's Sphere",
+                "Mind Stone",
+                "Fellwar Stone",
             )
             page(pageFormat) {
                 drawText(deckName, fontTitle, HorizontalAlignment.CENTER, box.upperRightY-5f, fontColor)
@@ -114,7 +120,8 @@ class DeckBuildingListPrinter {
                                         (Cards.name match cardName)
                                     }.mapNotNull {
                                         CardSet.findById(it[CardSets.id])
-                                    }.map { it.shortName.toString().uppercase() }.distinct()
+                        }.groupingBy { it.shortName.toString().uppercase() }
+                        .eachCount()
                             Triple(amount, cardName, cardSets)
                         }
                 }
@@ -126,7 +133,7 @@ class DeckBuildingListPrinter {
                     frame(20f + x, 20f, 20f, 20f) {
                         entries.take(50).forEach { (amount, cardName, cardSets) ->
                             val cardSetsString = if (cardName in blackListForSetSearch)
-                                "[*]" else "[${cardSets.joinToString { it }}]"
+                                "[*]" else "[${cardSets.entries.sortedByDescending(Map.Entry<String, Int>::value).joinToString { if(it.value > 1 ) "${it.key}+" else it.key }}]"
                             drawText(
                                 "$amount $cardName",
                                 fontCard,
@@ -153,8 +160,8 @@ class DeckBuildingListPrinter {
 }
 
 suspend fun main() {
-
-    listOf("Anim Pakal - Go Wide or Go Nome" to """
+    listOf(
+    "Anim Pakal - Go Wide or Go Nome" to """
         1 Alpine Meadow
         1 Ancient Den
         1 Battlefield Forge
@@ -1471,6 +1478,101 @@ Sideboard:
             1 Temur Charger
             1 Tin Street Gossip
             1 Toski, Bearer of Secrets
+        """.trimIndent(),
+        "Baeloth Barrityl, Entertainer - Let You Entertain Me" to """
+            1 Ash Barrens
+            1 Battlefield Forge
+            1 Command Tower
+            1 Desert
+            1 Evolving Wilds
+            1 Exotic Orchard
+            1 Furycalm Snarl
+            1 Lorehold Campus
+            10 Mountain
+            1 Myriad Landscape
+            9 Plains
+            1 Rugged Prairie
+            1 Rustvale Bridge
+            1 Slayers' Stronghold
+            1 Spinerock Knoll
+            1 Temple of Triumph
+            1 Terramorphic Expanse
+            1 Agitator Ant
+            1 Akki Battle Squad
+            1 All That Glitters
+            1 Arcane Signet
+            1 Archon of Coronation
+            1 Baeloth Barrityl, Entertainer
+            1 Bastion Protector
+            1 Blackblade Reforged
+            1 Blasphemous Act
+            1 Boros Charm
+            1 Boros Signet
+            1 Brigid, Hero of Kinsbaile
+            1 Citadel Siege
+            1 Collective Effort
+            1 Combat Calligrapher
+            1 Commander's Sphere
+            1 Contraband Livestock
+            1 Coveted Jewel
+            1 Death Kiss
+            1 Disenchant
+            1 Don't Move
+            1 Dragon Mantle
+            1 Dragonmaster Outcast
+            1 Duelist's Heritage
+            1 Emberwilde Captain
+            1 Fateful Absence
+            1 Fire Diamond
+            1 Fists of Flame
+            1 Flame Sweep
+            1 Fling
+            1 Frontier Warmonger
+            1 Ghirapur Aether Grid
+            1 Glittering Stockpile
+            1 Goro-Goro, Disciple of Ryusei
+            1 Havoc Jester
+            1 Hopeful Initiate
+            1 Kazuul's Fury // Kazuul's Cliffs
+            1 Life of the Party
+            1 Loxodon Warhammer
+            1 Marble Diamond
+            1 Mind Stone
+            1 Mirror Shield
+            1 Nils, Discipline Enforcer
+            1 Noble Heritage
+            1 Orzhov Advokist
+            1 Outpost Siege
+            1 Powerstone Minefield
+            1 Professional Face-Breaker
+            1 Quicksmith Genius
+            1 Rain of Riches
+            1 Return to Dust
+            1 Sejiri Shelter // Sejiri Glacier
+            1 Shatter the Sky
+            1 Shiny Impetus
+            1 Showdown of the Skalds
+            1 Smuggler's Share
+            1 Sol Ring
+            1 Sun Titan
+            1 Sunforger
+            1 Swiftfoot Boots
+            1 Talisman of Conviction
+            1 Temur Battle Rage
+            1 Together Forever
+            1 Valorous Stance
+            1 Wayfarer's Bauble
+            1 Wild Ricochet
+            Sideboard:
+
+            1 Aurelia, the Law Above
+            1 Breya's Apprentice
+            1 Court of Ardenvale
+            1 Crescendo of War
+            1 Inspired Tinkering
+            1 Mass Hysteria
+            1 Vicious Shadows
+            1 Felidar Retreat
         """.trimIndent()
     ).forEach { deck ->
         DeckBuildingListPrinter().printList(
