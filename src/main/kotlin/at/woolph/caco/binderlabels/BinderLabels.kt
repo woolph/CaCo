@@ -34,7 +34,7 @@ interface MapLabelItem {
 object PromosLabel: MapLabelItem {
     override val code: String = "PRM"
     override val title: String = "Promos & Specials"
-    override val mainIcon: ByteArray? = URI("https://c2.scryfall.com/file/scryfall-symbols/sets/star.svg?1624852800").renderSvgAsMythic()
+    override val mainIcon: ByteArray? by lazy { URI("https://c2.scryfall.com/file/scryfall-symbols/sets/star.svg?1624852800").renderSvgAsMythic() }
 }
 
 object BlankLabel: MapLabelItem {
@@ -44,143 +44,52 @@ object BlankLabel: MapLabelItem {
 }
 
 open class GenericLabel(override val code: String, override val title: String, override val subTitle: String? = null): MapLabelItem {
-    override val mainIcon: ByteArray? = URI("https://c2.scryfall.com/file/scryfall-symbols/sets/default.svg?1647835200").renderSvgAsMythic()
+    override val mainIcon: ByteArray? by lazy { URI("https://c2.scryfall.com/file/scryfall-symbols/sets/default.svg?1647835200").renderSvgAsMythic() }
 }
 
-open class SimpleSet(override val code: String): MapLabelItem {
-    override val title: String
-    override val mainIcon: ByteArray?
-
-    init {
-        val set = transaction {
-            CardSet.findById(code) ?: throw IllegalArgumentException("no set with code $code found")
-        }
-
-        title = set.name
-        mainIcon = set.icon.renderSvgAsMythic()
-    }
+fun fetchCardSets(vararg codes: String): List<CardSet> = transaction {
+    codes.map { CardSet.findById(it) ?: throw IllegalArgumentException("no set with code $it found") }
 }
+val CardSet?.lazyIconMythic: Lazy<ByteArray?> get() = lazy { this?.icon?.renderSvgAsMythic() }
+val CardSet?.lazyIconUncommon: Lazy<ByteArray?> get() = lazy { this?.icon?.renderSvgAsUncommon() }
 
-class SetWithCommander(override val code: String, override val subCode: String): MapLabelItem {
-    override val title: String
-    override val mainIcon: ByteArray?
-    override val subTitle: String
-    override val subIconRight: ByteArray?
-
-    init {
-        val (mainSet, commanderSet) = transaction {
-            arrayOf(
-                CardSet.findById(code) ?: throw IllegalArgumentException("no set with code $code found"),
-                CardSet.findById(subCode) ?: throw IllegalArgumentException("no set with code $subCode found"),
-            )
-        }
-
-        title = mainSet.name
-        mainIcon = mainSet.icon.renderSvgAsMythic()
-
-        subTitle = "incl. ${commanderSet.name}"
-        subIconRight = commanderSet.icon.renderSvgAsUncommon()
-    }
-}
-
-class SetWithCommanderAndAncillary(override val code: String, val commanderCode: String, val ancillaryCode: String): MapLabelItem {
-    override val title: String
-    override val mainIcon: ByteArray?
-    override val subCode: String
-    override val subTitle: String
-    override val subIconRight: ByteArray?
-    override val subIconLeft: ByteArray?
-
-    init {
-        val (mainSet, commanderSet, ancillarySet) = transaction {
-            arrayOf(
-                CardSet.findById(code) ?: throw IllegalArgumentException("no set with code $code found"),
-                CardSet.findById(commanderCode) ?: throw IllegalArgumentException("no set with code $commanderCode found"),
-                CardSet.findById(ancillaryCode) ?: throw IllegalArgumentException("no set with code $ancillaryCode found"),
-            )
-        }
-
-        title = mainSet.name
-        mainIcon = mainSet.icon.renderSvgAsMythic()
-        subCode = "$commanderCode/$ancillaryCode"
-
-        subTitle = "incl. ${commanderSet.name} & ${ancillarySet.name}"
-        subIconRight = commanderSet.icon.renderSvgAsUncommon()
-        subIconLeft = ancillarySet.icon.renderSvgAsUncommon()
-    }
-}
-
-class TwoSetBlock(blockTitle: String, code0: String, code1: String): MapLabelItem {
-    override val title: String = blockTitle
-    override val code: String = code0
-    override val mainIcon: ByteArray?
-    override val subCode: String = code1
-    override val subTitle: String
-    override val subIconRight: ByteArray?
-
-    init {
-        val cardSets = transaction {
-            listOf(code0, code1).map { _code ->
-                CardSet.findById(_code) ?: throw IllegalArgumentException("no set with code $code found")
+abstract class AbstractLabelItem(
+    val sets: List<CardSet>
+): MapLabelItem {
+    override val title: String get() = sets[0].name
+    override val subTitle: String?
+        get() = (if (title == sets[0].name) sets.drop(1) else sets).let { subTitleSets ->
+            when (subTitleSets.size) {
+                0 -> null
+                1 -> "incl. ${subTitleSets[0].name}"
+                else -> "incl. ${subTitleSets.dropLast(1).joinToString(", ") { it.name }}, & ${subTitleSets.last().name}"
             }
         }
 
-        subTitle = "incl. ${cardSets.joinToString(" & ") { it.name }}"
-        mainIcon = cardSets.component1().icon.renderSvgAsMythic()
-        subIconRight = cardSets.component2().icon.renderSvgAsUncommon()
-    }
+    override val code: String get() = sets[0].shortName.value
+    override val subCode: String get() = sets.drop(1).joinToString("/") { it.shortName.value }
+
+    override val mainIcon: ByteArray? by sets.getOrNull(0).lazyIconMythic
+    override val subIconLeft: ByteArray? by sets.getOrNull(if (sets.size > 2) 1 else 2).lazyIconUncommon
+    override val subIconRight: ByteArray? by sets.getOrNull(if (sets.size > 2) 2 else 1).lazyIconUncommon
+    override val subIconLeft2: ByteArray? by sets.getOrNull(3).lazyIconUncommon
+    override val subIconRight2: ByteArray? by sets.getOrNull(4).lazyIconUncommon
 }
 
-class ThreeSetBlock(blockTitle: String, code0: String, code1: String, code2: String): MapLabelItem {
+open class SimpleSet(override val code: String): AbstractLabelItem(fetchCardSets(code))
+
+class SetWithCommander(override val code: String, override val subCode: String): AbstractLabelItem(fetchCardSets(code, subCode))
+
+class SetWithCommanderAndAncillary(override val code: String, commanderCode: String, ancillaryCode: String): AbstractLabelItem(fetchCardSets(code, commanderCode, ancillaryCode))
+
+class TwoSetBlock(blockTitle: String, override val code: String, override val subCode: String): AbstractLabelItem(fetchCardSets(code, subCode)) {
     override val title: String = blockTitle
-    override val code: String = code0
-    override val mainIcon: ByteArray?
-    override val subCode: String = "$code1 / $code2"
-    override val subTitle: String
-    override val subIconLeft: ByteArray?
-    override val subIconRight: ByteArray?
-
-    init {
-        val cardSets = transaction {
-            listOf(code0, code1, code2).map { _code ->
-                CardSet.findById(_code) ?: throw IllegalArgumentException("no set with code $code found")
-            }
-        }
-
-        subTitle =  "incl. ${cardSets.dropLast(1).joinToString(", ") { it.name }}, & ${cardSets.last().name}"
-        mainIcon = cardSets.component1().icon.renderSvgAsMythic()
-        subIconLeft = cardSets.component2().icon.renderSvgAsUncommon()
-        subIconRight = cardSets.component3().icon.renderSvgAsUncommon()
-    }
 }
 
-class FiveSetBlock(blockTitle: String, code0: String, code1: String, code2: String, code3: String, code4: String): MapLabelItem {
+class ThreeSetBlock(blockTitle: String, override val code: String, code1: String, code2: String): AbstractLabelItem(fetchCardSets(code, code1, code2)) {
     override val title: String = blockTitle
-    override val code: String
-    override val mainIcon: ByteArray?
-    override val subCode: String
-    override val subTitle: String
-    override val subIconLeft: ByteArray?
-    override val subIconRight: ByteArray?
-    override val subIconLeft2: ByteArray?
-    override val subIconRight2: ByteArray?
+}
 
-    init {
-        val codes = listOf(code0, code1, code2, code3, code4)
-        val cardSets = transaction {
-            codes.map { CardSet.findById(it) ?: throw IllegalArgumentException("no set with code $it found") }
-        }
-
-        code = "UN*"
-        subCode = ""
-//		code = codes.first()
-//		subCode = codes.drop(1).joinToString("/")
-
-        subTitle =  "incl. ${cardSets.dropLast(1).joinToString(", ") { it.name }}, & ${cardSets.last().name}"
-        mainIcon = cardSets.component1().icon.renderSvgAsMythic()
-        subIconLeft = cardSets.component2().icon.renderSvgAsUncommon()
-        subIconRight = cardSets.component3().icon.renderSvgAsUncommon()
-        subIconLeft2 = cardSets.component4().icon.renderSvgAsUncommon()
-        subIconRight2 = cardSets.component5().icon.renderSvgAsUncommon()
-    }
+class FiveSetBlock(blockTitle: String, code0: String, code1: String, code2: String, code3: String, code4: String): AbstractLabelItem(fetchCardSets(code0, code1, code2, code3, code4)) {
+    override val title: String = blockTitle
 }
