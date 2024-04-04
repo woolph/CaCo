@@ -8,6 +8,7 @@ import java.net.URI
 val darkLabels = false
 val iconResolution = 256f
 
+fun URI?.renderSvg(): ByteArray? = try { this.renderSvg(iconResolution) } catch (e: Exception) { null }
 fun URI?.renderSvgAsMythic(): ByteArray? = try { this.renderSvg(iconResolution, if (darkLabels) "gray" else "black","#c54326", "#f7971c") } catch (e: Exception) { null }
 fun URI?.renderSvgAsRare(): ByteArray? = try { this.renderSvg(iconResolution, if (darkLabels) "gray" else "black", "#8d7431", "#f6db94") } catch (e: Exception) { null }
 fun URI?.renderSvgAsUncommon(): ByteArray? = try { this.renderSvg(iconResolution, if (darkLabels) "gray" else "black", "#626e77", "#c8e2f2") } catch (e: Exception) { null }

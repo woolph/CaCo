@@ -33,5 +33,15 @@ fun Node.drawAsImageCentered(subIcon: PDImageXObject, maximumWidth: Float, desir
     }
     drawImage(subIcon, box.width*0.5f + xOffsetIcons - actualWidth*0.5f, yOffsetIcons+(desiredHeight-actualHeight)*0.5f, actualWidth, actualHeight)
 }
+fun Node.drawAsImageLeft(subIcon: PDImageXObject, maximumWidth: Float, desiredHeight: Float, xOffsetIcons: Float, yOffsetIcons: Float) {
+    val heightScale = desiredHeight/subIcon.height
+    val desiredWidth = subIcon.width*heightScale
+    val (actualWidth, actualHeight) = if (desiredWidth > maximumWidth) {
+        maximumWidth to subIcon.height*maximumWidth/subIcon.width
+    } else {
+        desiredWidth to desiredHeight
+    }
+    drawImage(subIcon, xOffsetIcons, yOffsetIcons+(desiredHeight-actualHeight)*0.5f, actualWidth, actualHeight)
+}
 
 val dotsPerMillimeter = PDRectangle.A4.width/210f
