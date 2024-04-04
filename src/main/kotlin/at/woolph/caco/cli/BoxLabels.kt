@@ -17,29 +17,29 @@ import java.awt.Color
 import java.net.URI
 
 
-interface PileSeparator {
+interface BoxLabel {
     val code: String
     val title: String
     val icon: ByteArray?
 }
 
-object PromosPileSeparator: PileSeparator {
+object PromosBoxLabel: BoxLabel {
     override val code: String = "PRM"
     override val title: String = "Promos & Specials"
     override val icon: ByteArray? by lazy { URI("https://c2.scryfall.com/file/scryfall-symbols/sets/star.svg?1624852800").renderSvgAsMythic() }
 }
 
-object BlankPileSeparator: PileSeparator {
+object BlankBoxLabel: BoxLabel {
     override val code: String = ""
     override val title: String = ""
     override val icon: ByteArray? = null
 }
 
-open class GenericPileSeparator(override val code: String, override val title: String): PileSeparator {
+open class GenericBoxLabel(override val code: String, override val title: String): BoxLabel {
     override val icon: ByteArray? by lazy { URI("https://c2.scryfall.com/file/scryfall-symbols/sets/default.svg?1647835200").renderSvgAsMythic() }
 }
 
-open class SimpleSetPileSeparator(override val code: String): PileSeparator {
+open class SimpleBoxLabel(override val code: String): BoxLabel {
     private val set = transaction {
         CardSet.findById(code) ?: throw IllegalArgumentException("no set with code $code found")
     }
@@ -47,31 +47,27 @@ open class SimpleSetPileSeparator(override val code: String): PileSeparator {
     override val icon: ByteArray? by lazy { set.icon.renderSvgAsMythic() }
 }
 
-class PileSeparators {
+class BoxLabels {
     fun printLabel(file: String) {
         Databases.init()
 
         transaction {
             createPdfDocument {
-                val separators: List<PileSeparator> = listOf(
-                    PromosPileSeparator,
-                    SimpleSetPileSeparator("neo"),
-                    SimpleSetPileSeparator("mkm"),
-                    SimpleSetPileSeparator("m21"),
-                    SimpleSetPileSeparator("dom"),
-                    SimpleSetPileSeparator("m20"),
-                    SimpleSetPileSeparator("m19"),
-                    SimpleSetPileSeparator("rna"),
-                    SimpleSetPileSeparator("grn"),
-                    SimpleSetPileSeparator("war"),
+                val labels: List<BoxLabel> = listOf(
+                    PromosBoxLabel,
+                    SimpleBoxLabel("neo"),
+                    SimpleBoxLabel("mkm"),
+                    SimpleBoxLabel("m21"),
+                    SimpleBoxLabel("dom"),
+                    SimpleBoxLabel("m20"),
                 )
 
                 val fontColor = Color.BLACK
                 val fontFamily72Black = PDType0Font.load(this, javaClass.getResourceAsStream("/fonts/72-Black.ttf"))
 
-                val pageFormat = PDRectangle(PDRectangle.A4.height, PDRectangle.A4.width)
+                val pageFormat = PDRectangle.A4
 
-                val columns = 4
+                val columns = 3
                 val rows = 2
                 val itemsPerPage = columns * rows
 
@@ -92,7 +88,7 @@ class PileSeparators {
                 val maximumIconWidth = bannerHeight
                 val offsetX = (maximumWidth - maximumIconWidth) * 0.5f
 
-                separators.chunked(itemsPerPage).forEachIndexed { pageIndex, separatorItems ->
+                labels.chunked(itemsPerPage).forEachIndexed { pageIndex, separatorItems ->
                     page(pageFormat) {
                         println("column separator page #$pageIndex")
                         separatorItems.chunked(columns).forEachIndexed { rowIndex, rowItems ->
@@ -101,7 +97,7 @@ class PileSeparators {
                                 frame(columnWidth*columnIndex, rowHeight*rowIndex, (columnWidth)*(columns-columnIndex-1), (rowHeight)*(rows-rowIndex-1)) {
                                     drawBorder(borderWidth, fontColor)
                                     frame(margin, margin, margin, margin) {
-                                        if (columnItem != BlankPileSeparator) {
+                                        if (columnItem != BlankBoxLabel) {
                                             drawText(
                                                 columnItem.code.uppercase(),
                                                 fontCode,
@@ -129,5 +125,5 @@ class PileSeparators {
 }
 
 fun main() {
-    PileSeparators().printLabel("C:\\Users\\001121673\\CardSeparators.pdf")
+    PileSeparators().printLabel("C:\\Users\\001121673\\BoxLabels.pdf")
 }

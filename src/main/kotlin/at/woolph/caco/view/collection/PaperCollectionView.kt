@@ -68,7 +68,7 @@ class PaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
 							CardSet.all().sortedByDescending { it.dateOfRelease }.forEach { set ->
 								page(PDRectangle.A4) {
 									frame(PagePosition.RIGHT, 50f, 20f, 20f, 20f) {
-										drawText("Inventory ${set.name}", fontTitle, be.quodlibet.boxable.HorizontalAlignment.CENTER, box.upperRightY - 10f, java.awt.Color.BLACK)
+										drawText("Inventory ${set.name}", fontTitle, be.quodlibet.boxable.HorizontalAlignment.CENTER, 0f, box.upperRightY - 10f, java.awt.Color.BLACK)
 
 										// TODO calc metrics for all sets (so that formatting is the same for all pages)
 										set.cards.sortedBy { it.numberInSet }.filter { !it.promo }.let {

@@ -449,7 +449,7 @@ suspend fun main(args: Array<String>) {
 					CardSet.findById(setCode.toLowerCase())?.let { set ->
 						page(PDRectangle.A4) {
 							frame(PagePosition.RIGHT, 50f, 20f, 20f, 20f) {
-								drawText("Inventory ${set.name}", fontTitle, HorizontalAlignment.CENTER, box.upperRightY - 10f, Color.BLACK)
+								drawText("Inventory ${set.name}", fontTitle, HorizontalAlignment.CENTER, 0f, box.upperRightY - 10f, Color.BLACK)
 
 								// TODO calc metrics for all sets (so that formatting is the same for all pages)
 								set.cards.sortedBy { it.numberInSet }.filter { !it.promo }.let {
@@ -520,7 +520,7 @@ suspend fun main(args: Array<String>) {
 				page(PDRectangle.A4) {
 					frame(PagePosition.RIGHT, 50f, 20f, 20f, 20f) {
 
-						drawText("Needs ${set.name}", fontTitle, HorizontalAlignment.CENTER, box.upperRightY-10f, Color.BLACK)
+						drawText("Needs ${set.name}", fontTitle, HorizontalAlignment.CENTER, 0f, box.upperRightY-10f, Color.BLACK)
 
 						// TODO calc metrics for all sets (so that formatting is the same for all pages)
 						val baseTable = BaseTable(642f, 842f, 0f, box.width, 0f, this@createPdfDocument, this@page.pdPage, true, true)

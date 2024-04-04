@@ -50,51 +50,47 @@ class LegoBinderLabels(
             val pageFormat = PDRectangle.A4
 
             mapLabels.forEach { (columns, labels) ->
+                val margin = 12f
+                val defaultGapSize = 5f
                 val columnWidth = pageFormat.width/columns
+                val maximumWidth = columnWidth - 2*margin
+                val maximumHeight = pageFormat.height - 2*margin
 
-                val magicLogoHPadding = 10f
-                val titleXPosition = (columnWidth + fontTitle.size)*0.5f - 10f //64f
-                val titleYPosition = 200f
-                val subTitleXPosition = titleXPosition+22f
-                val subTitleYPosition = titleYPosition+30f
+                val logoYPosition = 0f
 
-                val logoYPosition = 48f
-
-                val mtgLogoWidth = columnWidth-2*magicLogoHPadding
+                val mtgLogoWidth = maximumWidth
                 val mtgLogoHeight = mtgLogo.height.toFloat()/mtgLogo.width.toFloat()*mtgLogoWidth
 
-                val magicLogoYPosition = 842f-14f-mtgLogoHeight
-                val maxTitleWidth = magicLogoYPosition-titleYPosition
+                val maxTitleWidth = maximumHeight - mtgLogoHeight - 2 * defaultGapSize - 80f
 
-                for(pageIndex in 0.. (labels.size-1)/columns) {
+                val titleXPosition = (maximumWidth + fontTitle.height) * 0.5f
+                val titleYPosition = maxTitleWidth + mtgLogoHeight + defaultGapSize
+                val subTitleXPosition = titleXPosition + fontSubTitle.height + defaultGapSize
+                val subTitleYPosition = titleYPosition - 30f
+
+                labels.chunked(columns).forEachIndexed { pageIndex, pageLabels ->
                     page(pageFormat) {
                         println("column label page #$pageIndex")
-                        val columnWidth = box.width/columns
+                        pageLabels.forEachIndexed { i, set ->
+                            if (set != BlankLabel) {
+                                frame(columnWidth*i, 0f, (columnWidth)*(columns-i-1), 0f) {
+                                    backgroundColor?.let { drawBackground(it) }
+                                    drawBorder(1f, fontColor)
 
-                        for (i in 0 until columns) {
-                            labels.getOrNull(columns*pageIndex + i)?.let { set ->
-                                if (set != BlankLabel) {
-                                    frame(columnWidth*i+1f, 0f, (columnWidth)*(columns-i-1)+1f, 0f) {
-                                        backgroundColor?.let { drawBackground(it) }
-                                        drawBorder(1f, fontColor)
-
-//                                        drawImage(mtgLogo, magicLogoHPadding + columnWidth*i, magicLogoYPosition, mtgLogoWidth, mtgLogoHeight)
-
+                                    frame(margin, margin, margin, margin) {
                                         set.subTitle?.let { _subTitle ->
                                             adjustTextToFitWidth(_subTitle, fontSubTitle, maxTitleWidth, 10f).let { (title, font) ->
-                                                drawText90(title, font, subTitleXPosition + columnWidth*i, subTitleYPosition, fontSubColor)
+                                                drawText(title, font, fontColor, subTitleXPosition, subTitleYPosition, 90.0)
                                             }
                                         }
 
                                         adjustTextToFitWidth(set.title, fontTitle, maxTitleWidth, 36f).let { (title, font) ->
-                                            drawText90(title, font, titleXPosition + columnWidth*i, titleYPosition, fontColor)
+                                            drawText(title, font, fontColor, titleXPosition, titleYPosition, 90.0)
                                         }
 
-                                        drawImage(mtgLogo, magicLogoHPadding + columnWidth*i, logoYPosition, mtgLogoWidth, mtgLogoHeight)
+                                        drawAsImageCentered(mtgLogo, mtgLogoWidth, mtgLogoHeight, 0f, logoYPosition)
 
-                                        frame(5f, 842f-120f+15f, 5f, 5f) {
-                                            drawText(set.code.uppercase(), fontCode, HorizontalAlignment.CENTER, 40f, fontColor)
-                                        }
+                                        drawText(set.code.uppercase(), fontCode, HorizontalAlignment.CENTER, 0f, titleYPosition + defaultGapSize + fontCode.height + 20f, fontColor)
                                     }
                                 }
                             }

@@ -90,12 +90,12 @@ class CollectionPagePreview {
                 page(pageFormat) {
                     val minNumberInSet = pageContent.minOf { it.map { it.numberInSet }.orElse("Z") }
                     val maxNumberInSet = pageContent.maxOf { it.map { it.numberInSet }.orElse("0") }
-                    drawText(minNumberInSet, fontCode, HorizontalAlignment.LEFT, pageFormat.upperRightY, fontColor)
-                    drawText(maxNumberInSet, fontCode, HorizontalAlignment.RIGHT, pageFormat.upperRightY, fontColor)
+                    drawText(minNumberInSet, fontCode, HorizontalAlignment.LEFT, 0f, pageFormat.upperRightY, fontColor)
+                    drawText(maxNumberInSet, fontCode, HorizontalAlignment.RIGHT, 0f, pageFormat.upperRightY, fontColor)
                     if (pageNumber > 0) {
-                        drawText("%02dB".format(pageNumber), fontCode, HorizontalAlignment.LEFT, 10f, fontColor)
+                        drawText("%02dB".format(pageNumber), fontCode, HorizontalAlignment.LEFT, 0f, 10f, fontColor)
                     }
-                    drawText("%02dF".format(pageNumber+1), fontCode, HorizontalAlignment.RIGHT, 10f, fontColor)
+                    drawText("%02dF".format(pageNumber+1), fontCode, HorizontalAlignment.RIGHT, 0f, 10f, fontColor)
 
                     pageContent.forEachIndexed { index, cardOptional ->
                         cardOptional.ifPresent { card ->

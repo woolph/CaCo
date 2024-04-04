@@ -185,91 +185,154 @@ class BinderLabels(
 
                 mapLabels.forEach { (columns, labels) ->
                     val columnWidth = pageFormat.width/columns
+                    val margin = 12f
 
-                    val titleXPosition = (columnWidth + fontTitle.size)*0.5f - 10f //64f
-                    val titleYPosition = 164f
-                    val subTitleXPosition = titleXPosition+22f
-                    val subTitleYPosition = titleYPosition+30f
-
-                    val maximumWidth = columnWidth-20f
+                    val maximumWidth = columnWidth-2*margin
+                    val maximumHeight = pageFormat.height-2*margin
                     val desiredHeight = 64f
-                    val marginTop = 15f
-                    val marginBottom = marginTop
 
-                    val magicLogoHPadding = 10f
-                    val magicLogoVPadding = marginTop
-                    val mtgLogoWidth = columnWidth-2*magicLogoHPadding
+                    val mtgLogoWidth = maximumWidth
                     val mtgLogoHeight = mtgLogo.height.toFloat()/mtgLogo.width.toFloat()*mtgLogoWidth
-                    val magicLogoYPosition = 842f-magicLogoVPadding-mtgLogoHeight
+                    val magicLogoYPosition = 0f
 
-                    val maxTitleWidth = magicLogoYPosition-titleYPosition-5f
+                    val defaultGapSize = 5f
+                    val mainIconYPos = 0f
+                    val codeYPos = mainIconYPos + desiredHeight + fontCode.totalHeight + defaultGapSize
+                    val subCodeYPos = codeYPos + fontCodeCommanderSubset.totalHeight
 
-                    val subCodeYPos = marginBottom + fontCodeCommanderSubset.height
-                    val codeYPos = subCodeYPos + fontCode.height
-                    val mainIconYPos = codeYPos + 17f
+                    val setDivHeight = desiredHeight + fontCode.totalHeight + fontCodeCommanderSubset.totalHeight + defaultGapSize
+                    val setDivYPos = maximumHeight - setDivHeight
+
+                    val maxTitleWidth = pageFormat.height - magicLogoYPosition - mtgLogoHeight - defaultGapSize - setDivHeight - 2 * margin - 2 * defaultGapSize
+
+                    val titleXPosition = (maximumWidth + fontTitle.height) * 0.5f
+                    val titleYPosition = setDivYPos - 3 * defaultGapSize
+                    val subTitleXPosition = titleXPosition + fontSubTitle.height + defaultGapSize
+                    val subTitleYPosition = titleYPosition - 30f
 
                     labels.chunked(columns).forEachIndexed { pageIndex, mapLabelItems ->
                         page(pageFormat) {
                             println("column label page #$pageIndex")
                             mapLabelItems.forEachIndexed { i, set ->
-                                val borderWidth = 2f
-                                frame(columnWidth*i+borderWidth, 0f, (columnWidth)*(columns-i-1)+borderWidth, 0f) {
-                                    drawBorder(borderWidth, fontColor)
+                                frame(columnWidth*i, 0f, (columnWidth)*(columns-i-1), 0f) {
+                                    drawBorder(2f, fontColor)
                                     if (set != BlankLabel) {
                                         backgroundColor?.let { drawBackground(it) }
 
-                                        drawImage(mtgLogo, magicLogoHPadding + columnWidth*i, magicLogoYPosition, mtgLogoWidth, mtgLogoHeight)
+                                        frame(margin, margin, margin, margin) {
+                                            drawAsImageCentered(
+                                                mtgLogo,
+                                                mtgLogoWidth,
+                                                mtgLogoHeight,
+                                                0f,
+                                                magicLogoYPosition,
+                                            )
 
-                                        set.subTitle?.let { _subTitle ->
-                                            adjustTextToFitWidth(_subTitle, fontSubTitle, maxTitleWidth, 10f).let { (title, font) ->
-                                                drawText90(title, font, subTitleXPosition + columnWidth*i, subTitleYPosition, fontSubColor)
-                                            }
-                                        }
-
-                                        adjustTextToFitWidth(set.title, fontTitle, maxTitleWidth, 36f).let { (title, font) ->
-                                            drawText90(title, font, titleXPosition + columnWidth*i, titleYPosition, fontColor)
-                                        }
-
-//                                        when(titleAdjustment) {
-//                                            TitleAdjustment.TEXT_CUT -> {
-//                                                var title = set.title
-//                                                while (fontTitle.getWidth(title) > maxTitleWidth) {
-//                                                    title = title.substring(0, title.length-4) + "..."
-//                                                }
-//                                                drawText90(title, fontTitle, titleXPosition + columnWidth*i, titleYPosition, fontColor)
-//                                            }
-//                                            TitleAdjustment.FONT_SIZE -> {
-//                                                var fontTitleAdjusted = fontTitle
-//                                                while (fontTitleAdjusted.getWidth(set.title) > maxTitleWidth) {
-//                                                    fontTitleAdjusted = fontTitleAdjusted.relative(0.95f)
-//                                                }
-//                                                drawText90(set.title, fontTitleAdjusted, titleXPosition + columnWidth*i, titleYPosition, fontColor)
-//                                            }
-//                                        }
-
-                                        frame(5f, 842f-120f+15f, 5f, 5f) {
-                                            drawText(set.code.uppercase(), fontCode, HorizontalAlignment.CENTER, codeYPos, fontColor)
-                                            set.subCode?.let { subCode ->
-                                                drawText(subCode.uppercase(), fontCodeCommanderSubset, HorizontalAlignment.CENTER, subCodeYPos, fontSubColor)
+                                            set.subTitle?.let { _subTitle ->
+                                                adjustTextToFitWidth(
+                                                    _subTitle,
+                                                    fontSubTitle,
+                                                    maxTitleWidth,
+                                                    10f
+                                                ).let { (title, font) ->
+                                                    drawText(
+                                                        title,
+                                                        font,
+                                                        fontSubColor,
+                                                        subTitleXPosition,
+                                                        subTitleYPosition,
+                                                        90.0
+                                                    )
+                                                }
                                             }
 
-                                            val maximumWidthSub = 20f
-                                            val desiredHeightSub = 20f
-                                            val xOffsetIcons = 27f
-                                            val yOffsetIcons = mainIconYPos - 10f
+                                            adjustTextToFitWidth(
+                                                set.title,
+                                                fontTitle,
+                                                maxTitleWidth,
+                                                36f
+                                            ).let { (title, font) ->
+                                                drawText(title, font, fontColor, titleXPosition, titleYPosition, 90.0)
+                                            }
 
-                                            set.subIconRight?.toPDImage(this@page)?.let { drawAsImage(it, maximumWidthSub, desiredHeightSub, i, columnWidth, xOffsetIcons, yOffsetIcons) }
-                                            set.subIconLeft?.toPDImage(this@page)?.let { drawAsImage(it, maximumWidthSub, desiredHeightSub, i, columnWidth, -xOffsetIcons, yOffsetIcons) }
+                                            frame(0f, setDivYPos, 0f, 0f) {
+                                                drawText(
+                                                    set.code.uppercase(),
+                                                    fontCode,
+                                                    HorizontalAlignment.CENTER,
+                                                    0f,
+                                                    codeYPos,
+                                                    fontColor
+                                                )
 
-                                            val xOffsetIcons2 = 32f+15f
-                                            val yOffsetIcons2 = mainIconYPos + 15f
+                                                set.subCode?.let { subCode ->
+                                                    drawText(
+                                                        subCode.uppercase(),
+                                                        fontCodeCommanderSubset,
+                                                        HorizontalAlignment.CENTER,
+                                                        0f,
+                                                        subCodeYPos,
+                                                        fontSubColor
+                                                    )
+                                                }
 
-                                            set.subIconRight2?.toPDImage(this@page)?.let { drawAsImage(it, maximumWidthSub, desiredHeightSub, i, columnWidth, xOffsetIcons2, yOffsetIcons2) }
-                                            set.subIconLeft2?.toPDImage(this@page)?.let { drawAsImage(it, maximumWidthSub, desiredHeightSub, i, columnWidth, -xOffsetIcons2, yOffsetIcons2) }
+                                                val maximumWidthSub = 20f
+                                                val desiredHeightSub = 20f
+                                                val xOffsetIcons = 27f
+                                                val yOffsetIcons = mainIconYPos + desiredHeight - 15f
+
+                                                set.subIconRight?.toPDImage(this@page)?.let {
+                                                    drawAsImageCentered(
+                                                        it,
+                                                        maximumWidthSub,
+                                                        desiredHeightSub,
+                                                        xOffsetIcons,
+                                                        yOffsetIcons
+                                                    )
+                                                }
+                                                set.subIconLeft?.toPDImage(this@page)?.let {
+                                                    drawAsImageCentered(
+                                                        it,
+                                                        maximumWidthSub,
+                                                        desiredHeightSub,
+                                                        -xOffsetIcons,
+                                                        yOffsetIcons
+                                                    )
+                                                }
+
+                                                val xOffsetIcons2 = 32f + 15f
+                                                val yOffsetIcons2 = mainIconYPos + 10f
+
+                                                set.subIconRight2?.toPDImage(this@page)?.let {
+                                                    drawAsImageCentered(
+                                                        it,
+                                                        maximumWidthSub,
+                                                        desiredHeightSub,
+                                                        xOffsetIcons2,
+                                                        yOffsetIcons2
+                                                    )
+                                                }
+                                                set.subIconLeft2?.toPDImage(this@page)?.let {
+                                                    drawAsImageCentered(
+                                                        it,
+                                                        maximumWidthSub,
+                                                        desiredHeightSub,
+                                                        -xOffsetIcons2,
+                                                        yOffsetIcons2
+                                                    )
+                                                }
+
+                                                set.mainIcon?.toPDImage(this@page)?.let {
+                                                    drawAsImageCentered(
+                                                        it,
+                                                        maximumWidth,
+                                                        desiredHeight,
+                                                        0f,
+                                                        mainIconYPos
+                                                    )
+                                                }
+                                            }
                                         }
-
-                                        set.mainIcon?.toPDImage(this@page)?.let { drawAsImage(it, maximumWidth, desiredHeight, i, columnWidth, 0f, mainIconYPos) }
-
                                     }
                                 }
                             }

@@ -8,6 +8,7 @@ import org.apache.pdfbox.pdmodel.PDPageContentStream
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.font.PDFont
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject
+import org.apache.pdfbox.pdmodel.graphics.state.PDExtendedGraphicsState
 import org.apache.pdfbox.util.Matrix
 import java.awt.Color
 import java.io.Closeable
@@ -123,6 +124,7 @@ fun Node.columns(columnGap: Float, lineSpacing: Float, font: PDFont, minFontSize
 
 	return ColumnManager(this, columns, linesPerColumn, columnGap, lineSpacing, Font(font, fontSize)).apply(block)
 }
+
 /*
 fun PDPageContentStream.write(text: String, font: PDFont, fontSize: Float, x: Float, y:Float, color: Color) {
 	try {
@@ -155,6 +157,9 @@ fun PDPageContentStream.write(text: String, font: PDFont, fontSize: Float, x: Fl
 	write(printedText, font, fontSize, x, y, color)
 }
 */
+fun PDRectangle.relative(x: Float = 0f, y: Float = 0f, width: Float = 0f, height: Float = 0f) // FIXME cap size if it does not fit?
+		= PDRectangle(this.lowerLeftX + x, upperRightY - y - height, width, height)
+
 fun PDRectangle.inset(marginLeft: Float = 0f, marginTop: Float = 0f, marginRight: Float = 0f, marginBottom: Float = 0f)
 		= PDRectangle(this.lowerLeftX+marginLeft, this.lowerLeftY + marginBottom, this.width-marginLeft-marginRight, this.height-marginTop-marginBottom)
 
@@ -190,6 +195,26 @@ fun PDDocument.page(format: PDRectangle, block: Page.()->Unit): Page {
 	return page
 }
 
+fun Node.drawText(text: String, font: Font, color: Color, x: Float, y:Float, rotation: Double) {
+	try {
+		contentStream.apply {
+			beginText()
+			setFont(font.family, font.size)
+			// we want to position our text on his baseline
+
+			setTextMatrix(Matrix.getTranslateInstance(box.lowerLeftX + x, box.upperRightY - y).apply {
+				rotate(Math.toRadians(rotation))
+			})
+
+			setNonStrokingColor(color)
+			showText(text)
+			endText()
+		}
+	} catch (e: IOException) {
+		throw IllegalStateException("Unable to write text", e)
+	}
+}
+
 fun Node.drawText(text: String, font: Font, x: Float, y:Float, color: Color) {
 	try {
 		contentStream.apply {
@@ -198,7 +223,7 @@ fun Node.drawText(text: String, font: Font, x: Float, y:Float, color: Color) {
 			// we want to position our text on his baseline
 
 
-			newLineAtOffset(x, y - font.totalHeight)
+			newLineAtOffset(x, y)
 			setNonStrokingColor(color)
 			showText(text)
 			endText()
@@ -229,10 +254,31 @@ fun Node.drawText90(text: String, font: Font, x: Float, y:Float, color: Color) {
 	}
 }
 
+fun Node.drawText270(text: String, font: Font, x: Float, y:Float, color: Color) {
+	try {
+		contentStream.apply {
+			beginText()
+			setFont(font.family, font.size)
+			// we want to position our text on his baseline
+
+
+			setTextMatrix(Matrix.getRotateInstance(Math.toRadians(-90.0), x, y).apply {
+//				translate(0f, -box.width)
+			})
+//			newLineAtOffset(x, y - font.totalHeight)
+			setNonStrokingColor(color)
+			showText(text)
+			endText()
+		}
+	} catch (e: IOException) {
+		throw IllegalStateException("Unable to write text", e)
+	}
+}
+
 fun Node.drawImage(image: PDImageXObject, x: Float, y:Float, width: Float, height: Float) {
 	try {
 		contentStream.apply {
-			drawImage(image, x, y, width, height)
+			drawImage(image, box.lowerLeftX + x, box.upperRightY - y - height, width, height)
 		}
 	} catch (e: IOException) {
 		throw IllegalStateException("Unable to write text", e)
@@ -261,13 +307,13 @@ fun Node.drawText(text: String, font: Font, x: Float, y:Float, color: Color, max
 	drawText(printedText, font, x, y, color)
 }
 
-fun Node.drawText(text: String, font: Font, horizontalAlignment: HorizontalAlignment, y: Float, color: Color) {
+fun Node.drawText(text: String, font: Font, horizontalAlignment: HorizontalAlignment, shiftX: Float, y: Float, color: Color) {
 	val startX = when(horizontalAlignment) {
 		HorizontalAlignment.LEFT -> box.lowerLeftX
 		HorizontalAlignment.CENTER -> (box.width - font.getWidth(text)) / 2 + box.lowerLeftX
 		HorizontalAlignment.RIGHT -> box.upperRightX - font.getWidth(text)
 	}
-	drawText(text, font, startX, y, color)
+	drawText(text, font, startX + shiftX, box.upperRightY - y, color)
 }
 
 fun Node.drawText(text: String, font: Font, verticalAlignment: VerticalAlignment, x: Float, color: Color) {
@@ -302,6 +348,9 @@ fun Node.frame(box: PDRectangle = this.box, block: Frame.()->Unit)
 		= Frame(this, box).apply(block)
 fun Node.frame(marginLeft: Float = 0f, marginTop: Float = 0f, marginRight: Float = 0f, marginBottom: Float = 0f, block: Frame.()->Unit)
 		= Frame(this, box.inset(marginLeft, marginTop, marginRight, marginBottom)).apply(block)
+fun Node.frameRelative(x: Float = 0f, y: Float = 0f, width: Float = 0f, height: Float = 0f, block: Frame.()->Unit)
+		= Frame(this, box.relative(x, y, width, height)).apply(block)
+
 fun Node.frame(pagePosition: PagePosition, marginInner: Float = 0f, marginTop: Float = 0f, marginOuter: Float = 0f, marginBottom: Float = 0f, block: Frame.()->Unit)
 		= Frame(this, box.inset(pagePosition, marginInner, marginTop, marginOuter, marginBottom)).apply(block)
 
@@ -310,17 +359,25 @@ fun Node.drawBorder(lineWidth: Float, lineColor: Color) {
 		setLineWidth(lineWidth)
 		setStrokingColor(lineColor)
 
-		addRect(box.lowerLeftX-lineWidth, box.lowerLeftY-lineWidth, box.width+lineWidth*2, box.height+lineWidth*2)
+//		addRect(box.lowerLeftX-lineWidth, box.lowerLeftY-lineWidth, box.width+lineWidth*2, box.height+lineWidth*2)
+		addRect(box.lowerLeftX, box.lowerLeftY, box.width, box.height)
 		stroke()
 	}
 }
 
 fun Node.drawBackground(backgroundColor: Color) {
 	contentStream.apply {
+		setGraphicsStateParameters(PDExtendedGraphicsState().apply {
+			nonStrokingAlphaConstant = backgroundColor.alpha/255f
+		})
 		setNonStrokingColor(backgroundColor)
 
 		addRect(box.lowerLeftX, box.lowerLeftY, box.width, box.height)
 		fill()
+
+		setGraphicsStateParameters(PDExtendedGraphicsState().apply {
+			nonStrokingAlphaConstant = 1f
+		})
 	}
 }
 

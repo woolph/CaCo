@@ -104,51 +104,58 @@ class DeckBuildingListPrinter {
                 "Fellwar Stone",
             )
             page(pageFormat) {
-                drawText(deckName, fontTitle, HorizontalAlignment.CENTER, box.upperRightY-5f, fontColor)
-                val entries = transaction {
-                    cardNames
-                        .map {
-                            val tokens = it.split(Regex("\\s"), 2)
-                            tokens[0].toInt() to tokens[1]
-                        }
-                        .sortedBy { it.second }
-                        .filter { it.first > 0 }
-                        .map { (amount, cardName) ->
-                            val cardSets =
-                                CardPossessions.innerJoin(Cards).innerJoin(ScryfallCardSets).innerJoin(CardSets)
-                                    .slice(CardSets.id).select {
-                                        (Cards.name match cardName)
-                                    }.mapNotNull {
-                                        CardSet.findById(it[CardSets.id])
-                        }.groupingBy { it.shortName.toString().uppercase() }
-                        .eachCount()
-                            Triple(amount, cardName, cardSets)
-                        }
-                }
-                sequenceOf(
-                    entries.take(50) to 0f,
-                    entries.drop(50) to box.width/2,
-                ).forEach { (entries, x) ->
-                    var line = 0
-                    frame(20f + x, 20f, 20f, 20f) {
-                        entries.take(50).forEach { (amount, cardName, cardSets) ->
-                            val cardSetsString = if (cardName in blackListForSetSearch)
-                                "[*]" else "[${cardSets.entries.sortedByDescending(Map.Entry<String, Int>::value).joinToString { if(it.value > 1 ) "${it.key}+" else it.key }}]"
-                            drawText(
-                                "$amount $cardName",
-                                fontCard,
-                                HorizontalAlignment.LEFT,
-                                box.upperRightY - line * (3.0f + fontCard.height + fontCode.height),
-                                fontColor
-                            )
-                            drawText(
-                                "   $cardSetsString",
-                                fontCode,
-                                HorizontalAlignment.LEFT,
-                                box.upperRightY - fontCard.height - line * (3.0f + fontCard.height + fontCode.height),
-                                fontColor
-                            )
-                            line++
+                frame(12f,12f,12f,12f) {
+                    drawText(deckName, fontTitle, HorizontalAlignment.CENTER, 0f, fontTitle.height, fontColor)
+                    val entries = transaction {
+                        cardNames
+                            .map {
+                                val tokens = it.split(Regex("\\s"), 2)
+                                tokens[0].toInt() to tokens[1]
+                            }
+                            .sortedBy { it.second }
+                            .filter { it.first > 0 }
+                            .map { (amount, cardName) ->
+                                val cardSets =
+                                    CardPossessions.innerJoin(Cards).innerJoin(ScryfallCardSets).innerJoin(CardSets)
+                                        .slice(CardSets.id).select {
+                                            (Cards.name match cardName)
+                                        }.mapNotNull {
+                                            CardSet.findById(it[CardSets.id])
+                                        }.groupingBy { it.shortName.toString().uppercase() }
+                                        .eachCount()
+                                Triple(amount, cardName, cardSets)
+                            }
+                    }
+                    sequenceOf(
+                        entries.take(50) to 0f,
+                        entries.drop(50) to box.width / 2,
+                    ).forEach { (entries, x) ->
+                        var line = 0
+                        frame(x, fontTitle.totalHeight, 0f, 0f) {
+                            entries.take(50).forEach { (amount, cardName, cardSets) ->
+                                val cardSetsString = if (cardName in blackListForSetSearch)
+                                    "[*]" else "[${
+                                    cardSets.entries.sortedByDescending(Map.Entry<String, Int>::value)
+                                        .joinToString { if (it.value > 1) "${it.key}+" else it.key }
+                                }]"
+                                drawText(
+                                    "$amount $cardName",
+                                    fontCard,
+                                    HorizontalAlignment.LEFT,
+                                    0f,
+                                    fontCard.totalHeight + line * (3.0f + fontCard.totalHeight + fontCode.totalHeight),
+                                    fontColor
+                                )
+                                drawText(
+                                    "   $cardSetsString",
+                                    fontCode,
+                                    HorizontalAlignment.LEFT,
+                                    0f,
+                                    fontCard.totalHeight + fontCode.totalHeight + line * (3.0f + fontCard.totalHeight + fontCode.totalHeight),
+                                    fontColor
+                                )
+                                line++
+                            }
                         }
                     }
                 }
