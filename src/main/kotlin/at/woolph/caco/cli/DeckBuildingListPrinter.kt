@@ -17,6 +17,7 @@ import org.jetbrains.exposed.sql.or
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.awt.Color
+import java.nio.file.Path
 import java.util.*
 
 class DeckBuildingListPrinter {
@@ -31,7 +32,7 @@ class DeckBuildingListPrinter {
             val pageFormat = PDRectangle.A4
 
             val fontColor = Color.BLACK
-            val fontFamily72Black = PDType0Font.load(this, javaClass.getResourceAsStream("/fonts/72-Black.ttf"))
+            val fontFamily72Black = loadType0Font(javaClass.getResourceAsStream("/fonts/72-Black.ttf")!!)
             val fontTitle = Font(fontFamily72Black, 12f)
             val fontCard = Font(PDType1Font.HELVETICA, 8f)
             val fontCode = Font(PDType1Font.HELVETICA_OBLIQUE, 6f)
@@ -161,7 +162,7 @@ class DeckBuildingListPrinter {
                 }
             }
 
-            save(file)
+            save(Path.of(file))
         }
     }
 }

@@ -7,18 +7,19 @@ import org.apache.pdfbox.pdmodel.PDPage
 import org.apache.pdfbox.pdmodel.PDPageContentStream
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.font.PDFont
+import org.apache.pdfbox.pdmodel.font.PDType0Font
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject
 import org.apache.pdfbox.pdmodel.graphics.state.PDExtendedGraphicsState
 import org.apache.pdfbox.util.Matrix
 import java.awt.Color
-import java.io.Closeable
 import java.io.IOException
+import java.io.InputStream
 import java.nio.file.Path
+import kotlin.io.path.createParentDirectories
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.min
 import kotlin.math.roundToInt
-
 
 class ColumnSpace(val columnManager: ColumnManager, val column: Int, val line: Int) {
 	fun drawText(text: String, color: Color, lineIndent: Float = 0f) {
@@ -83,7 +84,6 @@ class ColumnSpace(val columnManager: ColumnManager, val column: Int, val line: I
 class ColumnManager(val node: Node, val columns: Int, val linesPerColumn: Int, val columnGap: Float, val lineSpacing: Float, val font: Font) {
 	val maxLineWidth = (node.box.width-(columns-1)*columnGap)/columns
 	val lineHeight = font.totalHeight + lineSpacing
-
 
 	fun get(index: Int, block: ColumnSpace.()->Unit): ColumnSpace {
 		return ColumnSpace(this, index/linesPerColumn, index%linesPerColumn).apply(block)
@@ -157,8 +157,22 @@ fun PDPageContentStream.write(text: String, font: PDFont, fontSize: Float, x: Fl
 	write(printedText, font, fontSize, x, y, color)
 }
 */
-fun PDRectangle.relative(x: Float = 0f, y: Float = 0f, width: Float = 0f, height: Float = 0f) // FIXME cap size if it does not fit?
-		= PDRectangle(this.lowerLeftX + x, upperRightY - y - height, width, height)
+
+fun PDRectangle.relative(horizontalAlignment: HorizontalAlignment, offSetX: Float = 0f, verticalAlignment: VerticalAlignment, offSetY: Float = 0f, width: Float = 0f, height: Float = 0f): PDRectangle {
+	val x = offSetX + when(horizontalAlignment) {
+		HorizontalAlignment.LEFT -> this.lowerLeftX
+		HorizontalAlignment.CENTER -> (this.lowerLeftX + this.upperRightX - width) / 2
+		HorizontalAlignment.RIGHT -> this.upperRightX - width
+	}
+
+	val y = - offSetY + when(verticalAlignment) {
+		VerticalAlignment.TOP -> this.upperRightY - height
+		VerticalAlignment.MIDDLE -> (this.lowerLeftY + this.upperRightY - height) / 2
+		VerticalAlignment.BOTTOM -> lowerLeftY
+	}
+
+	return PDRectangle(x, y, width, height)
+}
 
 fun PDRectangle.inset(marginLeft: Float = 0f, marginTop: Float = 0f, marginRight: Float = 0f, marginBottom: Float = 0f)
 		= PDRectangle(this.lowerLeftX+marginLeft, this.lowerLeftY + marginBottom, this.width-marginLeft-marginRight, this.height-marginTop-marginBottom)
@@ -167,33 +181,59 @@ fun PDRectangle.inset(pagePosition: PagePosition, marginInner: Float = 0f, margi
 		= this.inset(if(pagePosition == PagePosition.LEFT) marginOuter else marginInner, marginTop, if(pagePosition == PagePosition.RIGHT) marginOuter else marginInner, marginBottom )
 
 enum class PagePosition {
-	SINGLE, LEFT, RIGHT
+	LEFT, RIGHT
 }
 
+class PDFDocument(
+	val document: PDDocument,
+	startingPagePosition: PagePosition,
+) : AutoCloseable by document {
+	var currentPagePosition = startingPagePosition
 
+	fun page(format: PDRectangle, block: Page.()->Unit): Page {
+		val page = Page(this, currentPagePosition, PDPage(format)).use { it.apply(block) }
+		alternateCurrentPagePosition()
+		document.addPage(page.pdPage)
+		return page
+	}
 
-fun createPdfDocument(file: Path, block: PDDocument.()->Unit) = PDDocument().use {
-	it.apply(block)
-	it.save(file.toFile())
+	private fun alternateCurrentPagePosition() {
+		currentPagePosition = when (currentPagePosition) {
+			PagePosition.LEFT -> PagePosition.RIGHT
+			PagePosition.RIGHT -> PagePosition.LEFT
+		}
+	}
+
+	fun save(file: Path) {
+		document.save(file.createParentDirectories().toFile())
+	}
+
+	fun loadType0Font(inputStream: InputStream) =
+		PDType0Font.load(document, inputStream)
+
+	fun createFromFile(file: Path) =
+		PDImageXObject.createFromFileByContent(file.toFile(), this.document)
+
+	fun createFromByteArray(image: ByteArray, imageName: String) =
+		PDImageXObject.createFromByteArray(document, image, imageName)
 }
 
-fun createPdfDocument( block: PDDocument.()->Unit) = PDDocument().use {it.apply(block) }
+fun createPdfDocument(file: Path, startingPagePosition: PagePosition = PagePosition.RIGHT, block: PDFDocument.()->Unit) =
+	PDFDocument(PDDocument(),startingPagePosition).use {
+		it.apply(block).save(file)
+	}
 
-open class Node(val contentStream: PDPageContentStream, val box: PDRectangle) {
+fun createPdfDocument(startingPagePosition: PagePosition = PagePosition.RIGHT, block: PDFDocument.()->Unit) =
+	PDFDocument(PDDocument(),startingPagePosition).use {it.apply(block) }
+
+open class Node(val document: PDFDocument, val contentStream: PDPageContentStream, val box: PDRectangle) {
 	var currentCursorPosition = box.upperRightY
 }
 
-
-class Page(val document: PDDocument, val pdPage: PDPage): Node(PDPageContentStream(document, pdPage), pdPage.mediaBox), Closeable {
+class Page(document: PDFDocument, val pagePosition: PagePosition, val pdPage: PDPage): Node(document, PDPageContentStream(document.document, pdPage), pdPage.mediaBox), AutoCloseable {
 	override fun close() {
 		contentStream.close()
 	}
-}
-
-fun PDDocument.page(format: PDRectangle, block: Page.()->Unit): Page {
-	val page = Page(this, PDPage(format)).use { it.apply(block) }
-	this.addPage(page.pdPage)
-	return page
 }
 
 fun Node.drawText(text: String, font: Font, color: Color, x: Float, y:Float, rotation: Double) {
@@ -342,17 +382,16 @@ fun Node.drawText(text: String, font: Font, horizontalAlignment: HorizontalAlign
 //
 //class Column(val parent: Columns, val columnIndex: UInt): Node(parent.contentStream, box = PDRectangle(parent.box.))
 
-class Frame(val parentNode: Node, box: PDRectangle): Node(parentNode.contentStream, box) {
-}
+class Frame(val parentNode: Node, box: PDRectangle): Node(parentNode.document, parentNode.contentStream, box)
 
 fun Node.frame(box: PDRectangle = this.box, block: Frame.()->Unit)
 		= Frame(this, box).apply(block)
 fun Node.frame(marginLeft: Float = 0f, marginTop: Float = 0f, marginRight: Float = 0f, marginBottom: Float = 0f, block: Frame.()->Unit)
 		= Frame(this, box.inset(marginLeft, marginTop, marginRight, marginBottom)).apply(block)
-fun Node.frameRelative(x: Float = 0f, y: Float = 0f, width: Float = 0f, height: Float = 0f, block: Frame.()->Unit)
-		= Frame(this, box.relative(x, y, width, height)).apply(block)
+fun Node.frameRelative(horizontalAlignment: HorizontalAlignment, offsetX: Float = 0f, verticalAlignment: VerticalAlignment, offsetY: Float = 0f, width: Float = 0f, height: Float = 0f, block: Frame.()->Unit)
+		= Frame(this, box.relative(horizontalAlignment, offsetX, verticalAlignment, offsetY, width, height)).apply(block)
 
-fun Node.frame(pagePosition: PagePosition, marginInner: Float = 0f, marginTop: Float = 0f, marginOuter: Float = 0f, marginBottom: Float = 0f, block: Frame.()->Unit)
+fun Page.framePagePosition(marginInner: Float, marginOuter: Float, marginTop: Float = 0f, marginBottom: Float = 0f, block: Frame.()->Unit)
 		= Frame(this, box.inset(pagePosition, marginInner, marginTop, marginOuter, marginBottom)).apply(block)
 
 fun Node.drawBorder(lineWidth: Float, lineColor: Color) {
@@ -382,7 +421,7 @@ fun Node.drawBackground(backgroundColor: Color) {
 	}
 }
 
-fun ByteArray.toPDImage(page: Page) = PDImageXObject.createFromByteArray(page.document, this ,null)
+fun ByteArray.toPDImage(node: Node) = PDImageXObject.createFromByteArray(node.document.document, this, null)
 
 fun Node.drawAsImage(subIcon: PDImageXObject, maximumWidth: Float, desiredHeight: Float, i: Int, columnWidth: Float, xOffsetIcons: Float, yOffsetIcons: Float) {
 	val heightScale = desiredHeight/subIcon.height
@@ -393,4 +432,58 @@ fun Node.drawAsImage(subIcon: PDImageXObject, maximumWidth: Float, desiredHeight
 		desiredWidth to desiredHeight
 	}
 	drawImage(subIcon, columnWidth*0.5f + xOffsetIcons + columnWidth*i - actualWidth*0.5f, yOffsetIcons+(desiredHeight-actualHeight)*0.5f, actualWidth, actualHeight)
+}
+
+fun adjustTextToFitWidth(originalText: String, font: Font, maxWidth: Float, minFontSize: Float): Pair<String, Font> {
+    val shrinkFactor = 0.95f
+    var shortendText = originalText
+    var shrinkedFont = font
+
+    while (shrinkedFont.getWidth(shortendText) > maxWidth && shrinkedFont.size*shrinkFactor > minFontSize) {
+        shrinkedFont = shrinkedFont.relative(shrinkFactor)
+    }
+
+    while (shrinkedFont.getWidth(shortendText) > maxWidth && shortendText.length > 4) {
+        shortendText = shortendText.substring(0, shortendText.length-4) + "..."
+    }
+
+    return shortendText to shrinkedFont
+}
+
+fun Node.drawAsImageCentered(subIcon: PDImageXObject, maximumWidth: Float, desiredHeight: Float, xOffsetIcons: Float, yOffsetIcons: Float) {
+    val heightScale = desiredHeight/subIcon.height
+    val desiredWidth = subIcon.width*heightScale
+    val (actualWidth, actualHeight) = if (desiredWidth > maximumWidth) {
+        maximumWidth to subIcon.height*maximumWidth/subIcon.width
+    } else {
+        desiredWidth to desiredHeight
+    }
+    drawImage(subIcon, box.width*0.5f + xOffsetIcons - actualWidth*0.5f, yOffsetIcons+(desiredHeight-actualHeight)*0.5f, actualWidth, actualHeight)
+}
+
+fun Node.drawAsImageLeft(subIcon: PDImageXObject, maximumWidth: Float, desiredHeight: Float, xOffsetIcons: Float, yOffsetIcons: Float) {
+    val heightScale = desiredHeight/subIcon.height
+    val desiredWidth = subIcon.width*heightScale
+    val (actualWidth, actualHeight) = if (desiredWidth > maximumWidth) {
+        maximumWidth to subIcon.height*maximumWidth/subIcon.width
+    } else {
+        desiredWidth to desiredHeight
+    }
+    drawImage(subIcon, xOffsetIcons, yOffsetIcons+(desiredHeight-actualHeight)*0.5f, actualWidth, actualHeight)
+}
+
+val dotsPerMillimeter = PDRectangle.A4.width/210f
+
+fun <Item> PDFDocument.columnedContent(items: Iterable<Item>, pageFormat: PDRectangle, columns: Int, columnBlock: Frame.(Item) -> Unit) {
+    val columnWidth = pageFormat.width/columns
+    items.chunked(columns).forEachIndexed { pageIndex, mapLabelItems ->
+        page(pageFormat) {
+            println("column page #$pageIndex")
+            mapLabelItems.forEachIndexed { i, set ->
+                frame(columnWidth*i, 0f, (columnWidth)*(columns-i-1), 0f) {
+                    columnBlock(set)
+                }
+            }
+        }
+    }
 }

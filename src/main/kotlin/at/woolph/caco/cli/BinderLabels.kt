@@ -10,16 +10,17 @@ import org.apache.pdfbox.pdmodel.font.PDType0Font
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.awt.Color
+import java.nio.file.Path
 
 class BinderLabels(
 //    val inputReader: LineReader,
 //    val output: OutputStream,
 ) {
-    fun printLabel(file: String) {
+    fun printLabel(file: Path) {
         Databases.init()
 
         transaction {
-            createPdfDocument {
+            createPdfDocument(file) {
                 val labelsWide : List<MapLabelItem> = listOf(
                 )
                 val labelsNarrow: List<MapLabelItem> = listOf(
@@ -164,10 +165,10 @@ class BinderLabels(
                 val fontSubColor = if (darkLabels) Color.LIGHT_GRAY else Color.GRAY
                 val backgroundColor: Color? = if (darkLabels) Color.BLACK else null
 
-                val mtgLogo = PDImageXObject.createFromFile("./mtg.png", this)
+                val mtgLogo = createFromFile(Path.of("./mtg.png"))
 
-                val fontFamilyPlanewalker = PDType0Font.load(this, javaClass.getResourceAsStream("/fonts/PlanewalkerBold-xZj5.ttf"))
-                val fontFamily72Black = PDType0Font.load(this, javaClass.getResourceAsStream("/fonts/72-Black.ttf"))
+                val fontFamilyPlanewalker = loadType0Font(javaClass.getResourceAsStream("/fonts/PlanewalkerBold-xZj5.ttf")!!)
+                val fontFamily72Black = loadType0Font(javaClass.getResourceAsStream("/fonts/72-Black.ttf")!!)
 
                 val fontTitle = Font(fontFamilyPlanewalker, 48f)
                 val fontSubTitle = Font(fontFamilyPlanewalker, 16f)
@@ -204,20 +205,7 @@ class BinderLabels(
                     val subTitleYPosition = titleYPosition - 30f
 
 
-                    fun <Item> PDDocument.columnedContent(items: Iterable<Item>, pageFormat: PDRectangle, columns: Int, columnBlock: Frame.(Item) -> Unit) {
-                        items.chunked(columns).forEachIndexed { pageIndex, mapLabelItems ->
-                            page(pageFormat) {
-                                println("column page #$pageIndex")
-                                mapLabelItems.forEachIndexed { i, set ->
-                                    frame(columnWidth*i, 0f, (columnWidth)*(columns-i-1), 0f) {
-                                        columnBlock(set)
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    columnedContent(labels, pageFormat, columns) { label ->
+                    columnedContent(labels, pageFormat, columns) { set ->
                         drawBorder(2f, fontColor)
                         if (set != BlankLabel) {
                             backgroundColor?.let { drawBackground(it) }
@@ -284,7 +272,7 @@ class BinderLabels(
                                     val xOffsetIcons = 27f
                                     val yOffsetIcons = mainIconYPos + desiredHeight - 15f
 
-                                    set.subIconRight?.toPDImage(this@page)?.let {
+                                    set.subIconRight?.toPDImage(this)?.let {
                                         drawAsImageCentered(
                                             it,
                                             maximumWidthSub,
@@ -293,7 +281,7 @@ class BinderLabels(
                                             yOffsetIcons
                                         )
                                     }
-                                    set.subIconLeft?.toPDImage(this@page)?.let {
+                                    set.subIconLeft?.toPDImage(this)?.let {
                                         drawAsImageCentered(
                                             it,
                                             maximumWidthSub,
@@ -306,7 +294,7 @@ class BinderLabels(
                                     val xOffsetIcons2 = 32f + 15f
                                     val yOffsetIcons2 = mainIconYPos + 10f
 
-                                    set.subIconRight2?.toPDImage(this@page)?.let {
+                                    set.subIconRight2?.toPDImage(this)?.let {
                                         drawAsImageCentered(
                                             it,
                                             maximumWidthSub,
@@ -315,7 +303,7 @@ class BinderLabels(
                                             yOffsetIcons2
                                         )
                                     }
-                                    set.subIconLeft2?.toPDImage(this@page)?.let {
+                                    set.subIconLeft2?.toPDImage(this)?.let {
                                         drawAsImageCentered(
                                             it,
                                             maximumWidthSub,
@@ -325,7 +313,7 @@ class BinderLabels(
                                         )
                                     }
 
-                                    set.mainIcon?.toPDImage(this@page)?.let {
+                                    set.mainIcon?.toPDImage(this)?.let {
                                         drawAsImageCentered(
                                             it,
                                             maximumWidth,
@@ -338,137 +326,7 @@ class BinderLabels(
                             }
                         }
                     }
-
-//                    labels.chunked(columns).forEachIndexed { pageIndex, mapLabelItems ->
-//                        page(pageFormat) {
-//                            println("column label page #$pageIndex")
-//                            mapLabelItems.forEachIndexed { i, set ->
-//                                frame(columnWidth*i, 0f, (columnWidth)*(columns-i-1), 0f) {
-//                                    drawBorder(2f, fontColor)
-//                                    if (set != BlankLabel) {
-//                                        backgroundColor?.let { drawBackground(it) }
-//
-//                                        frame(margin, margin, margin, margin) {
-//                                            drawAsImageCentered(
-//                                                mtgLogo,
-//                                                mtgLogoWidth,
-//                                                mtgLogoHeight,
-//                                                0f,
-//                                                magicLogoYPosition,
-//                                            )
-//
-//                                            set.subTitle?.let { _subTitle ->
-//                                                adjustTextToFitWidth(
-//                                                    _subTitle,
-//                                                    fontSubTitle,
-//                                                    maxTitleWidth,
-//                                                    10f
-//                                                ).let { (title, font) ->
-//                                                    drawText(
-//                                                        title,
-//                                                        font,
-//                                                        fontSubColor,
-//                                                        subTitleXPosition,
-//                                                        subTitleYPosition,
-//                                                        90.0
-//                                                    )
-//                                                }
-//                                            }
-//
-//                                            adjustTextToFitWidth(
-//                                                set.title,
-//                                                fontTitle,
-//                                                maxTitleWidth,
-//                                                36f
-//                                            ).let { (title, font) ->
-//                                                drawText(title, font, fontColor, titleXPosition, titleYPosition, 90.0)
-//                                            }
-//
-//                                            frame(0f, setDivYPos, 0f, 0f) {
-//                                                drawText(
-//                                                    set.code.uppercase(),
-//                                                    fontCode,
-//                                                    HorizontalAlignment.CENTER,
-//                                                    0f,
-//                                                    codeYPos,
-//                                                    fontColor
-//                                                )
-//
-//                                                set.subCode?.let { subCode ->
-//                                                    drawText(
-//                                                        subCode.uppercase(),
-//                                                        fontCodeCommanderSubset,
-//                                                        HorizontalAlignment.CENTER,
-//                                                        0f,
-//                                                        subCodeYPos,
-//                                                        fontSubColor
-//                                                    )
-//                                                }
-//
-//                                                val maximumWidthSub = 20f
-//                                                val desiredHeightSub = 20f
-//                                                val xOffsetIcons = 27f
-//                                                val yOffsetIcons = mainIconYPos + desiredHeight - 15f
-//
-//                                                set.subIconRight?.toPDImage(this@page)?.let {
-//                                                    drawAsImageCentered(
-//                                                        it,
-//                                                        maximumWidthSub,
-//                                                        desiredHeightSub,
-//                                                        xOffsetIcons,
-//                                                        yOffsetIcons
-//                                                    )
-//                                                }
-//                                                set.subIconLeft?.toPDImage(this@page)?.let {
-//                                                    drawAsImageCentered(
-//                                                        it,
-//                                                        maximumWidthSub,
-//                                                        desiredHeightSub,
-//                                                        -xOffsetIcons,
-//                                                        yOffsetIcons
-//                                                    )
-//                                                }
-//
-//                                                val xOffsetIcons2 = 32f + 15f
-//                                                val yOffsetIcons2 = mainIconYPos + 10f
-//
-//                                                set.subIconRight2?.toPDImage(this@page)?.let {
-//                                                    drawAsImageCentered(
-//                                                        it,
-//                                                        maximumWidthSub,
-//                                                        desiredHeightSub,
-//                                                        xOffsetIcons2,
-//                                                        yOffsetIcons2
-//                                                    )
-//                                                }
-//                                                set.subIconLeft2?.toPDImage(this@page)?.let {
-//                                                    drawAsImageCentered(
-//                                                        it,
-//                                                        maximumWidthSub,
-//                                                        desiredHeightSub,
-//                                                        -xOffsetIcons2,
-//                                                        yOffsetIcons2
-//                                                    )
-//                                                }
-//
-//                                                set.mainIcon?.toPDImage(this@page)?.let {
-//                                                    drawAsImageCentered(
-//                                                        it,
-//                                                        maximumWidth,
-//                                                        desiredHeight,
-//                                                        0f,
-//                                                        mainIconYPos
-//                                                    )
-//                                                }
-//                                            }
-//                                        }
-//                                    }
-//                                }
-//                            }
-//                        }
-//                    }
                 }
-                save(file)
             }
         }
     }
@@ -476,5 +334,5 @@ class BinderLabels(
 
 
 fun main() {
-    BinderLabels().printLabel("C:\\Users\\001121673\\private\\magic\\BinderLabels.pdf")
+    BinderLabels().printLabel(Path.of("C:\\Users\\001121673\\private\\magic\\BinderLabels.pdf"))
 }

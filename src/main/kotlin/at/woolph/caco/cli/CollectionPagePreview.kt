@@ -8,15 +8,14 @@ import at.woolph.libs.pdf.*
 import be.quodlibet.boxable.HorizontalAlignment
 import kotlinx.coroutines.runBlocking
 import org.apache.pdfbox.pdmodel.common.PDRectangle
-import org.apache.pdfbox.pdmodel.font.PDType0Font
-import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.awt.Color
+import java.nio.file.Path
 import java.util.*
 
 class CollectionPagePreview {
     @OptIn(ExperimentalStdlibApi::class)
-    suspend fun printLabel(setCode: String, file: String) {
+    suspend fun printLabel(setCode: String, file: Path) {
         Databases.init()
 
         val cardList = transaction {
@@ -28,14 +27,14 @@ class CollectionPagePreview {
             cardList,
         ).flatten().chunked(18)
 
-        createPdfDocument {
+        createPdfDocument(file) {
             val pageFormat = PDRectangle(PDRectangle.A4.height, PDRectangle.A4.width)
 
             val fontColor = Color.BLACK
-            val fontFamily72Black = PDType0Font.load(this, javaClass.getResourceAsStream("/fonts/72-Black.ttf"))
+            val fontFamily72Black = loadType0Font(javaClass.getResourceAsStream("/fonts/72-Black.ttf")!!)
             val fontCode = Font(fontFamily72Black, 10f)
 
-            val mtgCardBack = PDImageXObject.createFromFile("./card-back.jpg", this)
+            val mtgCardBack = createFromFile(Path.of("./card-back.jpg"))
 
             data class Position(
                 val x: Float,
@@ -112,7 +111,7 @@ class CollectionPagePreview {
                                         }
                                     }
                                 }!!
-                                val cardImage = PDImageXObject.createFromByteArray(this@createPdfDocument, byteArray, card.name)
+                                val cardImage = createFromByteArray(byteArray, card.name)
                                 print("card #\$${card.numberInSet} ${card.name} image rendering\r")
                                 drawImage(cardImage, cardPosition.x, cardPosition.y, cardSize.x, cardSize.y)
                                 print("card #\$${card.numberInSet} ${card.name} image rendered\r")
@@ -124,14 +123,10 @@ class CollectionPagePreview {
                     }
                 }
             }
-
-            save(file)
         }
     }
 }
 
 suspend fun main() {
-    CollectionPagePreview().printLabel("4ed", "C:\\Users\\001121673\\private\\4ed.pdf")
-    CollectionPagePreview().printLabel("5ed", "C:\\Users\\001121673\\private\\5ed.pdf")
-    CollectionPagePreview().printLabel("6ed", "C:\\Users\\001121673\\private\\6ed.pdf")
+    CollectionPagePreview().printLabel("5ed", Path.of("C:\\Users\\001121673\\private\\magic\\5ed.pdf"))
 }

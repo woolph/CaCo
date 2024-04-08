@@ -4,20 +4,13 @@ import at.woolph.caco.binderlabels.BlankLabel
 import at.woolph.caco.binderlabels.GenericLabel
 import at.woolph.caco.binderlabels.MapLabelItem
 import at.woolph.caco.binderlabels.darkLabels
-import at.woolph.libs.pdf.Font
-import at.woolph.libs.pdf.createPdfDocument
-import at.woolph.libs.pdf.drawBackground
-import at.woolph.libs.pdf.drawBorder
-import at.woolph.libs.pdf.drawImage
-import at.woolph.libs.pdf.drawText
-import at.woolph.libs.pdf.drawText90
-import at.woolph.libs.pdf.frame
-import at.woolph.libs.pdf.page
+import at.woolph.libs.pdf.*
 import be.quodlibet.boxable.HorizontalAlignment
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.font.PDType0Font
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject
 import java.awt.Color
+import java.nio.file.Path
 
 class LegoBinderLabels(
 //    val inputReader: LineReader,
@@ -36,10 +29,10 @@ class LegoBinderLabels(
             val fontSubColor = if (darkLabels) Color.LIGHT_GRAY else Color.GRAY
             val backgroundColor: Color? = if (darkLabels) Color.BLACK else null
 
-            val mtgLogo = PDImageXObject.createFromFile("./LEGO_logo.svg.png", this)
+            val mtgLogo = createFromFile(Path.of("./LEGO_logo.svg.png"))
 
-            val fontFamilyPlanewalker = PDType0Font.load(this, javaClass.getResourceAsStream("/fonts/Legothick.ttf"))
-            val fontFamily72Black = PDType0Font.load(this, javaClass.getResourceAsStream("/fonts/72-Black.ttf"))
+            val fontFamilyPlanewalker = loadType0Font(javaClass.getResourceAsStream("/fonts/PlanewalkerBold-xZj5.ttf")!!)
+            val fontFamily72Black = loadType0Font(javaClass.getResourceAsStream("/fonts/72-Black.ttf")!!)
 
             val fontTitle = Font(fontFamilyPlanewalker, 64f)
             val fontSubTitle = Font(fontFamily72Black, 16f)
@@ -98,7 +91,7 @@ class LegoBinderLabels(
                     }
                 }
             }
-            save(file)
+            save(Path.of(file))
         }
     }
 }

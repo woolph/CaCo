@@ -36,6 +36,7 @@ import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransacti
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.awt.Color
 import java.io.File
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
 import kotlin.math.max
@@ -444,11 +445,11 @@ suspend fun main(args: Array<String>) {
 
 			val fontTitle = Font(PDType1Font.HELVETICA_BOLD, 10f)
 
-			createPdfDocument(Paths.get("D:\\woolph\\Dropbox\\mtg-inventory.pdf")) {
+			createPdfDocument(Path.of("C:\\Users\\001121673\\private\\magic\\mtg-inventory.pdf")) {
 				setCodes.forEach { setCode ->
 					CardSet.findById(setCode.toLowerCase())?.let { set ->
 						page(PDRectangle.A4) {
-							frame(PagePosition.RIGHT, 50f, 20f, 20f, 20f) {
+							framePagePosition(50f, 20f, 20f, 20f) {
 								drawText("Inventory ${set.name}", fontTitle, HorizontalAlignment.CENTER, 0f, box.upperRightY - 10f, Color.BLACK)
 
 								// TODO calc metrics for all sets (so that formatting is the same for all pages)
@@ -516,14 +517,14 @@ suspend fun main(args: Array<String>) {
 					}
 
 
-			createPdfDocument(Paths.get("d:\\wants.pdf")) {
+			createPdfDocument(Paths.get("C:\\Users\\001121673\\private\\magic\\wants.pdf")) {
 				page(PDRectangle.A4) {
-					frame(PagePosition.RIGHT, 50f, 20f, 20f, 20f) {
+					framePagePosition(50f, 20f, 20f, 20f) {
 
 						drawText("Needs ${set.name}", fontTitle, HorizontalAlignment.CENTER, 0f, box.upperRightY-10f, Color.BLACK)
 
 						// TODO calc metrics for all sets (so that formatting is the same for all pages)
-						val baseTable = BaseTable(642f, 842f, 0f, box.width, 0f, this@createPdfDocument, this@page.pdPage, true, true)
+						val baseTable = BaseTable(642f, 842f, 0f, box.width, 0f, this@createPdfDocument.document, this@page.pdPage, true, true)
 						listOf("Dive Down" to 3, "Surge Mare" to 1).forEach {
 							val row = baseTable.createRow(15f).apply {
 								createCell(15f, it.second.toString(), HorizontalAlignment.CENTER, VerticalAlignment.MIDDLE)

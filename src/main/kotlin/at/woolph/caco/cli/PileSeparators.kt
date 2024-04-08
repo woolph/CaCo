@@ -3,18 +3,14 @@ package at.woolph.caco.cli
 import at.woolph.caco.binderlabels.*
 import at.woolph.caco.datamodel.Databases
 import at.woolph.caco.datamodel.sets.CardSet
-import at.woolph.libs.pdf.Font
-import at.woolph.libs.pdf.createPdfDocument
-import at.woolph.libs.pdf.drawBorder
-import at.woolph.libs.pdf.drawText
-import at.woolph.libs.pdf.frame
-import at.woolph.libs.pdf.page
+import at.woolph.libs.pdf.*
 import be.quodlibet.boxable.HorizontalAlignment
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.font.PDType0Font
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.awt.Color
 import java.net.URI
+import java.nio.file.Path
 
 
 interface PileSeparator {
@@ -67,7 +63,7 @@ class PileSeparators {
                 )
 
                 val fontColor = Color.BLACK
-                val fontFamily72Black = PDType0Font.load(this, javaClass.getResourceAsStream("/fonts/72-Black.ttf"))
+                val fontFamily72Black = PDType0Font.load(this.document, javaClass.getResourceAsStream("/fonts/72-Black.ttf"))
 
                 val pageFormat = PDRectangle(PDRectangle.A4.height, PDRectangle.A4.width)
 
@@ -78,7 +74,7 @@ class PileSeparators {
                 val columnWidth = pageFormat.width/columns
                 val rowHeight = pageFormat.height/rows
 
-                val magicCardHeight = 88f*dotsPerMillimeter
+                val magicCardHeight = 88f* dotsPerMillimeter
 
                 val margin = 12f
                 val defaultGapSize = 5f
@@ -122,7 +118,7 @@ class PileSeparators {
                         }
                     }
                 }
-                save(file)
+                save(Path.of(file))
             }
         }
     }

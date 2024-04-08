@@ -3,18 +3,14 @@ package at.woolph.caco.cli
 import at.woolph.caco.binderlabels.*
 import at.woolph.caco.datamodel.Databases
 import at.woolph.caco.datamodel.sets.CardSet
-import at.woolph.libs.pdf.Font
-import at.woolph.libs.pdf.createPdfDocument
-import at.woolph.libs.pdf.drawBorder
-import at.woolph.libs.pdf.drawText
-import at.woolph.libs.pdf.frame
-import at.woolph.libs.pdf.page
+import at.woolph.libs.pdf.*
 import be.quodlibet.boxable.HorizontalAlignment
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.font.PDType0Font
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.awt.Color
 import java.net.URI
+import java.nio.file.Path
 
 interface BoxLabel {
     val title: String
@@ -96,30 +92,32 @@ class BoxLabels {
         Databases.init()
 
         transaction {
-            createPdfDocument {
+            createPdfDocument(Path.of(file)) {
                 val labels: List<BoxLabel> = listOf(
-                    PlainsBoxLabel,
-                    IslandBoxLabel,
-                    SwampBoxLabel,
-                    MountainBoxLabel,
-                    ForestBoxLabel,
-                    GenericBoxLabel("Deck Building"),
-                    AwaitingCatalogizationBoxLabel(1),
-                    AwaitingCatalogizationBoxLabel(2),
-                    AwaitingCollectionBoxLabel(1),
-                    AwaitingCollectionBoxLabel(2),
-                    PlanechaseBoxLabel(1),
-                    PlanechaseBoxLabel(2),
-                    DuplicateBoxLabel("neo", "nec", "bbd"),
-                    DuplicateBoxLabel("mkm"),
-                    DuplicateBoxLabel("m21"),
-                    DuplicateBoxLabel("dom"),
-                    DuplicateBoxLabel("m20"),
+//                    PlainsBoxLabel,
+//                    IslandBoxLabel,
+//                    SwampBoxLabel,
+//                    MountainBoxLabel,
+//                    ForestBoxLabel,
+//                    GenericBoxLabel("Deck Building"),
+//                    AwaitingCatalogizationBoxLabel(1),
+//                    AwaitingCatalogizationBoxLabel(2),
+//                    AwaitingCollectionBoxLabel(1),
+//                    AwaitingCollectionBoxLabel(2),
+//                    PlanechaseBoxLabel(1),
+//                    PlanechaseBoxLabel(2),
+                    AwaitingCatalogizationBoxLabel(3),
+                    AwaitingCollectionBoxLabel(3),
+                    DuplicateBoxLabel("bbd"),
+                    DuplicateBoxLabel("stx"),
+                    DuplicateBoxLabel("khm"),
+                    DuplicateBoxLabel("mh2"),
                 )
 
                 val fontColor = Color.BLACK
-                val fontFamilyPlanewalker = PDType0Font.load(this, javaClass.getResourceAsStream("/fonts/PlanewalkerBold-xZj5.ttf"))
-                val fontFamily72Black = PDType0Font.load(this, javaClass.getResourceAsStream("/fonts/72-Black.ttf"))
+
+                val fontFamilyPlanewalker = loadType0Font(javaClass.getResourceAsStream("/fonts/PlanewalkerBold-xZj5.ttf")!!)
+                val fontFamily72Black = loadType0Font(javaClass.getResourceAsStream("/fonts/72-Black.ttf")!!)
 
                 val pageFormat = PDRectangle.A4
 
@@ -133,17 +131,16 @@ class BoxLabels {
                 val margin = 12f
                 val defaultGapSize = 5f
 
-                val foldingLine = 90f * dotsPerMillimeter // FIXME measure real foldline position
+                val foldingLine = 80.8f * 90f/89.8f * dotsPerMillimeter
 
-                val bannerHeight = 15f*dotsPerMillimeter - margin
+                val bannerHeight = 15f* dotsPerMillimeter - margin
 
                 val fontCode = Font(fontFamilyPlanewalker, bannerHeight * 0.7f)
                 val fontCode2 = Font(fontFamily72Black, bannerHeight * 0.7f)
 
                 val maximumWidth = columnWidth - 2*margin
-                val desiredHeight = bannerHeight * 0.9f
+                val desiredHeight = bannerHeight * 0.8f
                 val maximumIconWidth = bannerHeight
-                val offsetX = (maximumWidth - maximumIconWidth) * 0.5f
 
                 labels.chunked(itemsPerPage).forEachIndexed { pageIndex, separatorItems ->
                     page(pageFormat) {
@@ -173,7 +170,7 @@ class BoxLabels {
                                                 )
                                                 columnItem.icon?.toPDImage(this@page)
                                                     ?.let {
-                                                        drawAsImageLeft(it, maximumIconWidth, desiredHeight, 0f, box.height-bannerHeight)
+                                                        drawAsImageLeft(it, maximumIconWidth, desiredHeight, 0f, box.height - desiredHeight)
                                                     }
                                             }
                                             is MultipleSymbolBoxLabel -> {
@@ -182,12 +179,12 @@ class BoxLabels {
                                                     fontCode2,
                                                     HorizontalAlignment.LEFT,
                                                     0f,
-                                                    box.height + fontCode.descent,
+                                                    box.height + fontCode.descent + 2f,
                                                     fontColor
                                                 )
-                                                val width = fontCode2.getWidth(columnItem.title)
+                                                val width = fontCode2.getWidth(columnItem.title) + defaultGapSize
                                                 columnItem.icons.map { it.toPDImage(this@page) }.forEachIndexed { i, icon ->
-                                                    drawAsImageLeft(icon, maximumIconWidth, desiredHeight, width + maximumIconWidth * i, box.height-bannerHeight)
+                                                    drawAsImageLeft(icon, maximumIconWidth, desiredHeight, width + maximumIconWidth * i, box.height - desiredHeight)
                                                 }
                                             }
                                         }
@@ -197,12 +194,11 @@ class BoxLabels {
                         }
                     }
                 }
-                save(file)
             }
         }
     }
 }
 
 fun main() {
-    BoxLabels().printLabel("C:\\Users\\001121673\\magic\\BoxLabels.pdf")
+    BoxLabels().printLabel("C:\\Users\\001121673\\private\\magic\\BoxLabels.pdf")
 }
