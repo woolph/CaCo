@@ -129,5 +129,5 @@ class PileSeparators {
 }
 
 fun main() {
-    PileSeparators().printLabel("C:\\Users\\001121673\\CardSeparators.pdf")
+    PileSeparators().printLabel("C:\\Users\\001121673\\private\\magic\\CardSeparators.pdf")
 }

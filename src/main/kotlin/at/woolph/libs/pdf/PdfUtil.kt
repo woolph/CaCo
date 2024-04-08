@@ -183,6 +183,7 @@ open class Node(val contentStream: PDPageContentStream, val box: PDRectangle) {
 	var currentCursorPosition = box.upperRightY
 }
 
+
 class Page(val document: PDDocument, val pdPage: PDPage): Node(PDPageContentStream(document, pdPage), pdPage.mediaBox), Closeable {
 	override fun close() {
 		contentStream.close()

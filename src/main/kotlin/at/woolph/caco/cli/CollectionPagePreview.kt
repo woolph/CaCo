@@ -131,6 +131,7 @@ class CollectionPagePreview {
 }
 
 suspend fun main() {
-    CollectionPagePreview().printLabel("4ed", "C:\\Users\\001121673\\4ed.pdf")
-    CollectionPagePreview().printLabel("6ed", "C:\\Users\\001121673\\6ed.pdf")
+    CollectionPagePreview().printLabel("4ed", "C:\\Users\\001121673\\private\\4ed.pdf")
+    CollectionPagePreview().printLabel("5ed", "C:\\Users\\001121673\\private\\5ed.pdf")
+    CollectionPagePreview().printLabel("6ed", "C:\\Users\\001121673\\private\\6ed.pdf")
 }

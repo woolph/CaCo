@@ -270,135 +270,6 @@ suspend fun main() {
         1 The Millennium Calendar
         1 Threefold Thunderhulk
     """.trimIndent(),
-    "Gale Infect" to """1 Castle Locthwain
-1 Castle Vantress
-1 Clearwater Pathway // Murkwater Pathway
-1 Command Tower
-1 Dimir Aqueduct
-1 Drowned Catacomb
-1 Escape Tunnel
-1 Geier Reach Sanitarium
-1 Inkmoth Nexus
-6 Island
-1 Karn's Bastion
-1 Morphic Pool
-1 Mystic Sanctuary
-1 Peat Bog
-1 Restless Reef
-1 Rogue's Passage
-1 Saprazzan Skerry
-1 Shipwreck Marsh
-7 Swamp
-1 Tainted Isle
-1 Temple of Deceit
-1 Undercity Sewers
-1 Underground River
-1 Watery Grave
-1 Anoint with Affliction
-1 As Foretold
-1 Astral Cornucopia
-1 Bilious Skulldweller
-1 Bitter Triumph
-1 Blightbelly Rat
-1 Blighted Agent
-1 Bone Shards
-1 Bring the Ending
-1 Case of the Ransacked Lab
-1 Consider
-1 Contentious Plan
-1 Deadly Rollick
-1 Distorted Curiosity
-1 Drown in Ichor
-1 Everflowing Chalice
-1 Experimental Augury
-1 Feed the Swarm
-1 Flux Channeler
-1 Frantic Search
-1 Fuel for the Cause
-1 Gale, Waterdeep Prodigy
-1 Geth's Summons
-1 Gitaxian Probe
-1 Glistening Sphere
-1 God-Eternal Kefnet
-1 Ichor Rats
-1 Inexorable Tide
-1 Infectious Inquiry
-1 Midnight Clock
-1 Murmuring Mystic
-1 Myr Convert
-1 Night's Whisper
-1 Phyresis Outbreak
-1 Plague Myr
-1 Plague Stinger
-1 Pongify
-1 Primal Amulet // Primal Wellspring
-1 Prologue to Phyresis
-1 Ravenform
-1 Reject Imperfection
-1 Replicating Ring
-1 Scion of Halaster
-1 Search for Azcanta // Azcanta, the Sunken Ruin
-1 Sedgemoor Witch
-1 See the Truth
-1 Serum Snare
-1 Staff of Compleation
-1 Steady Progress
-1 Strategic Planning
-1 Swan Song
-1 Tainted Indulgence
-1 Tekuthal, Inquiry Dominus
-1 Tezzeret's Gambit
-1 The Mirari Conjecture
-1 Thought Scour
-1 Vat Emergence
-1 Viral Drake
-1 Vivisurgeon's Insight
-1 Voidwing Hybrid
-1 Vraska, Betrayal's Sting
-1 Vraska's Fall
-1 Windfall
-1 Wizards of Thay
-1 Yawgmoth, Thran Physician
-Sideboard:
-
-1 Archmage Emeritus
-1 Baral, Chief of Compliance
-1 Corrupted Resolve
-1 Counterspell
-1 Curious Homunculus // Voracious Reader
-1 Dreadship Reef
-1 Empowered Autogenerator
-1 Font of Magic
-1 Founding the Third Path
-1 Grim Affliction
-1 Imprisoned in the Moon
-1 Isochron Scepter
-1 Jace's Sanctum
-1 Lightning Greaves
-1 Merchant Scroll
-1 Mercurial Spelldancer
-1 Mindsplice Apparatus
-1 Mocking Sprite
-1 Mystical Teachings
-1 Mystical Tutor
-1 Nephalia Drownyard
-1 Ojer Pakpatiq, Deepest Epoch // Temple of Cyclical Time
-1 Otherworldly Gaze
-1 Pentad Prism
-1 Pestilent Syphoner
-1 Secrets of the Dead
-1 Sign in Blood
-1 Siphon Insight
-1 Solve the Equation
-1 Spread the Sickness
-1 Swiftfoot Boots
-1 Sword of Truth and Justice
-1 Tocasia's Dig Site
-1 Unmarked Grave
-1 Venser, Corpse Puppet
-1 Virulent Wound
-1 Whisper of the Dross
-""".trimIndent(),
     "Gale Poison" to """1 Castle Locthwain
 1 Castle Vantress
 1 Clearwater Pathway // Murkwater Pathway
@@ -837,107 +708,6 @@ Sideboard:
         1 Tranquil Thicket
     """.trimIndent(),
         "Rakdos, Lord of Riots - No Pain, No Game" to """
-            1 Bojuka Bog
-            1 Castle Locthwain
-            1 Command Tower
-            1 Dragonskull Summit
-            1 Eldrazi Temple
-            1 Evolving Wilds
-            1 Exotic Orchard
-            1 Fabled Passage
-            1 Foreboding Ruins
-            1 Graven Cairns
-            1 Leechridden Swamp
-            1 Mount Doom
-            4 Mountain
-            1 Myriad Landscape
-            1 Prismatic Vista
-            1 Rakdos Carnarium
-            1 Shadowblood Ridge
-            1 Shivan Gorge
-            1 Shrine of the Forsaken Gods
-            1 Smoldering Marsh
-            1 Spinerock Knoll
-            1 Sulfurous Springs
-            4 Swamp
-            1 Temple of Malice
-            1 Terramorphic Expanse
-            1 War Room
-            1 Wastes
-            1 Acidic Soil
-            1 All Is Dust
-            1 Ancient Stone Idol
-            1 Arcane Signet
-            1 Artisan of Kozilek
-            1 Baleful Mastery
-            1 Bane of Bala Ged
-            1 Black Market Connections
-            1 Blasphemous Act
-            1 Blightsteel Colossus
-            1 Blood for the Blood God!
-            1 Burnished Hart
-            1 Chandra's Ignition
-            1 Chaos Warp
-            1 Charcoal Diamond
-            1 Commander's Sphere
-            1 Conduit of Ruin
-            1 Court of Ambition
-            1 Crushing Disappointment
-            1 Cryptolith Fragment // Aurora of Emrakul
-            1 Deflecting Swat
-            1 Descent into Avernus
-            1 Earthquake
-            1 Fellwar Stone
-            1 Fire Diamond
-            1 Flame Rift
-            1 Flayer of Loyalties
-            1 Ill-Gotten Inheritance
-            1 It That Betrays
-            1 Keen Duelist
-            1 Kozilek, Butcher of Truth
-            1 Kozilek, the Great Distortion
-            1 Liberator, Urza's Battlethopter
-            1 Light Up the Stage
-            1 Lightning Bolt
-            1 Lightning Greaves
-            1 Mind Stone
-            1 Nettle Drone
-            1 Night's Whisper
-            1 Palace Siege
-            1 Pathrazer of Ulamog
-            1 Pestilence
-            1 Price of Progress
-            1 Prisoner's Dilemma
-            1 Rakdos Charm
-            1 Rakdos Signet
-            1 Rakdos, Lord of Riots
-            1 Retreat to Hagra
-            1 Rising of the Day
-            1 Risk Factor
-            1 Sarkhan's Unsealing
-            1 Sign in Blood
-            1 Sol Ring
-            1 Solemn Simulacrum
-            1 Spawn of Mayhem
-            1 Stormfist Crusader
-            1 Talisman of Indulgence
-            1 Terminate
-            1 Theater of Horrors
-            1 Tibalt's Trickery
-            1 Ulamog, the Infinite Gyre
-            1 Ulamog's Crusher
-            1 Unlicensed Disintegration
-            1 Walking Ballista
-            1 Wandering Archaic // Explore the Vastlands
-            1 Warstorm Surge
-            1 Wayfarer's Bauble
-            Sideboard:
-
-            1 Faithless Looting
-            1 Plague Spitter
-            1 Vedalken Orrery
-            """.trimIndent(),
-        "Rakdos, Lord of Riots - No Pain, No Game (Low Salt)" to """
             1 Blood Crypt
             1 Bojuka Bog
             1 Castle Locthwain
@@ -1580,12 +1350,105 @@ Sideboard:
             1 Mass Hysteria
             1 Vicious Shadows
             1 Felidar Retreat
+        """.trimIndent(),
+        "Ghalta - Alter Verwalter Ghalter" to """
+            1 Blighted Woodland
+            1 Bonders' Enclave
+            1 Castle Garenbrig
+            1 Demolition Field
+            23 Forest
+            1 Mirrorpool
+            1 Mosswort Bridge
+            1 Myriad Landscape
+            1 Reliquary Tower
+            1 Scavenger Grounds
+            1 Slippery Karst
+            1 Tranquil Thicket
+            1 War Room
+            1 Winding Canyons
+            1 Atraxa's Fall
+            1 Barrow-Blade
+            1 Beanstalk Giant // Fertile Footsteps
+            1 Beast Within
+            1 Biophagus
+            1 Blackblade Reforged
+            1 Cankerbloom
+            1 Deathrender
+            1 Decanter of Endless Water
+            1 Defiler of Vigor
+            1 Doomskar Warrior
+            1 Emergent Woodwurm
+            1 Exploration
+            1 Ezuri's Predation
+            1 Food Chain
+            1 Gaea's Touch
+            1 Garruk's Uprising
+            1 Gather Courage
+            1 Ghalta, Primal Hunger
+            1 Giant Growth
+            1 Gigantosaurus
+            1 God-Eternal Rhonas
+            1 Goreclaw, Terror of Qal Sisma
+            1 Greater Good
+            1 Gruff Triplets
+            1 Guardian Project
+            1 Gwenna, Eyes of Gaea
+            1 Haywire Mite
+            1 Heroic Intervention
+            1 Invigorate
+            1 Jamie McCrimmon
+            1 Kodama's Reach
+            1 Last March of the Ents
+            1 Life's Legacy
+            1 Liquimetal Torque
+            1 Llanowar Loamspeaker
+            1 Llanowar Tribe
+            1 Majestic Genesis
+            1 Might of Old Krosa
+            1 Momentous Fall
+            1 Mossbridge Troll
+            1 Nature's Claim
+            1 Old One Eye
+            1 Old-Growth Troll
+            1 Psychosis Crawler
+            1 Ram Through
+            1 Rancor
+            1 Return of the Wildspeaker
+            1 Rhonas the Indomitable
+            1 Selvala, Heart of the Wilds
+            1 Shadowspear
+            1 Silverback Elder
+            1 Skullclamp
+            1 Sol Ring
+            1 Surrak and Goreclaw
+            1 Tamiyo's Safekeeping
+            1 Tangleweave Armor
+            1 The Great Henge
+            1 Topiary Stomper
+            1 Tribute to the World Tree
+            1 Watchful Radstag
+            1 Wayward Swordtooth
+            1 Yorvo, Lord of Garenbrig
+            1 Zopandrel, Hunger Dominus
+            Sideboard:
+
+            1 Allosaurus Shepherd
+            1 Brooding Saurian
+            1 Cosmic Hunger
+            1 Genesis Storm
+            1 Glissa Sunseeker
+            1 Grothama, All-Devouring
+            1 Metamorphosis
+            1 Shigeki, Jukai Visionary
+            1 Thrashing Brontodon
+            1 Tower of the Magistrate
+            1 Tranquil Frillback
         """.trimIndent()
     ).forEach { deck ->
         DeckBuildingListPrinter().printList(
             deck.first,
             deck.second.lines().takeWhile { it != "Sideboard:" },
-            "C:\\Users\\001121673\\private\\${deck.first}.pdf"
+            "C:\\Users\\001121673\\private\\magic\\deck-lists\\${deck.first}.pdf"
         )
     }
 }

@@ -104,5 +104,5 @@ class LegoBinderLabels(
 }
 
 fun main() {
-    LegoBinderLabels().printLabel("C:\\Users\\001121673\\LegoBinderLabels.pdf")
+    LegoBinderLabels().printLabel("C:\\Users\\001121673\\private\\LegoBinderLabels.pdf")
 }

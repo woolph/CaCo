@@ -204,5 +204,5 @@ class BoxLabels {
 }
 
 fun main() {
-    BoxLabels().printLabel("C:\\Users\\001121673\\BoxLabels.pdf")
+    BoxLabels().printLabel("C:\\Users\\001121673\\magic\\BoxLabels.pdf")
 }
