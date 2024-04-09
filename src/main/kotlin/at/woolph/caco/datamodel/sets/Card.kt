@@ -51,6 +51,17 @@ class Card(id: EntityID<UUID>) : UUIDEntity(id) {
     var promo by Cards.promo
     var token by Cards.token
     var image by Cards.image.transform({ it?.toString() }, { it?.let { URI(it) } })
+    var thumbnail by Cards.image.transform(
+        {
+            it?.toString()?.replace(".jpg",".png")
+            ?.replace("/small/front", "/png/front")
+        },
+        {
+            it?.replace(".png",".jpg")
+                ?.replace("/png/front", "/small/front")
+                ?.replace( "c1.scryfall.com/file/scryfall-cards/", "cards.scryfall.io/") // old url
+                ?.let { URI(it) } },
+        )
     var cardmarketUri by Cards.cardmarketUri.transform({ it?.toString() }, { it?.let { URI(it) } })
 
     var extra by Cards.extra

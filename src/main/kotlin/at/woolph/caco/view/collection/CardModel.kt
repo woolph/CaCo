@@ -24,7 +24,7 @@ open class CardModel(card: Card): ItemViewModel<Card>(card), Comparable<CardMode
 	val rarity = bind(Card::rarity)
 	val promo = bind(Card::promo)
 	val token = bind(Card::token)
-	val image = bind(Card::image)
+	val image = bind(Card::thumbnail)
 	val cardmarketUri = bind(Card::cardmarketUri)
 
 	val currencyNumberFormat = NumberFormat.getCurrencyInstance()

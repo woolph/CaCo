@@ -197,6 +197,8 @@ class PDFDocument(
 		return page
 	}
 
+	fun emptyPage(format: PDRectangle) = page(format) {}
+
 	private fun alternateCurrentPagePosition() {
 		currentPagePosition = when (currentPagePosition) {
 			PagePosition.LEFT -> PagePosition.RIGHT
