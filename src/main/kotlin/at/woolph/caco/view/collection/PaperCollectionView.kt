@@ -12,6 +12,7 @@ import javafx.scene.control.ToolBar
 import javafx.stage.FileChooser
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.font.PDType1Font
+import org.apache.pdfbox.pdmodel.font.Standard14Fonts
 import org.jetbrains.exposed.sql.count
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
@@ -51,7 +52,7 @@ class PaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
             action(coroutineScope) {
 				// TODO progress dialog
 				chooseFile("Open Image", arrayOf(FileChooser.ExtensionFilter("Deckbox Export", "*.csv"))).singleOrNull()?.let {
-					importDeckbox(it)
+					importDeckbox(it.toPath())
 					updateCards()
 				}
             }
@@ -61,7 +62,7 @@ class PaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
             action(coroutineScope) {
 				chooseFile("Choose File to Print Inventory", arrayOf(FileChooser.ExtensionFilter("PDF", "*.pdf")), mode = FileChooserMode.Save).singleOrNull()?.let {
 					// TODO progress dialog
-					val fontTitle = Font(PDType1Font.HELVETICA_BOLD, 10f)
+					val fontTitle = Font(PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 10f)
 
 					transaction {
 						createPdfDocument(it.toPath()) {
@@ -73,7 +74,7 @@ class PaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
 										// TODO calc metrics for all sets (so that formatting is the same for all pages)
 										set.cards.sortedBy { it.numberInSet }.filter { !it.promo }.let {
 											frame(marginTop = fontTitle.height + 20f) {
-												columns((it.size - 1) / 100 + 1, 100, 5f, 3.5f, Font(PDType1Font.HELVETICA, 6.0f)) {
+												columns((it.size - 1) / 100 + 1, 100, 5f, 3.5f, Font(PDType1Font(Standard14Fonts.FontName.HELVETICA), 6.0f)) {
 													var i = 0
 													it.filter { !it.token }.forEach {
                                                         val ownedCountEN = it.possessions.filter { it.language == CardLanguage.ENGLISH }.count()

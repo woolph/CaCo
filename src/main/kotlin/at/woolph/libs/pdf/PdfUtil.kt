@@ -21,6 +21,8 @@ import kotlin.math.floor
 import kotlin.math.min
 import kotlin.math.roundToInt
 
+fun PDRectangle.toPosition() = Position(width, height)
+
 class ColumnSpace(val columnManager: ColumnManager, val column: Int, val line: Int) {
 	fun drawText(text: String, color: Color, lineIndent: Float = 0f) {
 		val x = columnManager.node.box.lowerLeftX+lineIndent + column*(columnManager.maxLineWidth+columnManager.columnGap)
@@ -31,7 +33,7 @@ class ColumnSpace(val columnManager: ColumnManager, val column: Int, val line: I
 
 	fun drawTextWithRects(text: String, countEN: Int, countDE: Int) {
 		columnManager.apply {
-			val max = 4
+			val max = 1
 			val rectLineWidth = 1f
 			val rectSize = font.size-rectLineWidth*2
 			val rectGap = 2f
@@ -67,9 +69,9 @@ class ColumnSpace(val columnManager: ColumnManager, val column: Int, val line: I
 					val x = box.lowerLeftX + lineIndent + column * (maxLineWidth + columnGap)
 
 					if (more) {
-						drawText(symbolMore, font, x - textGap - symbolWidth, y, Color.BLACK)
+						drawText(symbolMore, font, x - textGap - symbolWidth, y - font.height, Color.BLACK)
 					}
-					drawText(text, font, x, y, color, maxLineWidth - lineIndent)
+					drawText(text, font, x, y - font.height, color, maxLineWidth - lineIndent)
 				}
 			}
 		}
@@ -190,7 +192,7 @@ class PDFDocument(
 ) : AutoCloseable by document {
 	var currentPagePosition = startingPagePosition
 
-	fun page(format: PDRectangle, block: Page.()->Unit): Page {
+	inline fun page(format: PDRectangle, block: Page.()->Unit): Page {
 		val page = Page(this, currentPagePosition, PDPage(format)).use { it.apply(block) }
 		alternateCurrentPagePosition()
 		document.addPage(page.pdPage)
@@ -199,7 +201,7 @@ class PDFDocument(
 
 	fun emptyPage(format: PDRectangle) = page(format) {}
 
-	private fun alternateCurrentPagePosition() {
+	fun alternateCurrentPagePosition() {
 		currentPagePosition = when (currentPagePosition) {
 			PagePosition.LEFT -> PagePosition.RIGHT
 			PagePosition.RIGHT -> PagePosition.LEFT
@@ -220,12 +222,12 @@ class PDFDocument(
 		PDImageXObject.createFromByteArray(document, image, imageName)
 }
 
-fun createPdfDocument(file: Path, startingPagePosition: PagePosition = PagePosition.RIGHT, block: PDFDocument.()->Unit) =
+inline fun createPdfDocument(file: Path, startingPagePosition: PagePosition = PagePosition.RIGHT, block: PDFDocument.()->Unit) =
 	PDFDocument(PDDocument(),startingPagePosition).use {
 		it.apply(block).save(file)
 	}
 
-fun createPdfDocument(startingPagePosition: PagePosition = PagePosition.RIGHT, block: PDFDocument.()->Unit) =
+inline fun createPdfDocument(startingPagePosition: PagePosition = PagePosition.RIGHT, block: PDFDocument.()->Unit) =
 	PDFDocument(PDDocument(),startingPagePosition).use {it.apply(block) }
 
 open class Node(val document: PDFDocument, val contentStream: PDPageContentStream, val box: PDRectangle) {
@@ -334,13 +336,11 @@ fun Node.drawText(text: String, font: Font, x: Float, color: Color) {
 }
 
 fun Node.drawText(text: String, font: Font, x: Float, y:Float, color: Color, maxLineWidth: Float) {
-	//val text = "This answer points to something one needs to keep in mind, no matter which PDFBox versi"
-
 	var printedText = text
 	var lineWidth = font.getWidth(printedText)
-	while(lineWidth > maxLineWidth) {
+	while(lineWidth > maxLineWidth && printedText.length > 4 ) {
 		val tempPrintedText = printedText.removeSuffix("...").trimEnd().dropLastWhile { !it.isWhitespace() }
-		if(!tempPrintedText.isEmpty())
+		if(tempPrintedText.isNotEmpty())
 			printedText = "$tempPrintedText ..."
 		else
 			printedText = printedText.removeSuffix("...").dropLast(1)+"..."

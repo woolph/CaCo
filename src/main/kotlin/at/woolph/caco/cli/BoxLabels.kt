@@ -14,6 +14,7 @@ import java.nio.file.Path
 
 interface BoxLabel {
     val title: String
+    val subtitle: String? get() = null
 }
 
 interface OneSymbolBoxLabel: BoxLabel {
@@ -31,6 +32,11 @@ object BlankBoxLabel: BoxLabel {
 
 open class GenericBoxLabel(override val title: String): OneSymbolBoxLabel {
     override val icon: ByteArray? by lazy { URI("https://c2.scryfall.com/file/scryfall-symbols/sets/default.svg?1647835200").renderSvgAsMythic() }
+}
+
+object CommanderStapelsBoxLabel: OneSymbolBoxLabel {
+    override val title: String = "CMD Staples"
+    override val icon: ByteArray? by lazy { URI("https://c2.scryfall.com/file/scryfall-symbols/sets/cmd.svg?1647835200").renderSvgAsMythic() }
 }
 
 object PlainsBoxLabel: OneSymbolBoxLabel {
@@ -63,12 +69,12 @@ class PlanechaseBoxLabel(index: Int): OneSymbolBoxLabel {
     override val icon: ByteArray? by lazy { URI("https://svgs.scryfall.io/card-symbols/CHAOS.svg").renderSvg() }
 }
 
-class AwaitingCatalogizationBoxLabel(index: Int): OneSymbolBoxLabel {
-    override val title = "Catalogize $index"
+class AwaitingCatalogizationBoxLabel(index: Int? = null, override val subtitle: String? = null): OneSymbolBoxLabel {
+    override val title = "Catalogize ${index ?: ""}"
     override val icon: ByteArray? by lazy { URI("https://svgs.scryfall.io/sets/wth.svg").renderSvgAsMythic() }
 }
 
-class AwaitingCollectionBoxLabel(index: Int): OneSymbolBoxLabel {
+class AwaitingCollectionBoxLabel(index: Int, override val subtitle: String? = null): OneSymbolBoxLabel {
     override val title = "To Be Filed $index"
     override val icon: ByteArray? by lazy { URI("https://svgs.scryfall.io/sets/ath.svg").renderSvgAsMythic() }
 }
@@ -106,12 +112,16 @@ class BoxLabels {
 //                    AwaitingCollectionBoxLabel(2),
 //                    PlanechaseBoxLabel(1),
 //                    PlanechaseBoxLabel(2),
-                    AwaitingCatalogizationBoxLabel(3),
-                    AwaitingCollectionBoxLabel(3),
-                    DuplicateBoxLabel("bbd"),
-                    DuplicateBoxLabel("stx"),
-                    DuplicateBoxLabel("khm"),
-                    DuplicateBoxLabel("mh2"),
+                    CommanderStapelsBoxLabel,
+                    AwaitingCatalogizationBoxLabel(subtitle = "Lands, Double-Sided Tokens & Art Series"),
+                    AwaitingCollectionBoxLabel(1, "Older sets (w/o binder)"),
+                    AwaitingCollectionBoxLabel(2, "Older sets (w/o binder)"),
+                    AwaitingCollectionBoxLabel(3, "Masters & Commander sets (w/o binder)"),
+                    AwaitingCollectionBoxLabel(4, "Duel Decks & other special sets"),
+//                    DuplicateBoxLabel("bbd"),
+//                    DuplicateBoxLabel("stx"),
+//                    DuplicateBoxLabel("khm"),
+//                    DuplicateBoxLabel("mh2"),
                 )
 
                 val fontColor = Color.BLACK
@@ -137,6 +147,7 @@ class BoxLabels {
 
                 val fontCode = Font(fontFamilyPlanewalker, bannerHeight * 0.7f)
                 val fontCode2 = Font(fontFamily72Black, bannerHeight * 0.7f)
+                val fontSubtitle = Font(fontFamilyPlanewalker, 6f)
 
                 val maximumWidth = columnWidth - 2*margin
                 val desiredHeight = bannerHeight * 0.8f
@@ -153,7 +164,8 @@ class BoxLabels {
                                     contentStream.apply {
                                         setLineWidth(1f)
                                         setStrokingColor(Color.GRAY)
-                                        addLine(box.lowerLeftX, box.lowerLeftY + foldingLine, box.upperRightX, box.lowerLeftY + foldingLine)
+                                        moveTo(box.lowerLeftX, box.lowerLeftY + foldingLine)
+                                        lineTo(box.upperRightX, box.lowerLeftY + foldingLine)
                                         stroke()
                                     }
                                     frame(margin, margin, margin, margin) {
@@ -172,6 +184,17 @@ class BoxLabels {
                                                     ?.let {
                                                         drawAsImageLeft(it, maximumIconWidth, desiredHeight, 0f, box.height - desiredHeight)
                                                     }
+                                                columnItem.subtitle?.let {
+                                                    drawText(
+                                                        it,
+                                                        fontSubtitle,
+                                                        HorizontalAlignment.LEFT,
+                                                        maximumIconWidth + defaultGapSize + 8f,
+                                                        box.height + fontSubtitle.descent + 2f,
+                                                        fontColor
+                                                    )
+
+                                                }
                                             }
                                             is MultipleSymbolBoxLabel -> {
                                                 drawText(

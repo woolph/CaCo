@@ -21,7 +21,7 @@ enum class CardLanguage {
 	}
 
 	companion object {
-		fun parse(languageCode: String) = when(languageCode) {
+		fun parse(languageCode: String) = when(languageCode.lowercase()) {
 			"en" -> ENGLISH
 			"de" -> GERMAN
 			"ru" -> RUSSIAN

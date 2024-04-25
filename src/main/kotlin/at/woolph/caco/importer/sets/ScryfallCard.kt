@@ -21,6 +21,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import java.net.URI
 import java.time.LocalDate
+import java.time.ZonedDateTime
 import java.util.*
 
 object LocalDateSerializer : KSerializer<LocalDate> {
@@ -61,22 +62,24 @@ object UUIDSerializer : KSerializer<UUID> {
         encoder.encodeString(value.toString())
     }
 }
+object ZonedDateTimeSerializer : KSerializer<ZonedDateTime> {
+    override val descriptor = PrimitiveSerialDescriptor("ZonedDateTime", PrimitiveKind.STRING)
+
+    override fun deserialize(decoder: Decoder): ZonedDateTime {
+        return ZonedDateTime.parse(decoder.decodeString())
+    }
+
+    override fun serialize(encoder: Encoder, value: ZonedDateTime) {
+        encoder.encodeString(value.toString())
+    }
+}
 val jsonSerializer = Json {
     serializersModule = SerializersModule {
         contextual(LocalDate::class, LocalDateSerializer)
         contextual(URI::class, URISerializer)
         contextual(UUID::class, UUIDSerializer)
+        contextual(ZonedDateTime::class, ZonedDateTimeSerializer)
     }
-}
-
-@Serializable
-enum class MtgColor {
-    @SerialName("W") White,
-    @SerialName("U") Blue,
-    @SerialName("B") Black,
-    @SerialName("R") Red,
-    @SerialName("G") Green,
-    @SerialName("C") Colorless,
 }
 
 @Serializable
@@ -114,7 +117,7 @@ data class ScryfallCardFace(
     val flavor_name: String? = null,
     val watermark: String? = null,
     val artist: String? = null,
-    @Contextual val artist_id: UUID,
+    @Contextual val artist_id: UUID? = null,
     @Contextual val illustration_id: UUID? = null,
     val image_uris: Map<String, @Contextual URI>? = null,
 ): ScryfallBase {
@@ -135,6 +138,7 @@ data class ScryfallCard(
     @Contextual val oracle_id: UUID? = null,
     val multiverse_ids: Set<Int>,
     val mtgo_id: Int? = null,
+    val mtgo_foil_id: Int? = null,
     val arena_id: Int? = null,
     val tcgplayer_id: Int? = null,
     val tcgplayer_etched_id: Int? = null,
@@ -155,6 +159,8 @@ data class ScryfallCard(
     val type_line: String? = null,
     val printed_type_line: String? = null,
     val oracle_text: String? = null,
+    val life_modifier: String? = null,
+    val hand_modifier: String? = null,
     val printed_text: String? = null,
     val power: String? = null,
     val toughness: String? = null,

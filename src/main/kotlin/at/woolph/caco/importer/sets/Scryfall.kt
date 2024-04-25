@@ -12,9 +12,12 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import io.ktor.utils.io.core.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.withContext
+import java.io.InputStream
+import kotlin.io.use
 import kotlin.math.max
 import kotlin.math.min
 
@@ -85,22 +88,36 @@ internal fun loadSetsFromScryfall(): Flow<ScryfallSet> =
     .filter(ScryfallSet::isNonDigitalSetWithCards)
 
 fun importSets(): Flow<CardSet> = flow {
-    val sets = loadSetsFromScryfall().toList()
+    val sets = loadSetsFromScryfall().filter { it.set_type != "memorabilia" }.toList()
 
     sets.filter(ScryfallSet::isRootSet).forEach {
         CardSet.newOrUpdate(it.code) { it.update(this) }
     }
     sets.forEach {
-        val setId = it.id
-        val setFound = CardSet.findById(it.code)
-            ?: it.parent_set_code?.let { CardSet.findById(it) }
-            ?: throw NoSuchElementException("no card set found for code ${it.code} or ${it.parent_set_code}")
+        try {
+            val setId = it.id
+            val setFound = CardSet.findById(it.code)
+                ?: it.parent_set_code?.let { CardSet.findById(it) }
+                ?: throw NoSuchElementException("no card set found for code ${it.code} or ${it.parent_set_code}")
 
-        ScryfallCardSet.newOrUpdate(setId) {
-            setCode = it.code
-            name = it.name
-            set = setFound
+            ScryfallCardSet.newOrUpdate(setId) {
+                setCode = it.code
+                name = it.name
+                set = setFound
+            }
+        } catch (t: Throwable) {
+            LOG.error("error while importing set ${it.name}", t)
         }
     }
     emitAll(CardSet.all().asFlow())
+}
+
+suspend fun downloadBulkData(type: String, block: suspend (InputStream) -> Unit) {
+    val bulkData = request<ScryfallBulkData>("https://api.scryfall.com/bulk-data/${type}")
+
+    withContext(Dispatchers.IO) {
+        bulkData.downloadUri.toURL().openConnection().getInputStream().use {
+            block(it)
+        }
+    }
 }

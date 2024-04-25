@@ -7,10 +7,13 @@ import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.sets.*
 import at.woolph.caco.importer.sets.paddingCollectorNumber
 import com.opencsv.CSVReader
+import com.opencsv.CSVWriter
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.io.File
 import java.io.FileReader
+import java.io.FileWriter
+import java.nio.file.Path
 
 fun String.parseLanguageDeckbox(): CardLanguage = when (this) {
 	"English" -> CardLanguage.ENGLISH
@@ -49,13 +52,17 @@ fun CardCondition.toDeckboxCondition(): String = when (this) {
     else -> throw Exception("unknown condition")
 }
 
-fun importDeckbox(file: File) {
+fun importDeckbox(file: Path) {
     println("importing deckbox collection export file $file")
     transaction {
         CardPossessions.deleteAll()
 
-        val reader = CSVReader(FileReader(file))
-        val header = reader.readNext().withIndex().associate { it.value to it.index }
+        val writer = CSVWriter(FileWriter(File("not-imported.csv")))
+        val reader = CSVReader(FileReader(file.toFile()))
+        val header = reader.readNext().also {
+            writer.writeNext(it)
+        }.withIndex().associate { it.value to it.index }
+
         operator fun Array<String>.get(column: String): String? = header[column]?.let {this[it] }
 
         var nextLine: Array<String>? = reader.readNext()
@@ -66,7 +73,6 @@ fun importDeckbox(file: File) {
                 val edition = nextLine["Edition"]!!
                 val setName = mapSetName(edition.removePrefix("Prerelease Events: ").removePrefix("Extras: ").removePrefix("Promos: ").removePrefix("Promo Pack: "))
                 val token = edition.startsWith("Extras: ")
-                val setCode = nextLine["Edition Code"]!!.uppercase()
                 val language = nextLine["Language"]!!.parseLanguageDeckbox()
                 val condition = when (nextLine["Condition"]) {
                     "Mint", "Near Mint" -> CardCondition.NEAR_MINT
@@ -77,6 +83,22 @@ fun importDeckbox(file: File) {
                     else -> CardCondition.UNKNOWN
                 }
                 val isPromo = edition.startsWith("Promos: ") || edition.startsWith("Promo Pack: ")
+                var isTheListCard = false
+                val setCode = nextLine["Edition Code"]!!.uppercase().let {
+                    if (isPromo)
+                        it.removePrefix("P")
+                    else
+                        it
+                }.let {
+                    if (it == "PLIST") {
+                        isTheListCard = true
+                        nextLine!!["Printing Note"]!!.uppercase()
+                    } else
+                        it
+                }.let {
+                    setCodeMapping.getOrDefault(it, it)
+                }
+
                 val stampPrereleaseDate = edition.startsWith("Prerelease Events: ")
                 val foil = when {
                     stampPrereleaseDate -> true
@@ -84,7 +106,7 @@ fun importDeckbox(file: File) {
                     else -> false
                 }
                 val stampPlaneswalkerSymbol = nextLine["Promo"] == "promo"
-                val markPlaneswalkerSymbol = nextLine["Artist Proof"] == "proof"
+                val markPlaneswalkerSymbol = isTheListCard || nextLine["Artist Proof"] == "proof"
                 val cardNumber = mapSetNumber(nextLine["Card Number"]!!, setName).let { paddingCollectorNumber(when {
                     token -> "T$it"
                     setName == "War of the Spark Japanese Alternate Art" -> "$it★ P"
@@ -123,15 +145,11 @@ fun importDeckbox(file: File) {
                 }
             } catch (e: Exception) {
                 println("unable to import: ${e.message}")
+                writer.writeNext(nextLine)
             }
             nextLine = reader.readNext()
         }
     }
-
-    println("new setNameMapping")
-    println("\tval setNameMapping = mutableMapOf(")
-    setNameMapping.forEach { t, u -> println("\"$t\" to \"$u\",") }
-    println("\t)")
 }
 
 fun getCard(setCode: String, setName: String, cardNumber: String, token: Boolean, cardName: String, rarity: Rarity?, manaCost: String?, interactiveMode: Boolean): Card {
@@ -152,7 +170,7 @@ fun getCard(setCode: String, setName: String, cardNumber: String, token: Boolean
 //        return@mapNotNull Card.findById(it[Cards.id])
 //    }.map{it.name}.toList()
 
-    val cards = (Cards innerJoin ScryfallCardSets innerJoin CardSets).slice(Cards.id).select {
+    val cards = (Cards innerJoin ScryfallCardSets innerJoin CardSets).select(Cards.id).where {
         CardSets.name.eq(setName) and (Cards.numberInSet.eq(cardNumber))
         // TODO use setCode (does not work out of the box)
     }.mapNotNull {
@@ -164,7 +182,7 @@ fun getCard(setCode: String, setName: String, cardNumber: String, token: Boolean
     if (card != null) {
         return card
     } else if (interactiveMode) {
-        val possibleCards = Cards.slice(Cards.id).select {
+        val possibleCards = Cards.select(Cards.id).where {
             // FIXME older sets (eg. Portal Second Age have wrong setNumber values! identification via setNumber therefore not possible for these sets
             val s = Cards.numberInSet.eq(cardNumber) and Cards.token.eq(token)
             // and Cards.name.eq(cardName) // token vs. mini-game-cards result in multiples
@@ -198,6 +216,13 @@ fun getCard(setCode: String, setName: String, cardNumber: String, token: Boolean
         throw Exception("card $cardNumber (\"$cardName\") not found in set $setName")
     }
 }
+
+val setCodeMapping = mutableMapOf(
+    "UZ" to "USG",
+    "5E" to "5ED",
+    "P2" to "P02",
+    "AN" to "ARN",
+)
 
 /**
  * key is deckbox name

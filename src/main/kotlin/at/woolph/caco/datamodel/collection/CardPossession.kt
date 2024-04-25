@@ -1,5 +1,7 @@
 package at.woolph.caco.datamodel.collection
 
+import at.woolph.caco.datamodel.decks.Builds.default
+import at.woolph.caco.datamodel.decks.Builds.index
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.Cards
 import org.jetbrains.exposed.dao.IntEntity
@@ -14,7 +16,6 @@ object CardPossessions : IntIdTable() {
 	val datetimeOfAddition = datetime("datetimeOfAddition").index().defaultExpression(CurrentDateTime)
     val language = enumeration("language", CardLanguage::class).default(CardLanguage.UNKNOWN).index()
     val condition = enumeration("condition", CardCondition::class).default(CardCondition.UNKNOWN).index()
-	//val foil = enumeration("foil", Foil::class).default(Foil.NONFOIL).index()
     val foil = bool("foil").default(false).index()
     val stampPrereleaseDate = bool("stampPrereleaseDate").default(false).index()
 
@@ -34,6 +35,7 @@ object CardPossessions : IntIdTable() {
 	 *
 	 */
 	val tradeLock = bool("tradeLock").default(false).index()
+	val location = varchar("location", length = 128).index().nullable() // here you can mark where the card is to be found (collection binder, trade binder, deck, lent to someone, storage box, ...)
 }
 
 class CardPossession(id: EntityID<Int>) : IntEntity(id) {
@@ -47,5 +49,7 @@ class CardPossession(id: EntityID<Int>) : IntEntity(id) {
     var stampPrereleaseDate by CardPossessions.stampPrereleaseDate
     var stampPlaneswalkerSymbol by CardPossessions.stampPlaneswalkerSymbol
     var markPlaneswalkerSymbol by CardPossessions.markPlaneswalkerSymbol
+    var tradeLock by CardPossessions.tradeLock
+    var location by CardPossessions.location
     //var prereleasePromo by CardPossessions.prereleasePromo
 }

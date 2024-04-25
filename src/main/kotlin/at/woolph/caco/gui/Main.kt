@@ -19,11 +19,9 @@ import tornadofx.progressbar
 import tornadofx.tab
 import tornadofx.tabpane
 
-private val log by logger("at.woolph.caco.MainGui")
 
 fun main(args: Array<String>) {
 	Databases.init()
-	log.trace("launching UI")
 	launch<MyApp>(*args)
 }
 

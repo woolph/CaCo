@@ -35,22 +35,18 @@ object ImageCache {
         }
     }
 
-    suspend fun getImageByteArray(id: String, imageLoader: () -> ByteArray?): ByteArray? {
-        val cachedImage = newSuspendedTransaction(Dispatchers.IO, Databases.imageCache) {
-            CachedImage.findById(id)
-        }
-        return (cachedImage?.content ?: imageLoader()?.also { renderedImage ->
-            try {
-                newSuspendedTransaction(Dispatchers.IO, Databases.imageCache) {
+    suspend fun getImageByteArray(id: String, imageLoader: () -> ByteArray?): ByteArray? =
+        newSuspendedTransaction(Dispatchers.IO, Databases.imageCache) {
+            CachedImage.findById(id)?.content ?: imageLoader()?.also { renderedImage ->
+                try {
                     CachedImage.newOrUpdate(id) {
                         content = renderedImage
                     }
+                } catch(e: Throwable) {
+                    null
                 }
-            } catch(e: Throwable) {
-                null
             }
-        })
-    }
+        }
 
     suspend fun getImage(id: String, imageLoader: () -> ByteArray?): Image? =
         getImageByteArray(id, imageLoader)?.let { Image(ByteArrayInputStream(it)) }

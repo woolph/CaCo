@@ -65,3 +65,19 @@ internal inline fun <reified T: ScryfallBase> paginatedDataRequest(initialQuery:
         progressIndicator?.finished()
     }
 }
+
+internal suspend inline fun <reified T: ScryfallBase> request(query: String): T {
+    HttpClient(CIO) {
+        install(ContentNegotiation) {
+            json(jsonSerializer)
+        }
+    }.use { client ->
+        LOG.debug("requesting data from $query")
+        val response: HttpResponse = client.get(query)
+        if (response.status.isSuccess()) {
+            return response.body<T>()
+        } else {
+            throw Exception("request failed with status code ${response.status.description}")
+        }
+    }
+}

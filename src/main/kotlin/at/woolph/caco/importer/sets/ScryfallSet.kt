@@ -36,7 +36,7 @@ data class ScryfallSet(
 ): ScryfallBase {
     override fun isValid() = objectType == "set"
     fun isNonDigitalSetWithCards() = !digital && card_count > 0
-    fun isRootSet() = parent_set_code == null || code.endsWith(parent_set_code)
+    fun isRootSet() = parent_set_code == null || !code.endsWith(parent_set_code)
     fun update(cardSet: CardSet) = cardSet.apply {
         name = this@ScryfallSet.name
         dateOfRelease = this@ScryfallSet.released_at

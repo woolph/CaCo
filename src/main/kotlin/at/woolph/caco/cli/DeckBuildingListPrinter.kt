@@ -3,18 +3,11 @@ package at.woolph.caco.cli
 import at.woolph.caco.datamodel.Databases
 import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.datamodel.sets.*
-import at.woolph.caco.imagecache.ImageCache
 import at.woolph.libs.pdf.*
 import be.quodlibet.boxable.HorizontalAlignment
-import kotlinx.coroutines.runBlocking
 import org.apache.pdfbox.pdmodel.common.PDRectangle
-import org.apache.pdfbox.pdmodel.font.PDType0Font
 import org.apache.pdfbox.pdmodel.font.PDType1Font
-import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.or
-import org.jetbrains.exposed.sql.select
+import org.apache.pdfbox.pdmodel.font.Standard14Fonts
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.awt.Color
 import java.nio.file.Path
@@ -34,23 +27,9 @@ class DeckBuildingListPrinter {
             val fontColor = Color.BLACK
             val fontFamily72Black = loadType0Font(javaClass.getResourceAsStream("/fonts/72-Black.ttf")!!)
             val fontTitle = Font(fontFamily72Black, 12f)
-            val fontCard = Font(PDType1Font.HELVETICA, 8f)
-            val fontCode = Font(PDType1Font.HELVETICA_OBLIQUE, 6f)
+            val fontCard = Font(PDType1Font(Standard14Fonts.FontName.HELVETICA), 8f)
+            val fontCode = Font(PDType1Font(Standard14Fonts.FontName.HELVETICA_OBLIQUE), 6f)
 
-            data class Position(
-                val x: Float,
-                val y: Float,
-            ) {
-                operator fun plus(p: Position) = Position(x + p.x, y + p.y)
-                operator fun times(d: Float) = Position(x * d, y * d)
-                operator fun times(p: Position) = Position(x * p.x, y * p.y)
-                operator fun div(d: Float) = Position(x / d, y / d)
-                operator fun div(p: Position) = Position(x / p.x, y / p.y)
-                operator fun minus(p: Position) = Position(x - p.x, y -p.y)
-                operator fun unaryPlus() = this
-                operator fun unaryMinus() = Position(-x, -y)
-            }
-            fun PDRectangle.toPosition() = Position(width, height)
 
             val margin = Position(10.0f, 10.0f)
             val pageGap = 10.0f
@@ -59,40 +38,45 @@ class DeckBuildingListPrinter {
             val rows = 3
             val columns = 3
             val cardGap = Position(5.0f, 5.0f)
-            val cardSize = Position((pageSize.x - cardGap.x * (columns - 1))/columns, (pageSize.y - cardGap.y * (rows - 1))/rows)
+            val cardSize = Position(
+                (pageSize.x - cardGap.x * (columns - 1)) / columns,
+                (pageSize.y - cardGap.y * (rows - 1)) / rows
+            )
 
             val pageOffset = Position(pageSize.x + pageGap, 0f)
             val cardOffset = Position(cardSize.x + cardGap.x, cardSize.y + cardGap.y)
 
 
             fun position(index: Int): Position {
-                val page = when(index) {
-                    in 0 ..< 9 -> 0
-                    in 9 ..< 18 -> 1
+                val page = when (index) {
+                    in 0..<9 -> 0
+                    in 9..<18 -> 1
                     else -> throw IllegalArgumentException("index $index is not between 0 ..< 18")
                 }
 
-                val row = when(index - 9 * page) {
-                    in 0 ..< 3 -> 0
-                    in 3 ..< 6 -> 1
-                    in 6 ..< 9 -> 2
+                val row = when (index - 9 * page) {
+                    in 0..<3 -> 0
+                    in 3..<6 -> 1
+                    in 6..<9 -> 2
                     else -> throw IllegalStateException()
                 }
 
                 val column = index - 9 * page - 3 * row
-                require(column in 0 ..< 3)
+                require(column in 0..<3)
 
                 return margin +
                         pageOffset * page.toFloat() +
                         cardOffset * Position(column.toFloat(), rows - row.toFloat() - 1)
             }
 
-            val blackListForSetSearch = listOf(
+            val basics = listOf(
                 "Plains",
                 "Island",
                 "Swamp",
                 "Mountain",
                 "Forest",
+            )
+            val blackListForSetSearch = basics + listOf(
                 "Command Tower",
                 "Exotic Orchard",
                 "Evolving Wilds",
@@ -105,28 +89,34 @@ class DeckBuildingListPrinter {
                 "Fellwar Stone",
             )
             page(pageFormat) {
-                frame(12f,12f,12f,12f) {
+                frame(12f, 12f, 12f, 12f) {
                     drawText(deckName, fontTitle, HorizontalAlignment.CENTER, 0f, fontTitle.height, fontColor)
+                    val decklistEntryPattern = Regex("""^\s*(\d+)?\s+(.+)$""")
                     val entries = transaction {
                         cardNames
-                            .map {
-                                val tokens = it.split(Regex("\\s"), 2)
-                                tokens[0].toInt() to tokens[1]
+                            .mapNotNull {
+                                decklistEntryPattern.find(it)?.let {
+                                    (it.groupValues[1]?.toInt() ?: 1) to it.groupValues[2]
+                                }
                             }
                             .sortedBy { it.second }
                             .filter { it.first > 0 }
                             .map { (amount, cardName) ->
                                 val cardSets =
                                     CardPossessions.innerJoin(Cards).innerJoin(ScryfallCardSets).innerJoin(CardSets)
-                                        .slice(CardSets.id).select {
+                                        .select(CardSets.id, Cards.numberInSet).where {
                                             (Cards.name match cardName)
                                         }.mapNotNull {
-                                            CardSet.findById(it[CardSets.id])
-                                        }.groupingBy { it.shortName.toString().uppercase() }
+                                            "${it[CardSets.id].value.uppercase()} #${it[Cards.numberInSet].uppercase()}"
+                                        }.groupingBy { it }
                                         .eachCount()
                                 Triple(amount, cardName, cardSets)
                             }
+                    }.let { // sorts the basics to the bottom of the list sorted in WUBRG order
+                        val (part1, part2) = it.partition { (_, cardName, _) -> cardName !in basics }
+                        part1 + part2.sortedBy { (_, cardName, _) -> basics.indexOf(cardName) }
                     }
+
                     sequenceOf(
                         entries.take(50) to 0f,
                         entries.drop(50) to box.width / 2,
@@ -137,7 +127,7 @@ class DeckBuildingListPrinter {
                                 val cardSetsString = if (cardName in blackListForSetSearch)
                                     "[*]" else "[${
                                     cardSets.entries.sortedByDescending(Map.Entry<String, Int>::value)
-                                        .joinToString { if (it.value > 1) "${it.key}+" else it.key }
+                                        .joinToString { if (it.value > 1) "${it.key}+" else it.key}
                                 }]"
                                 drawText(
                                     "$amount $cardName",
@@ -169,7 +159,7 @@ class DeckBuildingListPrinter {
 
 suspend fun main() {
     listOf(
-    "Anim Pakal - Go Wide or Go Nome" to """
+        "Anim Pakal - Go Wide or Go Nome" to """
         1 Alpine Meadow
         1 Ancient Den
         1 Battlefield Forge
@@ -271,7 +261,7 @@ suspend fun main() {
         1 The Millennium Calendar
         1 Threefold Thunderhulk
     """.trimIndent(),
-    "Gale Poison" to """1 Castle Locthwain
+        "Gale Poison" to """1 Castle Locthwain
 1 Castle Vantress
 1 Clearwater Pathway // Murkwater Pathway
 1 Command Tower
@@ -401,7 +391,7 @@ Sideboard:
 1 Voidwing Hybrid
 1 Whisper of the Dross
 """.trimIndent(),
- "Delina - Let Chaos Ensue" to """1 Access Tunnel
+        "Delina - Let Chaos Ensue" to """1 Access Tunnel
 1 Castle Embereth
 1 Hidden Volcano
 1 Maze of Ith
@@ -493,7 +483,7 @@ Sideboard:
 1 World at War
 1 Zariel, Archduke of Avernus
     """.trimIndent(),
-"Tazri - To The Best of My Ability" to """
+        "Tazri - To The Best of My Ability" to """
         1 Cascading Cataracts
         1 City of Brass
         1 Command Tower
@@ -595,7 +585,7 @@ Sideboard:
         1 Wild Cantor
         1 Zirda, the Dawnwaker
     """.trimIndent(),
-        "Codie, Vociferous Codex - Cycle of Living End" to  """
+        "Codie, Vociferous Codex - Cycle of Living End" to """
         1 Alpine Meadow
         1 Arctic Treeline
         1 Ash Barrens
@@ -815,110 +805,120 @@ Sideboard:
             1 Zof Consumption // Zof Bloodbog
         """.trimIndent(),
         "Kenrith - King of Hearts" to """
-            1 Azorius Guildgate
-            1 Baldur's Gate
-            1 Basilisk Gate
-            1 Black Dragon Gate
-            1 Boros Guildgate
-            1 Citadel Gate
-            1 Cliffgate
-            1 Dimir Guildgate
-            1 Forbidden Orchard
-            4 Forest
-            1 Gateway Plaza
-            1 Golgari Guildgate
-            1 Gond Gate
-            1 Gruul Guildgate
-            1 Heap Gate
-            1 Homeward Path
-            1 Island
-            1 Izzet Guildgate
-            1 Manor Gate
-            1 Maze of Ith
-            1 Maze's End
-            1 Mountain
-            1 Orzhov Guildgate
-            2 Plains
-            1 Plaza of Harmony
-            1 Rakdos Guildgate
-            1 Rogue's Passage
-            1 Sea Gate
-            1 Selesnya Guildgate
-            1 Simic Guildgate
-            1 Swamp
-            1 The Black Gate
-            1 Thran Portal
-            1 Allure of the Unknown
-            1 Arcane Signet
-            1 Baleful Mastery
-            1 Benevolent Offering
-            1 Benthic Explorers
-            1 Bigger on the Inside
-            1 Bramble Sovereign
-            1 Circuitous Route
-            1 Círdan the Shipwright
-            1 Creative Technique
-            1 Crop Rotation
-            1 Cultivate
-            1 Discerning Financier
-            1 Divine Gambit
-            1 Dubious Challenge
-            1 Eon Frolicker
-            1 Excavation Technique
-            1 Explore the Underdark
-            1 Farseek
-            1 Flumph
-            1 Forcemage Advocate
-            1 Generous Gift
-            1 Healing Technique
-            1 Heartstone
-            1 Incarnation Technique
-            1 Infernal Offering
-            1 Ingenious Mastery
-            1 Intellectual Offering
-            1 Keen Duelist
-            1 Kenrith, the Returned King
-            1 Kros, Defense Contractor
-            1 Loran of the Third Path
-            1 Metamorphose
-            1 Nature's Lore
-            1 Nullmage Advocate
-            1 Pendant of Prosperity
-            1 Pulsemage Advocate
-            1 Rampant Growth
-            1 Replication Technique
-            1 Rootweaver Druid
-            1 Scheming Symmetry
-            1 Secret Rendezvous
-            1 Seedborn Muse
-            1 Sheltering Ancient
-            1 Shieldmage Advocate
-            1 Skullwinder
-            1 Sol Ring
-            1 Soldevi Golem
-            1 Spectral Searchlight
-            1 Spore Frog
-            1 Spurnmage Advocate
-            1 Sudden Salvation
-            1 Tempt with Discovery
-            1 Tenuous Truce
-            1 The Twelfth Doctor
-            1 The Wedding of River Song
-            1 Training Grounds
-            1 Verdant Mastery
-            1 Victory Chimes
-            1 Wedding Ring
-            1 Willbreaker
-            1 Your Temple Is Under Attack
-            1 Zirda, the Dawnwaker
-            Sideboard:
+1 Azorius Guildgate
+1 Baldur's Gate
+1 Basilisk Gate
+1 Black Dragon Gate
+1 Boros Guildgate
+1 Citadel Gate
+1 Cliffgate
+1 Dimir Guildgate
+1 Forbidden Orchard
+4 Forest
+1 Gateway Plaza
+1 Golgari Guildgate
+1 Gond Gate
+1 Gruul Guildgate
+1 Heap Gate
+1 Homeward Path
+1 Island
+1 Izzet Guildgate
+1 Karn's Bastion
+1 Manor Gate
+1 Maze of Ith
+1 Maze's End
+1 Mountain
+1 Orzhov Guildgate
+1 Plains
+1 Plaza of Harmony
+1 Rakdos Guildgate
+1 Rogue's Passage
+1 Sea Gate
+1 Selesnya Guildgate
+1 Simic Guildgate
+1 Swamp
+1 The Black Gate
+1 Thran Portal
+1 Allure of the Unknown
+1 Arcane Signet
+1 Baleful Mastery
+1 Benevolent Offering
+1 Benthic Explorers
+1 Bigger on the Inside
+1 Biomancer's Familiar
+1 Bramble Sovereign
+1 Circuitous Route
+1 Círdan the Shipwright
+1 Creative Technique
+1 Crop Rotation
+1 Curse of Opulence
+1 Discerning Financier
+1 Divine Gambit
+1 Dryad of the Ilysian Grove
+1 Dubious Challenge
+1 Eon Frolicker
+1 Excavation Technique
+1 Exploration
+1 Explore the Underdark
+1 Flumph
+1 Forcemage Advocate
+1 Generous Gift
+1 Healing Technique
+1 Heartstone
+1 Incarnation Technique
+1 Infernal Offering
+1 Ingenious Mastery
+1 Intellectual Offering
+1 Keen Duelist
+1 Kenrith, the Returned King
+1 Kros, Defense Contractor
+1 Loran of the Third Path
+1 Metamorphose
+1 Nullmage Advocate
+1 Open the Way
+1 Pendant of Prosperity
+1 Prize Pig
+1 Pulsemage Advocate
+1 Replication Technique
+1 Rootweaver Druid
+1 Scheming Symmetry
+1 Secret Rendezvous
+1 Seedborn Muse
+1 Shieldmage Advocate
+1 Skullwinder
+1 Sol Ring
+1 Spectral Searchlight
+1 Spelunking
+1 Spore Frog
+1 Spurnmage Advocate
+1 Sudden Salvation
+1 Tempt with Discovery
+1 Tenuous Truce
+1 The Twelfth Doctor
+1 The Wedding of River Song
+1 Training Grounds
+1 Verdant Mastery
+1 Victory Chimes
+1 Wedding Ring
+1 Your Temple Is Under Attack
+1 Zirda, the Dawnwaker
+Sideboard:
 
-            1 Cowardice
-            1 Dismiss into Dream
-            1 Kodama's Reach
-            1 Open the Gates
-            1 Shadrix Silverquill
-            1 Wilderness Reclamation
+1 Cowardice
+1 Cultivate
+1 Dismiss into Dream
+1 Expedition Map
+1 Farseek
+1 Kodama's Reach
+1 Leyline of Anticipation
+1 Nature's Lore
+1 Open the Gates
+1 Rampant Growth
+1 Shadrix Silverquill
+1 Sheltering Ancient
+1 Vedalken Orrery
+1 Wilderness Reclamation
+1 Willbreaker
         """.trimIndent(),
         "Kalamax - Spellosaurus Rex" to """
 1 Blighted Woodland
@@ -939,8 +939,6 @@ Sideboard:
 1 Simic Growth Chamber
 1 Survivors' Encampment
 1 Terramorphic Expanse
-1 An Offer You Can't Refuse
-1 Archdruid's Charm
 1 Archmage Emeritus
 1 Beast Within
 1 Big Score
@@ -957,7 +955,6 @@ Sideboard:
 1 Electrodominance
 1 Entish Restoration
 1 Expansion // Explosion
-1 Fierce Guardianship
 1 Fling
 1 Frantic Search
 1 Goblin Electromancer
@@ -975,27 +972,30 @@ Sideboard:
 1 Melek, Izzet Paragon
 1 Melek, Reforged Researcher
 1 Murmuring Mystic
+1 Mystic Confluence
 1 Narset's Reversal
 1 Natural Connection
 1 Nexus of Fate
 1 Ojer Pakpatiq, Deepest Epoch // Temple of Cyclical Time
-1 Paradise Mantle
 1 Primal Amulet // Primal Wellspring
 1 Prophetic Bolt
 1 Quick Study
 1 Ral, Storm Conduit
 1 Rashmi, Eternities Crafter
 1 Relic of Legends
+1 Return the Favor
 1 Roiling Regrowth
+1 Saheeli, Sublime Artificer
 1 Silundi Vision // Silundi Isle
 1 Slice in Twain
+1 Snap
 1 Sol Ring
 1 Soul's Fire
 1 Springleaf Drum
+1 Storm-Kiln Artist
 1 Sublime Epiphany
 1 Swarm Intelligence
 1 Talrand, Sky Summoner
-1 Temur Charm
 1 Thousand-Year Storm
 1 Thrill of Possibility
 1 Twinning Staff
@@ -1025,6 +1025,7 @@ Sideboard:
 1 Eon Frolicker
 1 Etali, Primal Storm
 1 Evolution Charm
+1 Fierce Guardianship
 1 Flame Sweep
 1 Frontier Bivouac
 1 Glademuse
@@ -1040,6 +1041,7 @@ Sideboard:
 1 Nascent Metamorph
 1 Niblis of Frost
 1 Pako, Arcane Retriever
+1 Paradise Mantle
 1 Price of Progress
 1 Pyromancer's Goggles
 1 Ravenous Gigantotherium
@@ -1049,9 +1051,8 @@ Sideboard:
 1 Starstorm
 1 Steam Vents
 1 Strength of the Tajuru
-1 Surreal Memoir
+1 Temur Charm
 1 Tribute to the Wild
-1 Underworld Breach
 1 Wort, the Raidmother
 1 Xyris, the Writhing Storm
 1 Yavimaya Coast
@@ -1444,7 +1445,104 @@ Sideboard:
             1 Thrashing Brontodon
             1 Tower of the Magistrate
             1 Tranquil Frillback
-        """.trimIndent()
+        """.trimIndent(),
+        "Tyvar - Dorks shall inherit the Earth" to """
+            1 Blooming Marsh
+            1 Castle Garenbrig
+            1 Cavern of Souls
+            1 Command Tower
+            1 Dryad Arbor
+            1 Evolving Wilds
+            1 Fabled Passage
+            12 Forest
+            1 Golgari Rot Farm
+            1 Haunted Mire
+            1 Llanowar Wastes
+            1 Nurturing Peatland
+            1 Overgrown Tomb
+            1 Prismatic Vista
+            4 Swamp
+            1 Terramorphic Expanse
+            1 Verdant Catacombs
+            1 Wirewood Lodge
+            1 Woodland Chasm
+            1 Atomize
+            1 Awakening
+            1 Beast Whisperer
+            1 Beast Within
+            1 Beastcaller Savant
+            1 Benefactor's Draught
+            1 Boreal Druid
+            1 Canopy Tactician
+            1 Circle of Dreams Druid
+            1 Copperhorn Scout
+            1 Cryptolith Rite
+            1 Deadly Rollick
+            1 Deathrite Shaman
+            1 Devoted Druid
+            1 Dwynen, Gilt-Leaf Daen
+            1 Elven Chorus
+            1 Elves of Deep Shadow
+            1 Elvish Archdruid
+            1 Elvish Champion
+            1 Elvish Harbinger
+            1 Elvish Mystic
+            1 Elvish Promenade
+            1 Elvish Warmaster
+            1 End-Raze Forerunners
+            1 Ezuri, Renegade Leader
+            1 Finale of Devastation
+            1 Fyndhorn Elves
+            1 Galadhrim Ambush
+            1 Guardian Project
+            1 Gwenna, Eyes of Gaea
+            1 Gyre Sage
+            1 Haldir, Lórien Lieutenant
+            1 Heritage Druid
+            1 Heroic Intervention
+            1 Immaculate Magistrate
+            1 Imperious Perfect
+            1 Incubation Druid
+            1 Inspiring Call
+            1 Joraga Treespeaker
+            1 Joraga Warcaller
+            1 Leaf-Crowned Visionary
+            1 Leyline of Abundance
+            1 Llanowar Elves
+            1 Llanowar Tribe
+            1 Llanowar Visionary
+            1 Marwyn, the Nurturer
+            1 Nyxbloom Ancient
+            1 Overwhelming Encounter
+            1 Paradise Druid
+            1 Phyrexian Arena
+            1 Priest of Titania
+            1 Reclamation Sage
+            1 Rishkar, Peema Renegade
+            1 Roaming Throne
+            1 Shaman of the Pack
+            1 Sight of the Scalelords
+            1 Song of Freyalise
+            1 Storm the Seedcore
+            1 Sylvan Library
+            1 The Great Henge
+            1 Tyvar Kell
+            1 Tyvar the Bellicose
+            1 Tyvar, Jubilant Brawler
+            1 Undercity Upheaval
+            1 Viridian Joiner
+            1 Vitalize
+            1 Wirewood Channeler
+            Sideboard:
+
+            1 Coat of Arms
+            1 Door of Destinies
+            1 Feed the Swarm
+            1 Galadhrim Brigade
+            1 Harmonize
+            1 Overwhelming Stampede
+            1 Umbral Mantle
+        """.trimIndent(),
     ).forEach { deck ->
         DeckBuildingListPrinter().printList(
             deck.first,

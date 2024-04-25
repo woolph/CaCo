@@ -1,28 +1,46 @@
 package at.woolph.caco.cli
 
-import at.woolph.caco.datamodel.Databases
-import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.imagecache.ImageCache
 import at.woolph.libs.pdf.*
 import be.quodlibet.boxable.HorizontalAlignment
+import com.github.ajalt.mordant.animation.coroutines.animateInCoroutine
+import com.github.ajalt.mordant.rendering.TextColors
+import com.github.ajalt.mordant.terminal.Terminal
+import com.github.ajalt.mordant.widgets.progress.*
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.awt.Color
 import java.nio.file.Path
-import java.util.*
 
-class CollectionPagePreview {
+class CollectionPagePreview(
+    val terminal: Terminal,
+) {
     @OptIn(ExperimentalStdlibApi::class)
-    suspend fun printLabel(setCode: String, file: Path) {
-        Databases.init()
+    suspend fun printLabel(setCode: String, file: Path) = coroutineScope {
+        terminal.println("Generating collection page preview for set $setCode")
+        val progress = progressBarContextLayout<String> {
+            percentage()
+            progressBar()
+            completed(style = terminal.theme.success)
+            timeRemaining(style = TextColors.magenta)
+            text { "$context" }
+        }.animateInCoroutine(terminal, context = "fetching cards")
+
+        launch { progress.execute() }
 
         val cardList = transaction {
             CardSet.findById(setCode)?.cards ?: emptyList()
-        }.sortedBy { it.numberInSet }.asSequence().map{ Optional.of(it) }
+        }.sortedBy { it.numberInSet }
 
-        val collectionPages = cardList.chunked(9)
+        progress.update { total = cardList.size.toLong() }
+
+        val endsWithLetter = Regex("\\d+")
+        val (ordinaryCardList, specialVersionCardList) = cardList.partition { it.numberInSet.matches(endsWithLetter) }
+        val collectionPages = ordinaryCardList.chunked(9) + specialVersionCardList.chunked(9)
 
         createPdfDocument(file, PagePosition.LEFT) {
             val pageFormat = PDRectangle.A4
@@ -32,21 +50,6 @@ class CollectionPagePreview {
             val fontCode = Font(fontFamily72Black, 10f)
 
             val mtgCardBack = createFromFile(Path.of("./card-back.jpg"))
-
-            data class Position(
-                val x: Float,
-                val y: Float,
-            ) {
-                operator fun plus(p: Position) = Position(x + p.x, y + p.y)
-                operator fun times(d: Float) = Position(x * d, y * d)
-                operator fun times(p: Position) = Position(x * p.x, y * p.y)
-                operator fun div(d: Float) = Position(x / d, y / d)
-                operator fun div(p: Position) = Position(x / p.x, y / p.y)
-                operator fun minus(p: Position) = Position(x - p.x, y -p.y)
-                operator fun unaryPlus() = this
-                operator fun unaryMinus() = Position(-x, -y)
-            }
-            fun PDRectangle.toPosition() = Position(width, height)
 
             val margin = Position(10.0f, 10.0f)
             val pageGap = 10.0f
@@ -77,28 +80,38 @@ class CollectionPagePreview {
             emptyPage(pageFormat)
             collectionPages.forEachIndexed { pageNumber, pageContent ->
                 page(pageFormat) {
-                    pageContent.forEachIndexed { index, cardOptional ->
-                        cardOptional.ifPresent { card ->
-                            val cardPosition = position(index)
-                            try {
-                                val byteArray = runBlocking {
-                                    ImageCache.getImageByteArray(card.thumbnail.toString()) {
-                                        try {
-                                            print("card #$${card.numberInSet} ${card.name} image downloading\r")
-                                            card.thumbnail?.toURL()?.readBytes()
-                                        } catch (t: Throwable) {
-                                            print("card #\$${card.numberInSet} ${card.name} image is not loaded\r")
-                                            null
-                                        }
+                    pageContent.forEachIndexed { index, card ->
+                        val cardPosition = position(index)
+                        try {
+                            val byteArray = ImageCache.getImageByteArray(card.thumbnail.toString()) {
+                                try {
+//                                        print("card #$${card.numberInSet} ${card.name} image downloading\r")
+                                    progress.update {
+                                        context = "card #\$${card.numberInSet} ${card.name} image downloading\r"
                                     }
-                                }!!
-                                val cardImage = createFromByteArray(byteArray, card.name)
-                                print("card #\$${card.numberInSet} ${card.name} image rendering\r")
-                                drawImage(cardImage, cardPosition.x, cardPosition.y, cardSize.x, cardSize.y)
-                                print("card #\$${card.numberInSet} ${card.name} image rendered\r")
-                            } catch (t: Throwable) {
-                                drawImage(mtgCardBack, cardPosition.x, cardPosition.y, cardSize.x, cardSize.y)
-                                print("card #\$${card.numberInSet} ${card.name} cardback rendered\r")
+                                    card.thumbnail?.toURL()?.readBytes()
+                                } catch (t: Throwable) {
+//                                        print("card #\$${card.numberInSet} ${card.name} image is not loaded\r")
+                                    null
+                                }
+                            }!!
+                            val cardImage = createFromByteArray(byteArray, card.name)
+//                            print("card #\$${card.numberInSet} ${card.name} image rendering\r")
+                            progress.update {
+                                context = "card #\$${card.numberInSet} ${card.name} image rendering\r"
+                            }
+                            drawImage(cardImage, cardPosition.x, cardPosition.y, cardSize.x, cardSize.y)
+//                            print("card #\$${card.numberInSet} ${card.name} image rendered\r")
+                            progress.update {
+                                context = "card #\$${card.numberInSet} ${card.name} image rendered\r"
+                                completed += 1
+                            }
+                        } catch (t: Throwable) {
+                            drawImage(mtgCardBack, cardPosition.x, cardPosition.y, cardSize.x, cardSize.y)
+//                            print("card #\$${card.numberInSet} ${card.name} cardback rendered\r")
+                            progress.update {
+                                context = "card #\$${card.numberInSet} ${card.name} image rendered\r"
+                                completed += 1
                             }
                         }
                     }
@@ -116,9 +129,4 @@ class CollectionPagePreview {
             }
         }
     }
-}
-
-suspend fun main() {
-    CollectionPagePreview().printLabel("4ed", Path.of("C:\\Users\\001121673\\private\\magic\\4ed.pdf"))
-    CollectionPagePreview().printLabel("5ed", Path.of("C:\\Users\\001121673\\private\\magic\\5ed.pdf"))
 }
