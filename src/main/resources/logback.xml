@@ -1,18 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration>
+
 <configuration>
-    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-        <!-- encoders are assigned the type
-             ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
-        <encoder>
-            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+    <import class="ch.qos.logback.classic.encoder.PatternLayoutEncoder"/>
+    <import class="ch.qos.logback.core.FileAppender"/>
+
+    <appender name="FILE" class="FileAppender">
+        <file>testFile.log</file>
+        <append>true</append>
+        <immediateFlush>true</immediateFlush>
+        <encoder class="PatternLayoutEncoder">
+            <pattern>%-4relative [%thread] %-5level %logger{35} -%kvp- %msg%n</pattern>
         </encoder>
     </appender>
 
     <logger name="Exposed" level="INFO"/>
-
-    <!-- Strictly speaking, the level attribute is not necessary since -->
-    <!-- the level of the root level is set to DEBUG by default.       -->
-    <root level="DEBUG">
-        <appender-ref ref="STDOUT" />
+    <root level="TRACE">
+        <appender-ref ref="FILE"/>
     </root>
-
 </configuration>
