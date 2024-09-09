@@ -17,7 +17,7 @@ repositories {
 
 dependencies {
 	implementation("org.jetbrains.kotlin:kotlin-stdlib")
-	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
+//	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 
 	implementation("io.ktor:ktor-client-core:2.2.4")
@@ -33,17 +33,19 @@ dependencies {
 	implementation("org.jetbrains.exposed:exposed-dao")
 	implementation("org.jetbrains.exposed:exposed-java-time")
 	implementation("org.jetbrains.exposed:exposed-jdbc")
-	runtimeOnly("com.h2database:h2:2.2.224")
+	runtimeOnly("com.h2database:h2:2.3.230")
 
+	implementation("org.jsoup:jsoup:1.15.3")
 	implementation("org.json:json:20220924")
 	implementation("com.opencsv:opencsv:5.7.1")
-	implementation("no.tornado:tornadofx:2.0.0-SNAPSHOT")
 	implementation("javax.xml.bind:jaxb-api:2.4.0-b180830.0359")
 	implementation("org.apache.pdfbox:pdfbox:3.0.2")
 	implementation("com.github.dhorions:boxable:1.7.0")
 	implementation("org.apache.xmlgraphics:batik-rasterizer:1.14")
 	implementation("org.apache.xmlgraphics:batik-codec:1.14")
-	implementation("org.jsoup:jsoup:1.15.3")
+	implementation("io.github.g0dkar:qrcode-kotlin:4.2.0")
+
+	implementation("no.tornado:tornadofx:2.0.0-SNAPSHOT")
 
 	implementation("com.github.ajalt.clikt:clikt:4.3.0")
 	implementation("com.github.ajalt.mordant:mordant:2.4.0")
@@ -78,7 +80,7 @@ javafx {
 }
 
 application {
-	mainClass.set("at.woolph.caco.gui.MainKt")
+	mainClass.set("at.woolph.caco.MainKt")
 }
 
 //

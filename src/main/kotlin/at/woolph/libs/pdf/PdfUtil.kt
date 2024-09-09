@@ -474,6 +474,17 @@ fun Node.drawAsImageLeft(subIcon: PDImageXObject, maximumWidth: Float, desiredHe
     drawImage(subIcon, xOffsetIcons, yOffsetIcons+(desiredHeight-actualHeight)*0.5f, actualWidth, actualHeight)
 }
 
+fun Node.drawAsImageRight(subIcon: PDImageXObject, maximumWidth: Float, desiredHeight: Float, xOffsetIcons: Float, yOffsetIcons: Float) {
+    val heightScale = desiredHeight/subIcon.height
+    val desiredWidth = subIcon.width*heightScale
+    val (actualWidth, actualHeight) = if (desiredWidth > maximumWidth) {
+        maximumWidth to subIcon.height*maximumWidth/subIcon.width
+    } else {
+        desiredWidth to desiredHeight
+    }
+    drawImage(subIcon, box.width + xOffsetIcons - actualWidth, yOffsetIcons+(desiredHeight-actualHeight)*0.5f, actualWidth, actualHeight)
+}
+
 val dotsPerMillimeter = PDRectangle.A4.width/210f
 
 fun <Item> PDFDocument.columnedContent(items: Iterable<Item>, pageFormat: PDRectangle, columns: Int, columnBlock: Frame.(Item) -> Unit) {

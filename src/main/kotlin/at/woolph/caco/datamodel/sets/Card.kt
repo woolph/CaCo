@@ -1,9 +1,12 @@
 package at.woolph.caco.datamodel.sets
 
+import at.woolph.caco.cli.manabase.ColorIdentity
+import at.woolph.caco.cli.manabase.ManaColor
 import at.woolph.caco.datamodel.collection.ArenaCardPossession
 import at.woolph.caco.datamodel.collection.ArenaCardPossessions
 import at.woolph.caco.datamodel.collection.CardPossession
 import at.woolph.caco.datamodel.collection.CardPossessions
+import at.woolph.caco.importer.sets.toEnumSet
 import org.jetbrains.exposed.dao.*
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
@@ -33,14 +36,19 @@ object Cards : IdTable<UUID>() {
     val specialDeckRestrictions = integer("specialDeckRestrictions").nullable()
 
     val manaCost = varchar("manaCost", length = 256).nullable()
+    val manaValue = float("manaValue").index()
+    val oracleText = varchar("oracleText", length = 1024)
     val type = varchar("type", length = 256).nullable()
+    val colorIdentity = integer("colorIdentity")
 
     val price = double("price").nullable()
     val priceFoil = double("priceFoil").nullable()
 }
 
 class Card(id: EntityID<UUID>) : UUIDEntity(id) {
-    companion object : UUIDEntityClass<Card>(Cards)
+    companion object : UUIDEntityClass<Card>(Cards) {
+        val CARD_DRAW_PATTERN = Regex("draws? (|a |two |three )cards?", RegexOption.IGNORE_CASE)
+    }
 
     var set by ScryfallCardSet referencedOn Cards.set
     var numberInSet by Cards.numberInSet
@@ -72,11 +80,64 @@ class Card(id: EntityID<UUID>) : UUIDEntity(id) {
     var specialDeckRestrictions by Cards.specialDeckRestrictions
 
     var manaCost by Cards.manaCost
+    var manaValue by Cards.manaValue
     var type by Cards.type
+    var oracleText by Cards.oracleText
 
     var price by Cards.price
     var priceFoil by Cards.priceFoil
 
+    var colorIdentity by Cards.colorIdentity.transform(
+        { it.colorIdentity.fold(0) { acc: Int, manaColor: ManaColor -> (acc or (1 shl manaColor.ordinal)) } },
+        { ColorIdentity(ManaColor.values().asSequence()
+            .filter { manaColor -> (it and (1 shl manaColor.ordinal)) != 0 }.toEnumSet())
+        })
+
     val possessions by CardPossession referrersOn CardPossessions.card
     val arenaPossessions by ArenaCardPossession referrersOn ArenaCardPossessions.card
+
+    val isCreature: Boolean get() = type?.contains("Creature") == true
+    val isLand: Boolean get() = type?.contains("Land") == true
+    val isCheapNonland: Boolean
+        get() = manaValue <= 2.0 && !isLand
+
+    val isCheapCardDraw: Boolean by lazy {
+        (isCheapNonland && (oracleText.contains(CARD_DRAW_PATTERN) &&
+                oracleTextNone("{4}", "blood token", "investigate") &&
+                ((!isCreature || oracleTextAll("when", "enters")))) ||
+                (!isCreature && !oracleText.contains(Regex("pays?", RegexOption.IGNORE_CASE)) &&
+                oracleTextAll("look", "library", "put", "your hand"))) ||
+                !isLand && oracleText.contains(Regex("cycling( \\{(0|1|2)\\}|—pay \\d+ life)", RegexOption.IGNORE_CASE))
+    }
+
+    val blacklistCheapRamp = listOf(
+        "Dreamscape Artist",
+        "Crop Rotation",
+        "Ordeal of Nylea",
+        "Khalni Heart Expedition",
+        "Oashra Cultivator",
+        "Elvish Reclaimer",
+    )
+    val isCheapRamp: Boolean by lazy {
+        isCheapNonland && !isCheapCardDraw && (
+                oracleText.contains(Regex("\\badd\\b", RegexOption.IGNORE_CASE)) && oracleTextNone("add its ability", "add a lore counter", "dies") ||
+                        oracleTextAll("search", "your library", "put", "onto the battlefield") && oracleTextAny("land", "basic") && name !in blacklistCheapRamp ||
+//                        oracleTextAll("search", "your library") && oracleTextAny("land", "basic") && (oracleTextNone("sacrifice") || "Wayfarer's Bauble".equals(name)) ||
+                        oracleTextAll("enchanted land is tapped", "adds an additional") ||
+                        oracleTextAll("put a creature card with", "from your hand onto the battlefield")
+            )
+    }
+
+    val isMDFCLand : Boolean get() = (type?.contains("// Land") == true) xor (type?.contains("Land // ") == true)
+
+    val isMDFCLandTapped : Boolean by lazy {
+        isMDFCLand && oracleTextAll("enters", "tapped") && oracleTextNone("you may pay", "unless")
+    }
+    val isMDFCLandUntapped : Boolean by lazy {
+        isMDFCLand && (!oracleTextAll("enters", "tapped") || oracleTextAny("you may pay", "unless"))
+    }
+
+    private fun oracleTextAll(vararg keywords: String) = keywords.all { oracleText.contains(it, ignoreCase = true) }
+    private fun oracleTextAny(vararg keywords: String) = keywords.any { oracleText.contains(it, ignoreCase = true) }
+    private fun oracleTextNone(vararg keywords: String) = keywords.none { oracleText.contains(it, ignoreCase = true) }
 }

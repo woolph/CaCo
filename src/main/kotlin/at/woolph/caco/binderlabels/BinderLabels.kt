@@ -79,6 +79,12 @@ abstract class AbstractLabelItem(
 
 open class SimpleSet(override val code: String): AbstractLabelItem(fetchCardSets(code))
 
+open class SeparatePreconPartSet(code: String): SimpleSet(code) {
+    override val subTitle: String? get() = "Preconstructed Commander Decks"
+    override val subCode: String
+        get() = "Precons"
+}
+
 class SetWithCommander(override val code: String, override val subCode: String): AbstractLabelItem(fetchCardSets(code, subCode))
 
 class SetWithCommanderAndAncillary(override val code: String, commanderCode: String, ancillaryCode: String): AbstractLabelItem(fetchCardSets(code, commanderCode, ancillaryCode))

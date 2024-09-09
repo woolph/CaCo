@@ -69,9 +69,25 @@ class PlanechaseBoxLabel(index: Int): OneSymbolBoxLabel {
     override val icon: ByteArray? by lazy { URI("https://svgs.scryfall.io/card-symbols/CHAOS.svg").renderSvg() }
 }
 
+interface DualSymbolBoxLabel: BoxLabel {
+    val icon: ByteArray?
+    val icon2: ByteArray?
+}
+
+object SnowCoveredBasicsAndWastes: OneSymbolBoxLabel {
+    override val title = "Snow Basics"
+    override val subtitle = "and Wastes"
+    override val icon: ByteArray? by lazy { URI("https://svgs.scryfall.io/card-symbols/S.svg").renderSvg() }
+}
+
 class AwaitingCatalogizationBoxLabel(index: Int? = null, override val subtitle: String? = null): OneSymbolBoxLabel {
     override val title = "Catalogize ${index ?: ""}"
     override val icon: ByteArray? by lazy { URI("https://svgs.scryfall.io/sets/wth.svg").renderSvgAsMythic() }
+}
+
+class ArtSeriesLabel(index: Int? = null, override val subtitle: String? = null): OneSymbolBoxLabel {
+    override val title = "Art Series ${index ?: ""}"
+    override val icon: ByteArray? by lazy { URI("https://svgs.scryfall.io/sets/pbook.svg").renderSvgAsMythic() }
 }
 
 class AwaitingCollectionBoxLabel(index: Int, override val subtitle: String? = null): OneSymbolBoxLabel {
@@ -92,38 +108,15 @@ open class DuplicateBoxLabel(vararg codes: String): MultipleSymbolBoxLabel {
     override val title: String = "DUP"
     override val icons: List<ByteArray> by lazy { sets.mapNotNull { it.icon.renderSvgAsMythic() } }
 }
+object PromoBoxLabel: MultipleSymbolBoxLabel {
+    override val title: String = "DUP"
+    override val icons: List<ByteArray> by lazy { listOf(URI("https://c2.scryfall.com/file/scryfall-symbols/sets/star.svg?1624852800").renderSvgAsMythic()!!) }
+}
 
 class BoxLabels {
-    fun printLabel(file: String) {
-        Databases.init()
-
+    fun printLabel(file: Path, labels: List<BoxLabel>) {
         transaction {
-            createPdfDocument(Path.of(file)) {
-                val labels: List<BoxLabel> = listOf(
-//                    PlainsBoxLabel,
-//                    IslandBoxLabel,
-//                    SwampBoxLabel,
-//                    MountainBoxLabel,
-//                    ForestBoxLabel,
-//                    GenericBoxLabel("Deck Building"),
-//                    AwaitingCatalogizationBoxLabel(1),
-//                    AwaitingCatalogizationBoxLabel(2),
-//                    AwaitingCollectionBoxLabel(1),
-//                    AwaitingCollectionBoxLabel(2),
-//                    PlanechaseBoxLabel(1),
-//                    PlanechaseBoxLabel(2),
-                    CommanderStapelsBoxLabel,
-                    AwaitingCatalogizationBoxLabel(subtitle = "Lands, Double-Sided Tokens & Art Series"),
-                    AwaitingCollectionBoxLabel(1, "Older sets (w/o binder)"),
-                    AwaitingCollectionBoxLabel(2, "Older sets (w/o binder)"),
-                    AwaitingCollectionBoxLabel(3, "Masters & Commander sets (w/o binder)"),
-                    AwaitingCollectionBoxLabel(4, "Duel Decks & other special sets"),
-//                    DuplicateBoxLabel("bbd"),
-//                    DuplicateBoxLabel("stx"),
-//                    DuplicateBoxLabel("khm"),
-//                    DuplicateBoxLabel("mh2"),
-                )
-
+            createPdfDocument(file) {
                 val fontColor = Color.BLACK
 
                 val fontFamilyPlanewalker = loadType0Font(javaClass.getResourceAsStream("/fonts/PlanewalkerBold-xZj5.ttf")!!)
@@ -196,6 +189,34 @@ class BoxLabels {
 
                                                 }
                                             }
+                                            is DualSymbolBoxLabel -> {
+                                                drawText(
+                                                    columnItem.title,
+                                                    fontCode,
+                                                    HorizontalAlignment.LEFT,
+                                                    maximumIconWidth + defaultGapSize,
+                                                    box.height + fontCode.descent,
+                                                    fontColor
+                                                )
+                                                columnItem.icon?.toPDImage(this@page)
+                                                    ?.let {
+                                                        drawAsImageLeft(it, maximumIconWidth, desiredHeight, 0f, box.height - desiredHeight)
+                                                    }
+                                                columnItem.icon2?.toPDImage(this@page)
+                                                    ?.let {
+                                                        drawAsImageRight(it, maximumIconWidth, desiredHeight, 0f, box.height - desiredHeight)
+                                                    }
+                                                columnItem.subtitle?.let {
+                                                    drawText(
+                                                        it,
+                                                        fontSubtitle,
+                                                        HorizontalAlignment.LEFT,
+                                                        maximumIconWidth + defaultGapSize + 8f,
+                                                        box.height + fontSubtitle.descent + 2f,
+                                                        fontColor
+                                                    )
+                                                }
+                                            }
                                             is MultipleSymbolBoxLabel -> {
                                                 drawText(
                                                     columnItem.title,
@@ -206,8 +227,41 @@ class BoxLabels {
                                                     fontColor
                                                 )
                                                 val width = fontCode2.getWidth(columnItem.title) + defaultGapSize
-                                                columnItem.icons.map { it.toPDImage(this@page) }.forEachIndexed { i, icon ->
-                                                    drawAsImageLeft(icon, maximumIconWidth, desiredHeight, width + maximumIconWidth * i, box.height - desiredHeight)
+                                                if (columnItem.icons.size <= 4) {
+                                                    columnItem.icons.map { it.toPDImage(this@page) }
+                                                        .forEachIndexed { i, icon ->
+                                                            drawAsImageLeft(
+                                                                icon,
+                                                                maximumIconWidth,
+                                                                desiredHeight,
+                                                                width + maximumIconWidth * i,
+                                                                box.height - desiredHeight
+                                                            )
+                                                        }
+                                                } else {
+                                                    columnItem.icons.map { it.toPDImage(this@page) }.chunked(8)
+                                                        .forEachIndexed { j, chunk ->
+                                                            chunk.forEachIndexed { i, icon ->
+                                                                drawAsImageLeft(
+                                                                    icon,
+                                                                    maximumIconWidth*0.5f,
+                                                                    desiredHeight*0.5f,
+                                                                    width + maximumIconWidth*0.5f * i,
+                                                                    box.height - desiredHeight*0.5f - j * desiredHeight*0.5f
+                                                                )
+                                                            }
+                                                        }
+
+                                                }
+                                                columnItem.subtitle?.let {
+                                                    drawText(
+                                                        it,
+                                                        fontSubtitle,
+                                                        HorizontalAlignment.LEFT,
+                                                        8f,
+                                                        box.height + fontSubtitle.descent + 2f,
+                                                        fontColor
+                                                    )
                                                 }
                                             }
                                         }
@@ -223,5 +277,63 @@ class BoxLabels {
 }
 
 fun main() {
-    BoxLabels().printLabel("C:\\Users\\001121673\\private\\magic\\BoxLabels.pdf")
+    Databases.init()
+    BoxLabels().printLabel(Path.of("C:\\Users\\001121673\\private\\magic\\BoxLabels.pdf"), listOf(
+//                    PlainsBoxLabel,
+//                    IslandBoxLabel,
+//                    SwampBoxLabel,
+//                    MountainBoxLabel,
+//                    ForestBoxLabel,
+//                    GenericBoxLabel("Deck Building"),
+//                    AwaitingCatalogizationBoxLabel(1),
+//                    AwaitingCatalogizationBoxLabel(2),
+//                    AwaitingCollectionBoxLabel(1),
+//                    AwaitingCollectionBoxLabel(2),
+//                    PlanechaseBoxLabel(1),
+//                    PlanechaseBoxLabel(2),
+//        CommanderStapelsBoxLabel,
+        AwaitingCatalogizationBoxLabel(subtitle = "Lands, Double-Sided Tokens & Placeholder"),
+//        AwaitingCollectionBoxLabel(1, "Older sets (w/o binder)"),
+//        AwaitingCollectionBoxLabel(2, "Older sets (w/o binder)"),
+//        AwaitingCollectionBoxLabel(3, "Masters & Commander sets (w/o binder)"),
+//        AwaitingCollectionBoxLabel(4, "Duel Decks & other special sets"),
+//                    DuplicateBoxLabel("bbd"),
+//                    DuplicateBoxLabel("stx"),
+//                    DuplicateBoxLabel("khm"),
+//                    DuplicateBoxLabel("mh2"),
+//
+//        DuplicateBoxLabel("rix"),
+//        DuplicateBoxLabel("rix", "kld", "aer", "akh", "hou"),
+//        DuplicateBoxLabel( "ltr", "unf", "jmp", "gn3"),
+//        DuplicateBoxLabel("mkm", "snc", "bro", "otj", "dmu", "lci", "mat", "woe"),
+//        DuplicateBoxLabel("soi", "emn"),
+//        object: DuplicateBoxLabel("m21") {
+//            override val subtitle: String = "Core Set 2021 Pt. I"
+//        },
+//        object: DuplicateBoxLabel("m21") {
+//            override val subtitle: String = "Core Set 2021 Pt. II"
+//        },
+//        DuplicateBoxLabel("mid"),
+//        DuplicateBoxLabel("vow"),
+//        DuplicateBoxLabel("neo"),
+//        DuplicateBoxLabel("bbd"),
+//        DuplicateBoxLabel("mh1"),
+//        DuplicateBoxLabel("mh2"),
+//        DuplicateBoxLabel("afr"),
+//        object: DuplicateBoxLabel("otc", "mkc", "lcc", "woc", "moc", "onc", "brc", "dmc", "ncc", "nec", "voc", "mic", "afc", "khc", "znc",) {
+//            override val subtitle: String = "Commander Sets II"
+//        },
+//        object: DuplicateBoxLabel("por", "p02", "usg", "ulg", "uds", "inv", "pls", "apc", "mmq", "nem", "pcy", "4ed", "5ed", "6ed") {
+//            override val subtitle: String = "Older Sets"
+//        },
+//        PromoBoxLabel,
+        SnowCoveredBasicsAndWastes,
+        ArtSeriesLabel(),
+        object: DuplicateBoxLabel("pip", "who", "40k", "ltc", "m3c", "cmm", "scd", "cmr", "clb", "c21", "c20", "c16", "c17", "c18", "c19") {
+            override val subtitle: String = "Commander Sets I"
+        },
+        object: DuplicateBoxLabel("otc", "mkc", "lcc", "woc", "moc", "onc", "brc", "dmc", "ncc", "nec", "voc", "mic", "afc", "khc", "znc","blc","dsc") {
+            override val subtitle: String = "Commander Sets II"
+        },
+    ))
 }

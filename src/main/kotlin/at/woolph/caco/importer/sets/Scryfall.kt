@@ -2,22 +2,17 @@ package at.woolph.caco.importer.sets
 
 import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
+import at.woolph.caco.httpclient.useHttpClient
 import at.woolph.caco.newOrUpdate
 import at.woolph.libs.log.logger
-import io.ktor.client.*
 import io.ktor.client.call.*
-import io.ktor.client.engine.cio.*
-import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
-import io.ktor.utils.io.core.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.withContext
 import java.io.InputStream
-import kotlin.io.use
 import kotlin.math.max
 import kotlin.math.min
 
@@ -43,44 +38,32 @@ fun paddingCollectorNumber(collectorNumber: String): String {
 
 // TODO import MDFC replacements (STX, KHM, ...)
 // TODO import double sided tokens as they are printed (especially those of the commander precons)
-suspend fun importSet(setCode: String): CardSet = withContext(Dispatchers.IO) {
-    HttpClient(CIO) {
-        install(ContentNegotiation) {
-            json(jsonSerializer)
-        }
-    }.use {
-        val response: HttpResponse = it.get("https://api.scryfall.com/sets/$setCode")
-        LOG.info("importing set $setCode")
+suspend fun importSet(setCode: String): CardSet = useHttpClient(Dispatchers.IO) { client ->
+    val response: HttpResponse = client.get("https://api.scryfall.com/sets/$setCode")
+    LOG.info("importing set $setCode")
 
-        if (!response.status.isSuccess())
-            throw Exception("request failed with status code ${response.status.description}")
+    if (!response.status.isSuccess())
+        throw Exception("request GET https://api.scryfall.com/sets/$setCode with status code ${response.status.description}")
 
-        val scryfallSet = response.body<ScryfallSet>()
+    val scryfallSet = response.body<ScryfallSet>()
 
-        if (scryfallSet.isNonDigitalSetWithCards()) {
-            CardSet.newOrUpdate(scryfallSet.code) { scryfallSet.update(this@newOrUpdate) }
-        } else {
-            throw Exception("result is not a set or it's digital or does not have any cards")
-        }
+    if (scryfallSet.isNonDigitalSetWithCards()) {
+        CardSet.newOrUpdate(scryfallSet.code) { scryfallSet.update(this@newOrUpdate) }
+    } else {
+        throw Exception("result is not a set or it's digital or does not have any cards")
     }
 }
 
-suspend fun CardSet.update() = withContext(Dispatchers.IO) {
-    HttpClient(CIO) {
-        install(ContentNegotiation) {
-            json(jsonSerializer)
-        }
-    }.use {
-        LOG.debug("update set ${this@update}")
-        val response: HttpResponse = it.get("https://api.scryfall.com/sets/${this@update.shortName}")
+suspend fun CardSet.update() = useHttpClient(Dispatchers.IO) { client ->
+    LOG.debug("update set ${this@update}")
+    val response: HttpResponse = client.get("https://api.scryfall.com/sets/${this@update.shortName}")
 
-        if (!response.status.isSuccess())
-            throw Exception("request failed with status code ${response.status.description}")
+    if (!response.status.isSuccess())
+        throw Exception("request failed with status code ${response.status.description}")
 
-        val scryfallSet: ScryfallSet = response.body()
+    val scryfallSet: ScryfallSet = response.body()
 
-        scryfallSet.update(this@update)
-    }
+    scryfallSet.update(this@update)
 }
 
 internal fun loadSetsFromScryfall(): Flow<ScryfallSet> =

@@ -27,7 +27,7 @@ class DialogButtonsBuilder<R>(val dialog: Dialog<R>) {
 	fun defaultAction(block: () -> R) {
 		defaultConverter = block
 	}
-	inner class DialogButtonBuilder(val buttonTyoe: ButtonType) {
+	inner class DialogButtonBuilder(val buttonType: ButtonType) {
 		private var converter: ((ButtonType) -> R)? = null
 
 		fun action(block: (ButtonType) -> R) {
@@ -35,21 +35,21 @@ class DialogButtonsBuilder<R>(val dialog: Dialog<R>) {
 		}
 
 		internal fun doAction() =
-			converter?.let { it(buttonTyoe) } ?: defaultConverter()
+			converter?.let { it(buttonType) } ?: defaultConverter()
 	}
 	private val buttonBuilers = mutableListOf<DialogButtonBuilder>()
 
-	fun button(buttonTyoe: ButtonType, builder: DialogButtonBuilder.() -> Unit = {}) {
-		buttonBuilers += DialogButtonBuilder(buttonTyoe).apply(builder)
+	fun button(buttonType: ButtonType, builder: DialogButtonBuilder.() -> Unit = {}) {
+		buttonBuilers += DialogButtonBuilder(buttonType).apply(builder)
 	}
 
 	fun button(buttonText: String, builder: DialogButtonBuilder.() -> Unit = {}) =
 		button(ButtonType(buttonText), builder)
 
 	internal fun apply() {
-		dialog.dialogPane.buttonTypes.setAll(buttonBuilers.map { it.buttonTyoe })
-		dialog.setResultConverter { buttonTyoe ->
-			buttonBuilers.firstOrNull { it.buttonTyoe === buttonTyoe }?.doAction()
+		dialog.dialogPane.buttonTypes.setAll(buttonBuilers.map { it.buttonType })
+		dialog.setResultConverter { buttonType ->
+			buttonBuilers.firstOrNull { it.buttonType === buttonType }?.doAction()
 		}
 	}
 }

@@ -1,53 +1,96 @@
 package at.woolph.caco.cli
 
+import at.woolph.caco.datamodel.decks.Format
+import com.github.ajalt.mordant.animation.coroutines.CoroutineProgressTaskAnimator
+import com.github.ajalt.mordant.animation.progress.advance
 import com.github.ajalt.mordant.terminal.Terminal
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
+import java.net.URI
+import java.net.URL
 
 class DeckboxDeckImporter(
     val terminal: Terminal,
+    val progress: CoroutineProgressTaskAnimator<String>? = null,
 ) {
-    fun importDeckboxDecks(userName: String) {
+    suspend fun importDeckboxDecks(userName: String) =
+        getListOfDeckLinks(userName).map { link ->
+            importDeck(link)
+        }
+
+    suspend fun getListOfDeckLinks(userName: String): Flow<URL> = flow {
         val baseUrl = "https://deckbox.org"
-        val doc = Jsoup.connect("$baseUrl/users/$userName").get()
+        val userUrl = "$baseUrl/users/$userName"
+        progress?.update { context = "fetching list of decks from $userUrl" }
 
-        doc.select("li.deck").forEach {
-            it.select("a[data-title]").forEach {
-                val link = "$baseUrl${it.attr("href")}"
-                val deckName = it.attr("data-title")
-                terminal.println(deckName)
-                terminal.println(link)
+        val doc = withContext(Dispatchers.IO) { Jsoup.connect(userUrl).get() }
 
-                val deckDoc = Jsoup.connect(link).get()
-                val (format, commander) = deckDoc.selectFirst("div.deck_info_widget")!!.let {
-                    it.selectFirst("span:matches(Format:) ~ span.variant")?.text() to it.selectFirst("span:matches(Commander:) ~ div > a")?.text()
-                }
-                val mainboard = deckDoc.selectFirst("table.main")!!.select("tr[id]").mapNotNull {
-                    val count = it.selectFirst("td.card_count")?.text()
-                    val cardName = it.selectFirst("td.card_name")?.text()
+        val result = doc.select("li.deck")
 
-                    if(cardName != commander) cardName to count else null
-                }.associate { it }
-                val sideboard = deckDoc.selectFirst("table.sideboard")!!.select("tr[id]").mapNotNull {
-                    val count = it.selectFirst("td.card_count")!!.text()
-                    val cardName = it.selectFirst("td.card_name a")!!.text()
+        progress?.update { total = result.size.toLong() }
 
-                    if(cardName != commander) cardName to count else null
-                }.associate { it }
+        emitAll(doc.select("li.deck").asFlow().mapNotNull {
+            "$baseUrl${it.selectFirst("a[href]")?.attr("href")}"
+        }.map(URI::create).map(URI::toURL).onEach {
+            progress?.advance(1)
+        })
+    }
 
-                terminal.println("Format: $format")
-                if (format == "com" || format == "bra" || format == "oat") {
-                    terminal.println("Commander:")
-                    terminal.println("1 $commander")
-                }
+    suspend fun importDeck(deckUrl: URL): DeckList {
+        progress?.update { context = "fetching deck from $deckUrl" }
+        val deckDoc = withContext(Dispatchers.IO) { Jsoup.connect(deckUrl.toString()).get() }
 
-                terminal.println("Mainboard:")
-                mainboard.forEach { (cardName, count) -> println("$count $cardName") }
+        val deckName = deckDoc.selectFirst("div.section_title")?.selectFirst("span")!!.text().replace(Regex("^\\d+\\s*"), "")
+        progress?.update { context = "processing $deckName" }
+        val format = when(deckDoc.selectFirst("div.deck_info_widget span.variant")?.text()) {
+            "com" -> Format.Commander
+            "sta" -> Format.Standard
+            "pio" -> Format.Pioneer
+            "his" -> Format.Historic
+            "mod" -> Format.Modern
+            "leg" -> Format.Legacy
+            "vin" -> Format.Vintage
+            "bra" -> Format.Brawl
+            "pau" -> Format.Pauper
+            "oat" -> Format.Oathbreaker
+            "cub" -> Format.Cube
+            else -> Format.Unknown
+        }
 
-                terminal.println(if (format == "com" || format == "bra" || format == "oat") "Maybeboard:" else "Sideboard:")
-                sideboard.forEach { (cardName, count) -> println("$count $cardName") }
+        val commanders = sequenceOf(
+            deckDoc.selectFirst("div#commander_info span:matches(Commander:) ~ div > a")?.text(),
+            deckDoc.selectFirst("div#commander_info span:matches(Partner:) ~ div > a")?.text(),
+        ).filterNotNull().associateWith { 1 }
 
-                terminal.prompt("Press Enter to continue: ")
-            }
+        val mainboard = deckDoc.selectFirst("table.main")!!.select("tr[id]").map {
+            val count = it.selectFirst("td.card_count")!!.text()
+            val cardName = it.selectFirst("td.card_name")!!.text()
+            cardName to count.toInt()
+        }.filter { !commanders.contains(it.first) }.toMap()
+        val sideboard = deckDoc.selectFirst("table.sideboard")!!.select("tr[id]").map {
+            val count = it.selectFirst("td.card_count")!!.text()
+            val cardName = it.selectFirst("td.card_name a")!!.text()
+            cardName to count.toInt()
+        }.toMap()
+
+        return when(format) {
+            Format.Commander, Format.Oathbreaker, Format.Brawl ->
+                DeckList(
+                    deckName,
+                    format,
+                    mainboard,
+                    commandZone = commanders,
+                    maybeboard = sideboard,
+                )
+            else ->
+                DeckList(
+                    deckName,
+                    format,
+                    mainboard,
+                    sideboard = sideboard,
+                )
         }
     }
 }

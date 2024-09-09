@@ -65,13 +65,14 @@ fun importDeckbox(file: Path) {
 
         operator fun Array<String>.get(column: String): String? = header[column]?.let {this[it] }
 
+        var countOfUnparsed = 0
         var nextLine: Array<String>? = reader.readNext()
         while (nextLine != null) {
             try {
                 val count = nextLine["Count"]!!.toInt()
                 val cardName = nextLine["Name"]!!
                 val edition = nextLine["Edition"]!!
-                val setName = mapSetName(edition.removePrefix("Prerelease Events: ").removePrefix("Extras: ").removePrefix("Promos: ").removePrefix("Promo Pack: "))
+                val setName = mapSetName(edition.removeSuffix(" Promo Pack").removePrefix("Prerelease Events: ").removePrefix("Extras: ").removePrefix("Promos: ").removePrefix("Promo Pack: "))
                 val token = edition.startsWith("Extras: ")
                 val language = nextLine["Language"]!!.parseLanguageDeckbox()
                 val condition = when (nextLine["Condition"]) {
@@ -126,7 +127,9 @@ fun importDeckbox(file: Path) {
                     else -> null
                 } }
 
-                if (cardName.startsWith("Art Card:")) {
+                if (token && cardName.contains(" // ")) {
+                    println("skipping $cardName because it is an Double Sided Token which is not supported")
+                } else if (cardName.startsWith("Art Card:")) {
                     println("skipping $cardName because it is an Art Card")
                 } else {
                     val card = getCard(setCode, setName, cardNumber, token, cardName, rarity, manaCost, interactiveMode = false)
@@ -145,10 +148,12 @@ fun importDeckbox(file: Path) {
                 }
             } catch (e: Exception) {
                 println("unable to import: ${e.message}")
+                countOfUnparsed++
                 writer.writeNext(nextLine)
             }
             nextLine = reader.readNext()
         }
+        println("unable to import $countOfUnparsed cards")
     }
 }
 
@@ -256,7 +261,7 @@ val setNameMapping = mutableMapOf(
     "Streets of New Capenna Commander" to "New Capenna Commander",
     "Warhammer 40,000" to "Warhammer 40,000 Commander",
     "The Lord of the Rings: Tales of Middle-earth Commander" to "Tales of Middle-earth Commander",
-    "The Lost Caverns of Ixalan Commander" to "Lost Caverns of Ixalan Commander",
+    "Lost Caverns of Ixalan Commander" to "The Lost Caverns of Ixalan Commander",
 )
 
 val setNumberMapping = mutableMapOf<String, Map<IntRange, Int>>(

@@ -1,5 +1,6 @@
 package at.woolph.caco.importer.sets
 
+import at.woolph.caco.cli.manabase.ManaColor
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
@@ -251,8 +252,17 @@ data class ScryfallCard(
         fullArt = full_art
         extendedArt = frame_effects.contains("extendedart")
 
+        colorIdentity = color_identity.toColorIdentity()
+
+        manaCost = mana_cost ?: card_faces?.mapNotNull { it.mana_cost }?.joinToString(" // ")
+        manaValue = cmc?.toFloat() ?: 0.0f
+        oracleText = sequence {
+            oracle_text?.let { yield(it) }
+            yieldAll(card_faces?.asSequence()?.map { it.oracle_text } ?: emptySequence())
+        }.joinToString("\n")
         price = prices["eur"]?.toDouble()
         priceFoil = prices["eur_foil"]?.toDouble()
+        type = type_line ?: card_faces?.mapNotNull { it.type_line }?.joinToString(" // ")
 
         val patternSpecialDeckRestrictions = Regex("A deck can have (any number of cards|only one card|up to (\\w+) cards) named ${this@ScryfallCard.name}\\.")
         specialDeckRestrictions = oracle_text?.let { patternSpecialDeckRestrictions.find(it) }?.let {

@@ -10,7 +10,6 @@ import com.github.ajalt.mordant.terminal.Terminal
 import com.github.ajalt.mordant.widgets.progress.*
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.awt.Color
@@ -27,7 +26,7 @@ class CollectionPagePreview(
             progressBar()
             completed(style = terminal.theme.success)
             timeRemaining(style = TextColors.magenta)
-            text { "$context" }
+            text { context }
         }.animateInCoroutine(terminal, context = "fetching cards")
 
         launch { progress.execute() }
@@ -49,10 +48,9 @@ class CollectionPagePreview(
             val fontFamily72Black = loadType0Font(javaClass.getResourceAsStream("/fonts/72-Black.ttf")!!)
             val fontCode = Font(fontFamily72Black, 10f)
 
-            val mtgCardBack = createFromFile(Path.of("./card-back.jpg"))
+            val mtgCardBack = createFromFile(Path.of("./assets/images/card-back.jpg"))
 
             val margin = Position(10.0f, 10.0f)
-            val pageGap = 10.0f
 
             val pageSize = pageFormat.toPosition()
             val columns = 3
@@ -115,10 +113,6 @@ class CollectionPagePreview(
                             }
                         }
                     }
-//                    val minNumberInSet = pageContent.minOf { it.map { it.numberInSet }.orElse("Z") }
-//                    val maxNumberInSet = pageContent.maxOf { it.map { it.numberInSet }.orElse("0") }
-//                    drawText("#$minNumberInSet - #$maxNumberInSet", fontCode, HorizontalAlignment.CENTER, 0f, box.height, fontColor)
-
                     when (pagePosition) {
                         PagePosition.RIGHT ->
                             drawText("Page %02d (Front)".format(pageNumber/2+1), fontCode, HorizontalAlignment.RIGHT, 0f, box.height, fontColor)

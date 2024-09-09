@@ -1,12 +1,13 @@
 package at.woolph.caco
 
-import at.woolph.caco.cli.CollectionPagePreview
-import at.woolph.caco.cli.PagePositionCalculator
+import at.woolph.caco.cli.*
+import at.woolph.caco.cli.manabase.*
 import at.woolph.caco.datamodel.Databases
 import at.woolph.caco.datamodel.collection.CardCondition
 import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.CardSet
+import at.woolph.caco.decks.DecklistPrinter
 import at.woolph.caco.gui.MyApp
 import at.woolph.caco.importer.collection.importDeckbox
 import at.woolph.caco.importer.collection.setNameMapping
@@ -16,7 +17,6 @@ import at.woolph.caco.importer.sets.*
 import at.woolph.caco.importer.sets.LOG
 import at.woolph.caco.view.collection.CardPossessionModel
 import at.woolph.caco.view.collection.PaperCollectionView
-import at.woolph.libs.files.createDirectory
 import at.woolph.libs.files.inputStream
 import at.woolph.libs.files.path
 import at.woolph.libs.pdf.*
@@ -31,8 +31,15 @@ import com.github.ajalt.clikt.parameters.options.*
 import com.github.ajalt.clikt.parameters.types.double
 import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.path
+import com.github.ajalt.mordant.animation.coroutines.animateInCoroutine
+import com.github.ajalt.mordant.rendering.TextColors
+import com.github.ajalt.mordant.widgets.progress.*
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.decodeToSequence
 import org.apache.pdfbox.pdmodel.common.PDRectangle
@@ -44,8 +51,10 @@ import tornadofx.launch
 import java.awt.Color
 import java.io.File
 import java.io.InputStream
+import java.net.URI
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.*
+import java.util.Currency
 import kotlin.io.path.*
 import kotlin.math.min
 
@@ -140,7 +149,7 @@ class UpdatesPrices: CliktCommand(name = "prices", help="Updates the price data 
     }
 }
 
-class ImportDeckbox: CliktCommand(name = "deckbox", help="Importing the collection from an Deckbox export CSV file") {
+class ImportDeckboxCollection: CliktCommand(name = "deckbox-collection", help="Importing the collection from an Deckbox export CSV file") {
     val file by argument(help="The file to import").path(mustExist = true).default(path(System.getProperty("user.home"), "Downloads"))
     override fun run() {
             if(file.isDirectory()) {
@@ -154,10 +163,6 @@ class ImportDeckbox: CliktCommand(name = "deckbox", help="Importing the collecti
                 importDeckbox(it)
             }
     }
-}
-
-class Print: CliktCommand(help="Printing data") {
-    override fun run() = Unit
 }
 
 class HighValueTradables: CliktCommand(help="Print the tradables above a certain price threshold") {
@@ -383,6 +388,188 @@ class PrintPagePositions: CliktCommand(name = "page-position", help="Printing a 
     }
 }
 
+class ImportDecklists: CliktCommand(name = "deckbox-decks", help="importing decklists") {
+    val username by option(help="Deckbox username").prompt("Enter the username of the deckbox user")
+
+    override fun run() = runBlocking<Unit> {
+        DeckboxDeckImporter(terminal).importDeckboxDecks(username).collect {
+            // TODO into database
+        }
+    }
+}
+
+class PrintDecklists: CliktCommand(name = "deckbox-decks", help="printing decklists") {
+    val username by option(help="Deckbox username").prompt("Enter the username of the deckbox user")
+    val output by option().path(canBeDir = true, canBeFile = true)
+
+    override fun run() = runBlocking<Unit> {
+        val progress = progressBarContextLayout<String> {
+            percentage()
+            progressBar()
+            completed(style = terminal.theme.success)
+            timeRemaining(style = TextColors.magenta)
+            text { "$context" }
+        }.animateInCoroutine(terminal, context = "")
+
+        val job = launch { progress.execute() }
+
+        val decklistPrinter = output?.let {
+            if (it.isDirectory()) {
+                DecklistPrinter.Pdf(it.createDirectories())
+            } else {
+                DecklistPrinter.PdfOneFile(it.createParentDirectories())
+            }
+        } ?: DecklistPrinter.Terminal(terminal)
+
+        decklistPrinter.print(DeckboxDeckImporter(terminal, progress).importDeckboxDecks(username).take(20).toList())
+
+        job.cancel("everything is done")
+    }
+}
+
+class PrintDecklist: CliktCommand(name = "deckbox-deck", help="printing decklist") {
+    val url by option(help="Deckbox decklist URL").convert { URI.create(it).toURL() }.prompt("Enter URL")
+    val output by option().path(canBeDir = true, canBeFile = true)
+
+    override fun run() = runBlocking<Unit> {
+        val decklistPrinter = output?.let {
+            DecklistPrinter.Pdf(it)
+        } ?: DecklistPrinter.Terminal(terminal)
+
+        DeckboxDeckImporter(terminal).importDeck(url).let { decklistPrinter.print(listOf(it)) }
+    }
+}
+
+@JvmInline
+value class Percentage(val value: Double) {
+    override fun toString() = String.format("%1.1f%%", value * 100)
+}
+
+object Currencies {
+    val USD = Currency.getInstance("USD")
+    val EUR = Currency.getInstance("EUR")
+    val YEN = Currency.getInstance("JPY")
+}
+
+data class CurrencyValue(val value: Double, val currency: Currency): Comparable<CurrencyValue> {
+    override fun compareTo(other: CurrencyValue): Int = value.compareTo(other.value)
+
+    override fun toString() = String.format("%.${currency.defaultFractionDigits}f%s", value, currency.symbol)
+}
+
+class PrintMissingStats: CliktCommand(name = "missing-stats", help="printing the stats of collection missings things") {
+    override fun run() = runBlocking<Unit> {
+
+        newSuspendedTransaction {
+            data class MissingStats(
+                val count: Int,
+                val total: Int,
+                val costs: CurrencyValue,
+            ) {
+                val completionPercentage: Percentage
+                    get() = Percentage(1.0 - count.toDouble() / total)
+            }
+            val missingStatsPerSet = CardSet.all().filter {
+                !it.digitalOnly && it.officalCardCount > 50
+            }.map {
+                val overallCardCount = it.cards.count { !it.token }
+                val missingCardsForCollection = it.cards.filter { card -> !card.token && card.possessions.count() < 1 }
+                val count = missingCardsForCollection.count()
+                val costs = missingCardsForCollection.sumOf { it.price ?: 10.0 }
+                it to MissingStats(count, overallCardCount, CurrencyValue(costs, Currencies.USD))
+            }.sortedBy { it.second.costs }
+
+            println("Set code\tSet name\tCompletion\tEstimated cost to complete\tMissing cards")
+            missingStatsPerSet.forEach { (set, stats) ->
+                println("${set.shortName.value}\t${set.name}\t${stats.completionPercentage}\t${stats.costs}\t${stats.count}")
+            }
+        }
+    }
+}
+
+class PrintManaBase: CliktCommand(name = "generate-manabase", help="printing decklist") {
+    val colorIdentity by option(help="The color identity to generate the mana base for").convert { ColorIdentity(it) }.required()
+
+    override fun run() = runBlocking<Unit> {
+        val selectionCriterion = SelectionCriterion(
+            ColorIdentity.GRUUL,
+            basicLandTypeFactors = 0.1,
+            fastStartFactor = 1.5,
+            maxPricePerCard = 25.0,
+        )
+        generateManabase(selectionCriterion, """
+1 Abrade
+1 Accorder's Shield
+1 Arcane Signet
+1 Battered Golem
+1 Beast Within
+1 Blasphemous Act
+1 Blood Moon
+1 Bone Saw
+1 Cathar's Shield
+1 Chaos Warp
+1 Chrome Mox
+1 Claws of Gix
+1 Cloud Key
+1 Daretti, Scrap Savant
+1 Darksteel Relic
+1 Elvish Spirit Guide
+1 Everflowing Chalice
+1 Finale of Devastation
+1 Foundry Inspector
+1 Fountain of Youth
+1 Ghirapur Aether Grid
+1 Goblin Engineer
+1 Grapeshot
+1 Haywire Mite
+1 Herbal Poultice
+1 Howling Mine
+1 Ingenious Artillerist
+1 Jeweled Amulet
+1 Jeweled Lotus
+1 Jhoira's Familiar
+1 Liberator, Urza's Battlethopter
+1 Lightning Greaves
+1 Lotus Petal
+1 Memnite
+1 Meria, Scholar of Antiquity
+1 Mishra's Bauble
+1 Mox Amber
+1 Mox Opal
+1 Myr Retriever
+1 Mystic Forge
+1 Ornithopter
+1 Paradise Mantle
+1 Phyrexian Walker
+1 Reckless Fireweaver
+1 Reckless Handling
+1 Sarinth Steelseeker
+1 Scrap Trawler
+1 Sensei's Divining Top
+1 Shield Sphere
+1 Shimmer Myr
+1 Simian Spirit Guide
+1 Sol Ring
+1 Spellbook
+1 Spidersilk Net
+1 Stone of Erech
+1 Swiftfoot Boots
+1 Sylvan Library
+1 Talisman of Impulse
+1 The Millennium Calendar
+1 Tormod's Crypt
+1 Traxos, Scourge of Kroog
+1 Unwinding Clock
+1 Urza's Bauble
+1 Veil of Summer
+1 Volatile Wanderglyph
+1 Welding Jar
+1 Winter Orb
+1 Zuran Orb
+        """.trimIndent().lines().map { DecklistEntry(it.removePrefix("1 ")) }).forEach { println(it) }
+    }
+}
+
 fun main(args: Array<String>) {
     Databases.init()
 
@@ -391,17 +578,22 @@ fun main(args: Array<String>) {
             Ui(),
             NoOpCliktCommand(name = "import", help="Importing data").subcommands(
                 ImportScryfall(),
-                ImportDeckbox(),
+                ImportDeckboxCollection(),
                 UpdatesPrices(),
                 ImportSet(),
+                ImportDecklists(),
             ),
-            Print().subcommands(
+            NoOpCliktCommand(name = "print", help="Printing data").subcommands(
                 HighValueTradables(),
                 PrintInventory(),
                 PrintCollectionBinderPageView(),
                 PrintPagePositions(),
+                PrintDecklist(),
+                PrintDecklists(),
+                PrintMissingStats(),
             ),
-            EnterCards()
+            EnterCards(),
+            PrintManaBase(),
         )
         .main(args)
 }

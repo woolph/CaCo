@@ -1,5 +1,6 @@
 package at.woolph.caco.importer.sets
 
+import at.woolph.caco.httpclient.useHttpClient
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
@@ -32,11 +33,7 @@ data class PaginatedData<T: ScryfallBase>(
 internal inline fun <reified T: ScryfallBase> paginatedDataRequest(initialQuery: String, optional: Boolean = false, progressIndicator: ProgressIndicator? = null): Flow<T> = flow {
     var currentQuery: String? = initialQuery
 
-    HttpClient(CIO) {
-        install(ContentNegotiation) {
-            json(jsonSerializer)
-        }
-    }.use { client ->
+    useHttpClient { client ->
         while (currentQuery != null && currentCoroutineContext().isActive) {
             LOG.debug("importing paginated data from $currentQuery")
             val response: HttpResponse = client.get(currentQuery!!)
@@ -66,18 +63,12 @@ internal inline fun <reified T: ScryfallBase> paginatedDataRequest(initialQuery:
     }
 }
 
-internal suspend inline fun <reified T: ScryfallBase> request(query: String): T {
-    HttpClient(CIO) {
-        install(ContentNegotiation) {
-            json(jsonSerializer)
-        }
-    }.use { client ->
-        LOG.debug("requesting data from $query")
-        val response: HttpResponse = client.get(query)
-        if (response.status.isSuccess()) {
-            return response.body<T>()
-        } else {
-            throw Exception("request failed with status code ${response.status.description}")
-        }
+internal suspend inline fun <reified T: ScryfallBase> request(query: String): T = useHttpClient { client ->
+    LOG.debug("requesting data from $query")
+    val response: HttpResponse = client.get(query)
+    if (response.status.isSuccess()) {
+        return@useHttpClient response.body<T>()
+    } else {
+        throw Exception("request failed with status code ${response.status.description}")
     }
 }

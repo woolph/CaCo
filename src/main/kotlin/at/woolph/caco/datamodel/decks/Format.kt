@@ -11,4 +11,6 @@ enum class Format(val shortName: String) {
 	Legacy("LGC"),
 	Vintage("VTG"),
 	Pioneer("PNR"),
+	Brawl("BRL"),
+	Cube("CUB"),
 }
