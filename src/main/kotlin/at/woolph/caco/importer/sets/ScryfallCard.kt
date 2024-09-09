@@ -1,6 +1,5 @@
 package at.woolph.caco.importer.sets
 
-import at.woolph.caco.cli.manabase.ManaColor
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
@@ -20,10 +19,13 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
+import org.slf4j.LoggerFactory
 import java.net.URI
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.*
+
+private val LOG = LoggerFactory.getLogger("at.woolph.caco.importer.sets.ScryfallCard")
 
 object LocalDateSerializer : KSerializer<LocalDate> {
     override val descriptor = PrimitiveSerialDescriptor("LocalDate", PrimitiveKind.STRING)

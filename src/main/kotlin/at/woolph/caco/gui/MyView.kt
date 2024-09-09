@@ -4,11 +4,11 @@ import at.woolph.caco.importer.sets.ProgressIndicator
 import at.woolph.caco.view.collection.PaperCollectionView
 import at.woolph.caco.view.decks.DecksView
 import at.woolph.libs.ktfx.view
-import at.woolph.libs.log.logger
 import javafx.collections.FXCollections
 import javafx.collections.ObservableList
 import javafx.geometry.Side
 import javafx.scene.Parent
+import org.slf4j.LoggerFactory
 import tornadofx.View
 import tornadofx.borderpane
 import tornadofx.doubleBinding
@@ -50,7 +50,7 @@ class MyView : View() {
 	}
 
 	companion object {
-		val logger by logger()
+		val logger = LoggerFactory.getLogger(this::class.java.declaringClass)
 		val progressIndicators: ObservableList<ProgressIndicator> = FXCollections.observableList(mutableListOf())
 	}
 }

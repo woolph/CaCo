@@ -1,14 +1,10 @@
 package at.woolph.caco.importer.sets
 
 import at.woolph.caco.httpclient.useHttpClient
-import io.ktor.client.*
 import io.ktor.client.call.*
-import io.ktor.client.engine.cio.*
-import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
@@ -18,6 +14,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.isActive
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import org.slf4j.LoggerFactory
 
 @Serializable
 data class PaginatedData<T: ScryfallBase>(
@@ -29,6 +26,8 @@ data class PaginatedData<T: ScryfallBase>(
 ): ScryfallBase {
     override fun isValid() = objectType == "list"
 }
+
+private val LOG = LoggerFactory.getLogger("at.woolph.caco.importer.sets.PaginatedData")
 
 internal inline fun <reified T: ScryfallBase> paginatedDataRequest(initialQuery: String, optional: Boolean = false, progressIndicator: ProgressIndicator? = null): Flow<T> = flow {
     var currentQuery: String? = initialQuery

@@ -1,5 +1,6 @@
 package at.woolph.caco
 
+import at.woolph.caco.UpdatesPrices.Companion.log
 import at.woolph.caco.cli.*
 import at.woolph.caco.cli.manabase.*
 import at.woolph.caco.datamodel.Databases
@@ -14,11 +15,8 @@ import at.woolph.caco.importer.collection.setNameMapping
 import at.woolph.caco.importer.collection.toDeckboxCondition
 import at.woolph.caco.importer.collection.toLanguageDeckbox
 import at.woolph.caco.importer.sets.*
-import at.woolph.caco.importer.sets.LOG
 import at.woolph.caco.view.collection.CardPossessionModel
 import at.woolph.caco.view.collection.PaperCollectionView
-import at.woolph.libs.files.inputStream
-import at.woolph.libs.files.path
 import at.woolph.libs.pdf.*
 import at.woolph.libs.prompt
 import be.quodlibet.boxable.HorizontalAlignment
@@ -45,8 +43,11 @@ import kotlinx.serialization.json.decodeToSequence
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.font.PDType1Font
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts
+import org.jetbrains.exposed.dao.Entity
+import org.jetbrains.exposed.dao.EntityClass
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.slf4j.LoggerFactory
 import tornadofx.launch
 import java.awt.Color
 import java.io.File
@@ -68,12 +69,6 @@ class Ui: CliktCommand(help="User interface", treatUnknownOptionsAsArgs = true) 
     }
 }
 
-
-sealed class Either<out A, out B> {
-    class Left<A>(val value: A): Either<A, Nothing>()
-    class Right<B>(val value: B): Either<Nothing, B>()
-}
-
 class ImportScryfall: CliktCommand(name = "scryfall", help="Importing the card data from Scryfall") {
     val source by mutuallyExclusiveOptions(
         option("--bulk-data", help="which bulk data to import").convert { Either.Left(it) },
@@ -93,7 +88,7 @@ class ImportScryfall: CliktCommand(name = "scryfall", help="Importing the card d
                                 it.update(this)
                             }
                         } catch(t: Throwable) {
-                            LOG.error("error while importing card ${it.name}", t)
+                            log.error("error while importing card ${it.name}", t)
                         }
                     }
             }
@@ -103,6 +98,10 @@ class ImportScryfall: CliktCommand(name = "scryfall", help="Importing the card d
                 is Either.Right -> sourceX.value.inputStream().use { processJson(it) }
             }
         }
+    }
+
+    companion object {
+        val log = LoggerFactory.getLogger(this::class.java.declaringClass)
     }
 }
 
@@ -118,10 +117,14 @@ class ImportSet: CliktCommand(name = "sets", help="Importing the card data from 
                             importCardsOfSet()
                         }
                     } catch(ex:Exception) {
-                        ex.printStackTrace()
+                        log.error("error while importing ${setCodes}", ex)
                     }
                 }
         }
+    }
+
+    companion object {
+        val log = LoggerFactory.getLogger(this::class.java.declaringClass)
     }
 }
 
@@ -141,16 +144,20 @@ class UpdatesPrices: CliktCommand(name = "prices", help="Updates the price data 
                                 priceFoil = it.prices["eur_foil"]?.toDouble()
                             }
                         } catch(t: Throwable) {
-                            LOG.error("error while updating price for card ${it.name}", t)
+                            log.error("error while updating price for card ${it.name}", t)
                         }
                     }
             }
         }
     }
+
+    companion object {
+        val log = LoggerFactory.getLogger(this::class.java.declaringClass)
+    }
 }
 
 class ImportDeckboxCollection: CliktCommand(name = "deckbox-collection", help="Importing the collection from an Deckbox export CSV file") {
-    val file by argument(help="The file to import").path(mustExist = true).default(path(System.getProperty("user.home"), "Downloads"))
+    val file by argument(help="The file to import").path(mustExist = true).default(Path(System.getProperty("user.home"), "Downloads"))
     override fun run() {
             if(file.isDirectory()) {
                 file.useDirectoryEntries { entries ->
@@ -440,23 +447,6 @@ class PrintDecklist: CliktCommand(name = "deckbox-deck", help="printing decklist
     }
 }
 
-@JvmInline
-value class Percentage(val value: Double) {
-    override fun toString() = String.format("%1.1f%%", value * 100)
-}
-
-object Currencies {
-    val USD = Currency.getInstance("USD")
-    val EUR = Currency.getInstance("EUR")
-    val YEN = Currency.getInstance("JPY")
-}
-
-data class CurrencyValue(val value: Double, val currency: Currency): Comparable<CurrencyValue> {
-    override fun compareTo(other: CurrencyValue): Int = value.compareTo(other.value)
-
-    override fun toString() = String.format("%.${currency.defaultFractionDigits}f%s", value, currency.symbol)
-}
-
 class PrintMissingStats: CliktCommand(name = "missing-stats", help="printing the stats of collection missings things") {
     override fun run() = runBlocking<Unit> {
 
@@ -591,9 +581,42 @@ fun main(args: Array<String>) {
                 PrintDecklist(),
                 PrintDecklists(),
                 PrintMissingStats(),
+                // TODO PrintMissingForDecks(),
+                // TODO PrintMissingForCollection(),
+                // TODO PrintDuplicatesRanked(), // by Price and or EDHREC Rank
             ),
             EnterCards(),
             PrintManaBase(),
         )
         .main(args)
 }
+
+
+fun <ID : Comparable<ID>, T: Entity<ID>> EntityClass<ID, T>.newOrUpdate(id: ID, setter: T.() -> Unit): T {
+    return findById(id)?.apply(setter) ?: new(id, setter)
+}
+
+sealed class Either<out A, out B> {
+    class Left<A>(val value: A): Either<A, Nothing>()
+    class Right<B>(val value: B): Either<Nothing, B>()
+}
+
+@JvmInline
+value class Percentage(val value: Double) {
+    override fun toString() = String.format("%1.1f%%", value * 100)
+}
+
+object Currencies {
+    val USD = Currency.getInstance("USD")
+    val EUR = Currency.getInstance("EUR")
+    val YEN = Currency.getInstance("JPY")
+}
+
+data class CurrencyValue(val value: Double, val currency: Currency): Comparable<CurrencyValue> {
+    override fun compareTo(other: CurrencyValue): Int = value.compareTo(other.value)
+
+    override fun toString() = String.format("%.${currency.defaultFractionDigits}f%s", value, currency.symbol)
+}
+
+
+data class Quadruple<A, B, C, D>(val t1: A, val t2: B, val t3: C, val t4: D)

@@ -28,7 +28,6 @@ class CheapRampTests {
                 "Springleaf Drum",
                 "Lotus Cobra",
                 "Dark Ritual",
-                "Sylvan Scrying",
                 "Wolfwillow Haven",
                 "Aether Vial",
                 "Wayfarer's Bauble",

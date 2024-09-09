@@ -4,7 +4,6 @@ import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.httpclient.useHttpClient
 import at.woolph.caco.newOrUpdate
-import at.woolph.libs.log.logger
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -12,11 +11,12 @@ import io.ktor.http.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.withContext
+import org.slf4j.LoggerFactory
 import java.io.InputStream
 import kotlin.math.max
 import kotlin.math.min
 
-internal val LOG by logger("at.woolph.caco.importer.sets.Scryfall")
+private val LOG = LoggerFactory.getLogger("at.woolph.caco.importer.sets.Scryfall")
 
 val patternPromoCollectorNumber = Regex("([s★c])$")
 
