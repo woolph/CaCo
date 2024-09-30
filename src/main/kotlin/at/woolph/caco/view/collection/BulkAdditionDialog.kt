@@ -21,16 +21,13 @@ import javafx.event.EventHandler
 import javafx.scene.control.ButtonType
 import javafx.scene.control.Dialog
 import javafx.scene.control.SelectionMode
-import javafx.scene.control.TableColumn
 import javafx.scene.control.TableView
 import javafx.scene.control.TextField
 import javafx.scene.control.ToggleButton
 import javafx.scene.input.KeyCode
-import javafx.scene.layout.BorderPane
 import javafx.scene.layout.Priority
 import javafx.stage.FileChooser
 import org.jetbrains.exposed.sql.transactions.transaction
-import tornadofx.ChangeListener
 import tornadofx.FileChooserMode
 import tornadofx.View
 import tornadofx.action
@@ -60,11 +57,10 @@ import tornadofx.tooltip
 import tornadofx.top
 import tornadofx.vboxConstraints
 import java.io.File
-import java.util.*
 
-class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolean, selection: Card? = null): Dialog<Boolean>() {
+class BulkAdditionDialog(val collectionSettings: CollectionSettings, val set: CardSet, val owner: View, imageLoading: Boolean, selection: Card? = null): Dialog<Boolean>() {
 
-    inner class CardModel(card: Card): at.woolph.caco.view.collection.CardModel(card) {
+    inner class CardModel(card: Card): CardPossessionModel(card, collectionSettings) {
         val bulkAdditionNonPremium = SimpleIntegerProperty(0)
         val bulkAdditionPremium = SimpleIntegerProperty(0)
 		val bulkAdditionPrereleasePromo = SimpleIntegerProperty(0)
@@ -276,6 +272,10 @@ class BulkAdditionDialog(val set: CardSet, val owner: View, imageLoading: Boolea
                         }
 
                         column("Name", CardModel::name).remainingWidth()
+
+                        column("Possession", CardModel::possessionTotal) {
+                            contentWidth(5.0, useAsMin = true, useAsMax = true)
+                        }
 
                         column("Add", CardModel::bulkAdditionNonPremium) {
                             contentWidth(5.0, useAsMin = true, useAsMax = true)

@@ -41,7 +41,7 @@ class PaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
             action(coroutineScope) {
 				set?.let {
 					newSuspendedTransaction {
-						BulkAdditionDialog(it, this@PaperCollectionView, toggleButtonImageLoading.isSelected, tvCards.selectedItem?.item).showAndAwait()?.let {
+						BulkAdditionDialog(collectionSettings, it, this@PaperCollectionView, toggleButtonImageLoading.isSelected, tvCards.selectedItem?.item).showAndAwait()?.let {
 							updateCards()
 						}
 					}

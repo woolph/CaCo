@@ -11,7 +11,7 @@ import tornadofx.integerBinding
 import tornadofx.stringBinding
 import kotlin.math.min
 
-class CardPossessionModel(card: Card, val collectionsSettings: CollectionSettings): CardModel(card) {
+open class CardPossessionModel(card: Card, val collectionsSettings: CollectionSettings): CardModel(card) {
 
 	val possessionPremiumTarget: IntegerBinding = integerBinding(extendedArt, nonfoilAvailable, foilAvailable) {
 		if (extendedArt.value || !foilAvailable.value) {
