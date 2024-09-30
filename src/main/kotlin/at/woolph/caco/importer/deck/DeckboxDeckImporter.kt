@@ -1,5 +1,6 @@
-package at.woolph.caco.cli
+package at.woolph.caco.importer.deck
 
+import at.woolph.caco.cli.DeckList
 import at.woolph.caco.datamodel.decks.Format
 import com.github.ajalt.mordant.animation.coroutines.CoroutineProgressTaskAnimator
 import com.github.ajalt.mordant.animation.progress.advance

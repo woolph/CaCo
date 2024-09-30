@@ -1,6 +1,7 @@
 package at.woolph.caco.importer.sets
 
 import at.woolph.caco.httpclient.useHttpClient
+import at.woolph.caco.importer.deck.Pageable
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -12,19 +13,27 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.isActive
+import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.slf4j.LoggerFactory
+import java.net.URI
 
 @Serializable
 data class PaginatedData<T: ScryfallBase>(
     @SerialName("object") val objectType: String,
-    val total_cards: Int? = null,
+    @SerialName("total_cards") override val totalItems: Int,
     val has_more: Boolean,
-    val next_page: String? = null,
+    @Contextual val next_page: String? = null,
     val data: List<T>,
-): ScryfallBase {
+): ScryfallBase, Pageable<T> {
     override fun isValid() = objectType == "list"
+
+    override fun hasNext(): Boolean = has_more
+
+    override fun next(): String = next_page!!
+
+    override fun contents(): Flow<T> = data.asFlow()
 }
 
 private val LOG = LoggerFactory.getLogger("at.woolph.caco.importer.sets.PaginatedData")
@@ -46,7 +55,7 @@ internal inline fun <reified T: ScryfallBase> paginatedDataRequest(initialQuery:
                     paginatedData.data.asFlow()
                         .updateProgressIndicator(
                             progressIndicator,
-                            paginatedData.total_cards ?: paginatedData.data.size
+                            paginatedData.totalItems
                         )
                         .filter { it.isValid() }
 //                    .onEach { LOG.trace("emitting $it") }

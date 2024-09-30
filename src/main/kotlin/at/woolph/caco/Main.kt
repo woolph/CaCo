@@ -1,6 +1,5 @@
 package at.woolph.caco
 
-import at.woolph.caco.UpdatesPrices.Companion.log
 import at.woolph.caco.cli.*
 import at.woolph.caco.cli.manabase.*
 import at.woolph.caco.datamodel.Databases
@@ -14,6 +13,8 @@ import at.woolph.caco.importer.collection.importDeckbox
 import at.woolph.caco.importer.collection.setNameMapping
 import at.woolph.caco.importer.collection.toDeckboxCondition
 import at.woolph.caco.importer.collection.toLanguageDeckbox
+import at.woolph.caco.importer.deck.ArchidektDeckImporter
+import at.woolph.caco.importer.deck.DeckboxDeckImporter
 import at.woolph.caco.importer.sets.*
 import at.woolph.caco.view.collection.CardPossessionModel
 import at.woolph.caco.view.collection.PaperCollectionView
@@ -434,6 +435,35 @@ class PrintDecklists: CliktCommand(name = "deckbox-decks", help="printing deckli
     }
 }
 
+class PrintArchidektDecks: CliktCommand(name = "archidekt-decks", help="printing decklists from archidekt") {
+    val username by option(help="Archidekt username").prompt("Enter the username of the Archidekt user")
+    val output by option().path(canBeDir = true, canBeFile = true)
+
+    override fun run() = runBlocking<Unit> {
+        val progress = progressBarContextLayout<String> {
+            percentage()
+            progressBar()
+            completed(style = terminal.theme.success)
+            timeRemaining(style = TextColors.magenta)
+            text { "$context" }
+        }.animateInCoroutine(terminal, context = "")
+
+        val job = launch { progress.execute() }
+
+        val decklistPrinter = output?.let {
+            if (it.isDirectory()) {
+                DecklistPrinter.Pdf(it.createDirectories())
+            } else {
+                DecklistPrinter.PdfOneFile(it.createParentDirectories())
+            }
+        } ?: DecklistPrinter.Terminal(terminal)
+
+        decklistPrinter.print(ArchidektDeckImporter(terminal, progress).importDecks(username).toList())
+
+        job.cancel("everything is done")
+    }
+}
+
 class PrintDecklist: CliktCommand(name = "deckbox-deck", help="printing decklist") {
     val url by option(help="Deckbox decklist URL").convert { URI.create(it).toURL() }.prompt("Enter URL")
     val output by option().path(canBeDir = true, canBeFile = true)
@@ -478,85 +508,20 @@ class PrintMissingStats: CliktCommand(name = "missing-stats", help="printing the
 }
 
 class PrintManaBase: CliktCommand(name = "generate-manabase", help="printing decklist") {
-    val colorIdentity by option(help="The color identity to generate the mana base for").convert { ColorIdentity(it) }.required()
+    val colorIdentity by option(help="The color identity to generate the mana base for").convert { ColorIdentity(it) }.prompt("Enter colorIdentity:")
+    val basicLandTypeFactors by option(help="basicLandTypeFactors").double().default(0.1)
+    val fastStartFactor by option(help="fastStartFactor").double().default(1.2)
+    val maxPricePerCard by option(help="maxPricePerCard").double().default(Double.MAX_VALUE)
 
     override fun run() = runBlocking<Unit> {
         val selectionCriterion = SelectionCriterion(
-            ColorIdentity.GRUUL,
-            basicLandTypeFactors = 0.1,
-            fastStartFactor = 1.5,
-            maxPricePerCard = 25.0,
+            colorIdentity,
+            basicLandTypeFactors = basicLandTypeFactors,
+            fastStartFactor = fastStartFactor,
+            maxPricePerCard = maxPricePerCard,
         )
-        generateManabase(selectionCriterion, """
-1 Abrade
-1 Accorder's Shield
-1 Arcane Signet
-1 Battered Golem
-1 Beast Within
-1 Blasphemous Act
-1 Blood Moon
-1 Bone Saw
-1 Cathar's Shield
-1 Chaos Warp
-1 Chrome Mox
-1 Claws of Gix
-1 Cloud Key
-1 Daretti, Scrap Savant
-1 Darksteel Relic
-1 Elvish Spirit Guide
-1 Everflowing Chalice
-1 Finale of Devastation
-1 Foundry Inspector
-1 Fountain of Youth
-1 Ghirapur Aether Grid
-1 Goblin Engineer
-1 Grapeshot
-1 Haywire Mite
-1 Herbal Poultice
-1 Howling Mine
-1 Ingenious Artillerist
-1 Jeweled Amulet
-1 Jeweled Lotus
-1 Jhoira's Familiar
-1 Liberator, Urza's Battlethopter
-1 Lightning Greaves
-1 Lotus Petal
-1 Memnite
-1 Meria, Scholar of Antiquity
-1 Mishra's Bauble
-1 Mox Amber
-1 Mox Opal
-1 Myr Retriever
-1 Mystic Forge
-1 Ornithopter
-1 Paradise Mantle
-1 Phyrexian Walker
-1 Reckless Fireweaver
-1 Reckless Handling
-1 Sarinth Steelseeker
-1 Scrap Trawler
-1 Sensei's Divining Top
-1 Shield Sphere
-1 Shimmer Myr
-1 Simian Spirit Guide
-1 Sol Ring
-1 Spellbook
-1 Spidersilk Net
-1 Stone of Erech
-1 Swiftfoot Boots
-1 Sylvan Library
-1 Talisman of Impulse
-1 The Millennium Calendar
-1 Tormod's Crypt
-1 Traxos, Scourge of Kroog
-1 Unwinding Clock
-1 Urza's Bauble
-1 Veil of Summer
-1 Volatile Wanderglyph
-1 Welding Jar
-1 Winter Orb
-1 Zuran Orb
-        """.trimIndent().lines().map { DecklistEntry(it.removePrefix("1 ")) }).forEach { println(it) }
+
+        generateManabase(selectionCriterion, sequence<String> { terminal.readLineOrNull(false) }.takeWhile { it.isNotBlank() }.map { DecklistEntry(it.removePrefix("1 ")) }.toList()).forEach { println(it) }
     }
 }
 
@@ -580,6 +545,7 @@ fun main(args: Array<String>) {
                 PrintPagePositions(),
                 PrintDecklist(),
                 PrintDecklists(),
+                PrintArchidektDecks(),
                 PrintMissingStats(),
                 // TODO PrintMissingForDecks(),
                 // TODO PrintMissingForCollection(),

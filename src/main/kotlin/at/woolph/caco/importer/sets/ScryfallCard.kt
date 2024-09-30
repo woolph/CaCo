@@ -77,6 +77,7 @@ object ZonedDateTimeSerializer : KSerializer<ZonedDateTime> {
     }
 }
 val jsonSerializer = Json {
+    ignoreUnknownKeys = true
     serializersModule = SerializersModule {
         contextual(LocalDate::class, LocalDateSerializer)
         contextual(URI::class, URISerializer)
