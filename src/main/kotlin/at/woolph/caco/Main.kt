@@ -400,13 +400,13 @@ class ImportDecklists: CliktCommand(name = "deckbox-decks", help="importing deck
     val username by option(help="Deckbox username").prompt("Enter the username of the deckbox user")
 
     override fun run() = runBlocking<Unit> {
-        DeckboxDeckImporter(terminal).importDeckboxDecks(username).collect {
+        DeckboxDeckImporter().importDeckboxDecks(username).collect {
             // TODO into database
         }
     }
 }
 
-class PrintDecklists: CliktCommand(name = "deckbox-decks", help="printing decklists") {
+class PrintDeckboxDecks: CliktCommand(name = "deckbox-decks", help="printing decklists") {
     val username by option(help="Deckbox username").prompt("Enter the username of the deckbox user")
     val output by option().path(canBeDir = true, canBeFile = true)
 
@@ -429,7 +429,7 @@ class PrintDecklists: CliktCommand(name = "deckbox-decks", help="printing deckli
             }
         } ?: DecklistPrinter.Terminal(terminal)
 
-        decklistPrinter.print(DeckboxDeckImporter(terminal, progress).importDeckboxDecks(username).take(20).toList())
+        decklistPrinter.print(DeckboxDeckImporter(progress).importDeckboxDecks(username).take(20).toList())
 
         job.cancel("everything is done")
     }
@@ -458,7 +458,7 @@ class PrintArchidektDecks: CliktCommand(name = "archidekt-decks", help="printing
             }
         } ?: DecklistPrinter.Terminal(terminal)
 
-        decklistPrinter.print(ArchidektDeckImporter(terminal, progress).importDecks(username).toList())
+        decklistPrinter.print(ArchidektDeckImporter(progress).importDecks(username).toList())
 
         job.cancel("everything is done")
     }
@@ -473,7 +473,7 @@ class PrintDecklist: CliktCommand(name = "deckbox-deck", help="printing decklist
             DecklistPrinter.Pdf(it)
         } ?: DecklistPrinter.Terminal(terminal)
 
-        DeckboxDeckImporter(terminal).importDeck(url).let { decklistPrinter.print(listOf(it)) }
+        DeckboxDeckImporter().importDeck(url).let { decklistPrinter.print(listOf(it)) }
     }
 }
 
@@ -544,7 +544,7 @@ fun main(args: Array<String>) {
                 PrintCollectionBinderPageView(),
                 PrintPagePositions(),
                 PrintDecklist(),
-                PrintDecklists(),
+                PrintDeckboxDecks(),
                 PrintArchidektDecks(),
                 PrintMissingStats(),
                 // TODO PrintMissingForDecks(),
