@@ -5,6 +5,7 @@ enum class Format(val shortName: String) {
 	Standard("STD"),
 	Historic("HSC"),
 	Commander("CMD"),
+	PauperCommander("PCMD"),
 	Oathbreaker("OBR"),
 	Modern("MDN"),
 	Pauper("PPR"),
