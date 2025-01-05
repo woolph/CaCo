@@ -9,6 +9,7 @@ import at.woolph.caco.importer.sets.paddingCollectorNumber
 import com.opencsv.CSVReader
 import com.opencsv.CSVWriter
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.io.File
 import java.io.FileReader
@@ -55,108 +56,148 @@ fun CardCondition.toDeckboxCondition(): String = when (this) {
 fun importDeckbox(file: Path) {
     println("importing deckbox collection export file $file")
     transaction {
+        val knownSets = CardSet.all().map { it.id.value }.toSet()
+        val promoPrintingNotes = listOf("Bundle Foil Promo", "Promo", "Buy-A-Box Promo")
         CardPossessions.deleteAll()
 
-        val writer = CSVWriter(FileWriter(File("not-imported.csv")))
-        val reader = CSVReader(FileReader(file.toFile()))
-        val header = reader.readNext().also {
-            writer.writeNext(it)
-        }.withIndex().associate { it.value to it.index }
+        CSVWriter(FileWriter(File("not-imported.csv"))).use { writer ->
+            CSVReader(FileReader(file.toFile())).use { reader ->
+                val header = reader.readNext().also {
+                    writer.writeNext(it)
+                }.withIndex().associate { it.value to it.index }
 
-        operator fun Array<String>.get(column: String): String? = header[column]?.let {this[it] }
+                operator fun Array<String>.get(column: String): String? = header[column]?.let { this[it] }
 
-        var countOfUnparsed = 0
-        var nextLine: Array<String>? = reader.readNext()
-        while (nextLine != null) {
-            try {
-                val count = nextLine["Count"]!!.toInt()
-                val cardName = nextLine["Name"]!!
-                val edition = nextLine["Edition"]!!
-                val setName = mapSetName(edition.removeSuffix(" Promo Pack").removePrefix("Prerelease Events: ").removePrefix("Extras: ").removePrefix("Promos: ").removePrefix("Promo Pack: "))
-                val token = edition.startsWith("Extras: ")
-                val language = nextLine["Language"]!!.parseLanguageDeckbox()
-                val condition = when (nextLine["Condition"]) {
-                    "Mint", "Near Mint" -> CardCondition.NEAR_MINT
-                    "Good (Lightly Played)" -> CardCondition.EXCELLENT
-                    "Played" -> CardCondition.GOOD
-                    "Heavily Played" -> CardCondition.PLAYED
-                    "Poor" -> CardCondition.POOR
-                    else -> CardCondition.UNKNOWN
-                }
-                val isPromo = edition.startsWith("Promos: ") || edition.startsWith("Promo Pack: ")
-                var isTheListCard = false
-                val setCode = nextLine["Edition Code"]!!.uppercase().let {
-                    if (isPromo)
-                        it.removePrefix("P")
-                    else
-                        it
-                }.let {
-                    if (it == "PLIST") {
-                        isTheListCard = true
-                        nextLine!!["Printing Note"]!!.uppercase()
-                    } else
-                        it
-                }.let {
-                    setCodeMapping.getOrDefault(it, it)
-                }
-
-                val stampPrereleaseDate = edition.startsWith("Prerelease Events: ")
-                val foil = when {
-                    stampPrereleaseDate -> true
-                    nextLine["Foil"] == "foil" -> true
-                    else -> false
-                }
-                val stampPlaneswalkerSymbol = nextLine["Promo"] == "promo"
-                val markPlaneswalkerSymbol = isTheListCard || nextLine["Artist Proof"] == "proof"
-                val cardNumber = mapSetNumber(nextLine["Card Number"]!!, setName).let { paddingCollectorNumber(when {
-                    token -> "T$it"
-                    setName == "War of the Spark Japanese Alternate Art" -> "$it★ P"
-                    setName == "Jumpstart Front Cards" -> "M$it"
-//                        isMemorabilia -> "M" + it.getString("collector_number")
-                    isPromo -> "$it P"
-                    else -> it
-                })
-                }
-//                    val type = nextLine["Type"]
-                val manaCost = nextLine["Cost"]
-                val rarity = nextLine["Rarity"]?.let { when(it) {
-                    "MythicRare" -> Rarity.MYTHIC
-                    "Rare" -> Rarity.RARE
-                    "Uncommon" -> Rarity.UNCOMMON
-                    "Common" -> Rarity.COMMON
-                    else -> null
-                } }
-
-                if (token && cardName.contains(" // ")) {
-                    println("skipping $cardName because it is an Double Sided Token which is not supported")
-                } else if (cardName.startsWith("Art Card:")) {
-                    println("skipping $cardName because it is an Art Card")
-                } else {
-                    val card = getCard(setCode, setName, cardNumber, token, cardName, rarity, manaCost, interactiveMode = false)
-
-                    repeat(count) {
-                        CardPossession.new {
-                            this.card = card
-                            this.language = language
-                            this.condition = condition
-                            this.foil = foil
-                            this.stampPrereleaseDate = stampPrereleaseDate
-                            this.stampPlaneswalkerSymbol = stampPlaneswalkerSymbol
-                            this.markPlaneswalkerSymbol = markPlaneswalkerSymbol
+                var countOfUnparsed = 0
+                var nextLine: Array<String>? = reader.readNext()
+                while (nextLine != null) {
+                    try {
+                        val printingNote = nextLine["Printing Note"]!!
+                        val count = nextLine["Count"]!!.toInt()
+                        val cardName = nextLine["Name"]!!
+                        val edition = nextLine["Edition"]!!
+                        val setName = mapSetName(
+                            edition.removeSuffix(" Promo Pack").removePrefix("Prerelease Events: ").removePrefix("Extras: ")
+                                .removePrefix("Promos: ").removePrefix("Promo Pack: ")
+                        )
+                        val token = edition.startsWith("Extras: ")
+                        val language = nextLine["Language"]!!.parseLanguageDeckbox()
+                        val condition = when (nextLine["Condition"]) {
+                            "Mint", "Near Mint" -> CardCondition.NEAR_MINT
+                            "Good (Lightly Played)" -> CardCondition.EXCELLENT
+                            "Played" -> CardCondition.GOOD
+                            "Heavily Played" -> CardCondition.PLAYED
+                            "Poor" -> CardCondition.POOR
+                            else -> CardCondition.UNKNOWN
                         }
+                        val isPromo = edition.startsWith("Promos: ") || edition.startsWith("Promo Pack: ") ||
+                                printingNote in promoPrintingNotes
+                        var isTheListCard = false
+                        val setCode = nextLine["Edition Code"]!!.lowercase().let {
+                            if (isPromo)
+                                it.removePrefix("P")
+                            else
+                                it
+                        }.let {
+                            if (it == "PLIST") {
+                                isTheListCard = true
+                                printingNote.lowercase()
+                            } else {
+                                it
+                            }
+                        }.let {
+                            setCodeMapping.getOrDefault(it, it)
+                        }.let {
+                            if (it !in knownSets) {
+                                CardSets.select(CardSets.id).where { CardSets.name.eq(setName) }
+                                    .mapNotNull { it[CardSets.id].value }
+                                    .singleOrNull() ?: it
+                            } else {
+                                it
+                            }
+                        }
+
+                        val stampPrereleaseDate = edition.startsWith("Prerelease Events: ")
+                        val foil = when {
+                            stampPrereleaseDate -> true
+                            nextLine["Foil"] == "foil" -> true
+                            else -> false
+                        }
+                        val stampPlaneswalkerSymbol = nextLine["Promo"] == "promo"
+                        val markPlaneswalkerSymbol = isTheListCard || nextLine["Artist Proof"] == "proof"
+                        val cardNumber = mapSetNumber(nextLine["Card Number"]!!, setName).let {
+                            if (printingNote matches Regex("[a-z]")) {
+                                "$it$printingNote"
+                            } else {
+                                it
+                            }
+                        }.let {
+                            paddingCollectorNumber(
+                                when {
+                                    token -> "T$it"
+                                    setName == "War of the Spark Japanese Alternate Art" -> "$it★ P"
+                                    setName == "Jumpstart Front Cards" -> "M$it"
+    //                        isMemorabilia -> "M" + it.getString("collector_number")
+                                    isPromo -> "$it P"
+                                    else -> it
+                                }
+                            )
+                        }
+    //                    val type = nextLine["Type"]
+                        val manaCost = nextLine["Cost"]
+                        val rarity = nextLine["Rarity"]?.let {
+                            when (it) {
+                                "MythicRare" -> Rarity.MYTHIC
+                                "Rare" -> Rarity.RARE
+                                "Uncommon" -> Rarity.UNCOMMON
+                                "Common" -> Rarity.COMMON
+                                else -> null
+                            }
+                        }
+
+                        if (setCode.length < 3) {
+                            println("skipping $cardName because setCode $setCode is not 3 letters long for $setName")
+                        } else if (token && cardName.contains(" // ")) {
+                            println("skipping $cardName because it is an Double Sided Token which is not supported")
+                        } else if (cardName.startsWith("Art Card:")) {
+                            println("skipping $cardName because it is an Art Card")
+                        } else {
+                            val card = getCard(
+                                setCode,
+                                setName,
+                                cardNumber,
+                                token,
+                                cardName,
+                                rarity,
+                                manaCost,
+                                interactiveMode = false
+                            )
+
+                            repeat(count) {
+                                CardPossession.new {
+                                    this.card = card
+                                    this.language = language
+                                    this.condition = condition
+                                    this.foil = foil
+                                    this.stampPrereleaseDate = stampPrereleaseDate
+                                    this.stampPlaneswalkerSymbol = stampPlaneswalkerSymbol
+                                    this.markPlaneswalkerSymbol = markPlaneswalkerSymbol
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        println("unable to import: ${e.message}")
+                        countOfUnparsed++
+                        writer.writeNext(nextLine)
                     }
+                    nextLine = reader.readNext()
                 }
-            } catch (e: Exception) {
-                println("unable to import: ${e.message}")
-                countOfUnparsed++
-                writer.writeNext(nextLine)
+                println("unable to import $countOfUnparsed cards")
             }
-            nextLine = reader.readNext()
         }
-        println("unable to import $countOfUnparsed cards")
     }
 }
-
+val setsWithUnreliableCollectorNumbers = listOf("ITP")
 fun getCard(setCode: String, setName: String, cardNumber: String, token: Boolean, cardName: String, rarity: Rarity?, manaCost: String?, interactiveMode: Boolean): Card {
 //    val cardSetJoin = Join(ScryfallCardSets, CardSets,
 //        onColumn = ScryfallCardSets.set, otherColumn = CardSets.id,
@@ -175,14 +216,24 @@ fun getCard(setCode: String, setName: String, cardNumber: String, token: Boolean
 //        return@mapNotNull Card.findById(it[Cards.id])
 //    }.map{it.name}.toList()
 
-    val cards = (Cards innerJoin ScryfallCardSets innerJoin CardSets).select(Cards.id).where {
-        CardSets.name.eq(setName) and (Cards.numberInSet.eq(cardNumber))
-        // TODO use setCode (does not work out of the box)
-    }.mapNotNull {
-        return@mapNotNull Card.findById(it[Cards.id])
-    }.toList()
+    val reliableCardNumber = setCode !in setsWithUnreliableCollectorNumbers
 
-    val card = cards.filter { it.name == cardName }.singleOrNull()
+    val card = if (reliableCardNumber) {
+        val cards = (Cards innerJoin ScryfallCardSets innerJoin CardSets).select(Cards.id).where {
+            CardSets.id.eq(setCode.lowercase()) and (Cards.numberInSet.eq(cardNumber))
+        }.mapNotNull {
+            return@mapNotNull Card.findById(it[Cards.id])
+        }.toList()
+
+        cards.filter { it.name == cardName }.singleOrNull()
+    } else {
+        (Cards innerJoin ScryfallCardSets innerJoin CardSets).select(Cards.id).where {
+            CardSets.id.eq(setCode.lowercase()) and (Cards.name.eq(cardName))
+        }.mapNotNull {
+            return@mapNotNull Card.findById(it[Cards.id])
+        }.singleOrNull()
+    }
+
 
     if (card != null) {
         return card
@@ -221,12 +272,41 @@ fun getCard(setCode: String, setName: String, cardNumber: String, token: Boolean
         throw Exception("card $cardNumber (\"$cardName\") not found in set $setName")
     }
 }
-
+val promoSetCodes = listOf(
+    "mlp",
+    "lpromos",
+    "bftcp",
+    "fnmp",
+    "mgdc",
+    "rep",
+)
 val setCodeMapping = mutableMapOf(
-    "UZ" to "USG",
-    "5E" to "5ED",
-    "P2" to "P02",
-    "AN" to "ARN",
+    "gu" to "ulg",
+    "uz" to "usg",
+    "cg" to "uds",
+    "4e" to "4ed",
+    "5e" to "5ed",
+    "6e" to "6ed",
+    "p2" to "p02",
+    "pr" to "pcy",
+    "an" to "arn",
+    "ne" to "nem",
+    "in" to "inv",
+    "mm" to "mmq",
+    "ap" to "apc",
+    "mi" to "mir",
+    "ps" to "pls",
+    "ex" to "exo",
+    "od" to "ody",
+    "st" to "sth",
+    "te" to "tmp",
+    "vi" to "vis",
+    "ia" to "ice",
+    "wl" to "wth",
+    "al" to "all",
+    "fe" to "fem",
+    "hm" to "hml",
+    "le" to "leg",
 )
 
 /**

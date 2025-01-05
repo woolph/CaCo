@@ -20,7 +20,7 @@ interface Pageable<T> {
     fun hasNext(): Boolean
     fun next(): String
     fun contents(): Flow<T>
-    val totalItems: Int
+    val totalItems: Int?
 }
 
 @Serializable

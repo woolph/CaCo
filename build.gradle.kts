@@ -16,26 +16,25 @@ repositories {
 }
 
 dependencies {
-	implementation("org.jetbrains.kotlin:kotlin-stdlib")
-//	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
-	implementation("org.jetbrains.kotlin:kotlin-reflect")
+	implementation(kotlin("reflect"))
 
-	implementation("io.ktor:ktor-client-core:2.2.4")
-	implementation("io.ktor:ktor-client-cio:2.2.4")
-	implementation("io.ktor:ktor-client-content-negotiation:2.2.4")
-	implementation("io.ktor:ktor-serialization-kotlinx-json:2.2.4")
+	implementation(platform("io.ktor:ktor-bom:3.0.3"))
+	implementation("io.ktor:ktor-client-core")
+	implementation("io.ktor:ktor-client-cio")
+	implementation("io.ktor:ktor-client-content-negotiation")
+	implementation("io.ktor:ktor-serialization-kotlinx-json")
 
-	implementation(platform("org.jetbrains.kotlinx:kotlinx-coroutines-bom:1.8.0"))
+	implementation(platform("org.jetbrains.kotlinx:kotlinx-coroutines-bom:1.10.1"))
 	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
 	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-javafx")
 
-	implementation(platform("org.jetbrains.exposed:exposed-bom:0.49.0"))
+	implementation(platform("org.jetbrains.exposed:exposed-bom:0.57.0"))
 	implementation("org.jetbrains.exposed:exposed-dao")
 	implementation("org.jetbrains.exposed:exposed-java-time")
 	implementation("org.jetbrains.exposed:exposed-jdbc")
-	runtimeOnly("com.h2database:h2:2.3.230")
+	runtimeOnly("com.h2database:h2:2.3.232")
 
-	implementation("org.jsoup:jsoup:1.15.3")
+	implementation("org.jsoup:jsoup:1.18.3")
 	implementation("org.json:json:20220924")
 	implementation("com.opencsv:opencsv:5.7.1")
 	implementation("javax.xml.bind:jaxb-api:2.4.0-b180830.0359")
@@ -47,13 +46,13 @@ dependencies {
 
 	implementation("no.tornado:tornadofx:2.0.0-SNAPSHOT")
 
-	implementation("com.github.ajalt.clikt:clikt:4.3.0")
-	implementation("com.github.ajalt.mordant:mordant:2.4.0")
-	implementation("com.github.ajalt.mordant:mordant-coroutines:2.4.0")
+	implementation("com.github.ajalt.clikt:clikt:5.0.2")
+	implementation("com.github.ajalt.mordant:mordant:3.0.1")
+	implementation("com.github.ajalt.mordant:mordant-coroutines:3.0.1")
 
-	implementation("org.slf4j:slf4j-api:2.0.5")
-	implementation("org.slf4j:slf4j-ext:2.0.5")
-	runtimeOnly("ch.qos.logback:logback-classic:1.4.5")
+	implementation("org.slf4j:slf4j-api:2.0.16")
+	implementation("org.slf4j:slf4j-ext:2.0.16")
+	runtimeOnly("ch.qos.logback:logback-classic:1.5.15")
 
 	testImplementation("io.kotest:kotest-property:5.5.4")
 	testImplementation("io.kotest:kotest-runner-junit5-jvm:5.5.4")
@@ -66,12 +65,6 @@ tasks.withType<Test> {
 
 kotlin {
 	jvmToolchain(libs.versions.jvmTarget.get().toInt())
-
-	target.compilations.all {
-		kotlinOptions {
-			jvmTarget = libs.versions.jvmTarget.get()
-		}
-	}
 }
 
 javafx {

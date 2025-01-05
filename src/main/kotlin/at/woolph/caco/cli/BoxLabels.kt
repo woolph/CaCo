@@ -110,7 +110,9 @@ open class DuplicateBoxLabel(vararg codes: String): MultipleSymbolBoxLabel {
 }
 object PromoBoxLabel: MultipleSymbolBoxLabel {
     override val title: String = "DUP"
-    override val icons: List<ByteArray> by lazy { listOf(URI("https://c2.scryfall.com/file/scryfall-symbols/sets/star.svg?1624852800").renderSvgAsMythic()!!) }
+    override val icons: List<ByteArray> by lazy { listOf(
+        URI("https://c2.scryfall.com/file/scryfall-symbols/sets/star.svg?1624852800").renderSvgAsMythic()!!
+    ) }
 }
 
 class BoxLabels {
@@ -227,6 +229,11 @@ class BoxLabels {
                                                     fontColor
                                                 )
                                                 val width = fontCode2.getWidth(columnItem.title) + defaultGapSize
+                                                val multiIconHeight = desiredHeight * 0.5f
+                                                val multiIconWidth = maximumIconWidth * 0.5f
+                                                val gapX = 3.0f
+                                                val gapY = multiIconHeight*0.67f
+
                                                 if (columnItem.icons.size <= 4) {
                                                     columnItem.icons.map { it.toPDImage(this@page) }
                                                         .forEachIndexed { i, icon ->
@@ -239,19 +246,19 @@ class BoxLabels {
                                                             )
                                                         }
                                                 } else {
-                                                    columnItem.icons.map { it.toPDImage(this@page) }.chunked(8)
-                                                        .forEachIndexed { j, chunk ->
-                                                            chunk.forEachIndexed { i, icon ->
-                                                                drawAsImageLeft(
-                                                                    icon,
-                                                                    maximumIconWidth*0.5f,
-                                                                    desiredHeight*0.5f,
-                                                                    width + maximumIconWidth*0.5f * i,
-                                                                    box.height - desiredHeight*0.5f - j * desiredHeight*0.5f
-                                                                )
-                                                            }
-                                                        }
+                                                    columnItem.icons.map { it.toPDImage(this@page) }
+                                                        .forEachIndexed { i, icon ->
+                                                            val displacingY = if (i%2 == 0) gapY else 0.0f
+                                                            val displacingX = (multiIconWidth * 0.5f + gapX) * i
 
+                                                            drawAsImageLeft(
+                                                                icon,
+                                                                multiIconWidth,
+                                                                multiIconHeight,
+                                                                width + displacingX,
+                                                                box.height - multiIconHeight - displacingY
+                                                            )
+                                                        }
                                                 }
                                                 columnItem.subtitle?.let {
                                                     drawText(
@@ -277,6 +284,20 @@ class BoxLabels {
 }
 
 fun main() {
+    val romanNumerals = mapOf(
+        1 to "I",
+        2 to "II",
+        3 to "III",
+        4 to "IV",
+        5 to "V",
+        6 to "VI",
+        7 to "VII",
+        8 to "VIII",
+        9 to "IX",
+        10 to "X",
+        11 to "XI",
+        12 to "XII",
+    )
     Databases.init()
     BoxLabels().printLabel(Path.of("C:\\Users\\001121673\\private\\magic\\BoxLabels.pdf"), listOf(
 //                    PlainsBoxLabel,
@@ -292,20 +313,12 @@ fun main() {
 //                    PlanechaseBoxLabel(1),
 //                    PlanechaseBoxLabel(2),
 //        CommanderStapelsBoxLabel,
-        AwaitingCatalogizationBoxLabel(subtitle = "Lands, Double-Sided Tokens & Placeholder"),
-//        AwaitingCollectionBoxLabel(1, "Older sets (w/o binder)"),
-//        AwaitingCollectionBoxLabel(2, "Older sets (w/o binder)"),
-//        AwaitingCollectionBoxLabel(3, "Masters & Commander sets (w/o binder)"),
-//        AwaitingCollectionBoxLabel(4, "Duel Decks & other special sets"),
 //                    DuplicateBoxLabel("bbd"),
-//                    DuplicateBoxLabel("stx"),
 //                    DuplicateBoxLabel("khm"),
 //                    DuplicateBoxLabel("mh2"),
 //
 //        DuplicateBoxLabel("rix"),
 //        DuplicateBoxLabel("rix", "kld", "aer", "akh", "hou"),
-//        DuplicateBoxLabel( "ltr", "unf", "jmp", "gn3"),
-//        DuplicateBoxLabel("mkm", "snc", "bro", "otj", "dmu", "lci", "mat", "woe"),
 //        DuplicateBoxLabel("soi", "emn"),
 //        object: DuplicateBoxLabel("m21") {
 //            override val subtitle: String = "Core Set 2021 Pt. I"
@@ -317,23 +330,56 @@ fun main() {
 //        DuplicateBoxLabel("vow"),
 //        DuplicateBoxLabel("neo"),
 //        DuplicateBoxLabel("bbd"),
-//        DuplicateBoxLabel("mh1"),
-//        DuplicateBoxLabel("mh2"),
 //        DuplicateBoxLabel("afr"),
-//        object: DuplicateBoxLabel("otc", "mkc", "lcc", "woc", "moc", "onc", "brc", "dmc", "ncc", "nec", "voc", "mic", "afc", "khc", "znc",) {
-//            override val subtitle: String = "Commander Sets II"
-//        },
-//        object: DuplicateBoxLabel("por", "p02", "usg", "ulg", "uds", "inv", "pls", "apc", "mmq", "nem", "pcy", "4ed", "5ed", "6ed") {
-//            override val subtitle: String = "Older Sets"
-//        },
 //        PromoBoxLabel,
-        SnowCoveredBasicsAndWastes,
-        ArtSeriesLabel(),
-        object: DuplicateBoxLabel("pip", "who", "40k", "ltc", "m3c", "cmm", "scd", "cmr", "clb", "c21", "c20", "c16", "c17", "c18", "c19") {
+//        AwaitingCatalogizationBoxLabel(subtitle = "Lands, Double-Sided Tokens & Placeholder"),
+//        AwaitingCollectionBoxLabel(1, "Older sets (w/o binder)"),
+//        AwaitingCollectionBoxLabel(2, "Older sets (w/o binder)"),
+//        AwaitingCollectionBoxLabel(3, "Older sets (w/o binder)"),
+//        AwaitingCollectionBoxLabel(4, "Commander sets (w/o binder)"),
+//        AwaitingCollectionBoxLabel(5, "Masters & Duel Decks"),
+//        SnowCoveredBasicsAndWastes,
+//        ArtSeriesLabel(),
+        object: DuplicateBoxLabel("por", "p02", "ptk", "usg", "ulg", "uds", "inv", "pls", "apc", "mmq", "nem", "pcy") {
+            override val subtitle: String = "Older Sets"
+        },
+        object: DuplicateBoxLabel( "ust", "unh", "unf", "hop", "pc2", "pca", "jmp", "j22", "j25", "gnt", "gn2", "gn3") {
+            override val subtitle: String = "Weird Sets"
+        },
+        object: DuplicateBoxLabel("2ed", "3ed", "4ed", "5ed", "6ed", "7ed", "8ed", "9ed", "itp") {
+            override val subtitle: String = "White-Bordered Sets"
+        },
+        *(listOf("dft", "fdn", "dsk", "blb", "big", "otp", "otj", "clu", "mkm", "rex", "lci", "woe", "mat", "mul", "mom", "one", "bot", "bro", "dmu", "snc", "neo",
+            ).reversed().chunked(12).withIndex().map { (i, it) ->
+            object: DuplicateBoxLabel(*it.toTypedArray()) {
+                override val subtitle: String = "Standard Sets ${romanNumerals[i+1]}"
+            }
+        }).toTypedArray(),
+        object: DuplicateBoxLabel( "pspl", "spg",){
+            override val subtitle: String = "Promos & Special Guests"
+        },
+        object: DuplicateBoxLabel("c16", "c17", "c18", "c19", "c20", "c21", "cm2", "cmr", "cmm", "clb", "m3c", "scd", ) {
             override val subtitle: String = "Commander Sets I"
         },
-        object: DuplicateBoxLabel("otc", "mkc", "lcc", "woc", "moc", "onc", "brc", "dmc", "ncc", "nec", "voc", "mic", "afc", "khc", "znc","blc","dsc") {
-            override val subtitle: String = "Commander Sets II"
+        DuplicateBoxLabel("stx", "sta"),
+        object: DuplicateBoxLabel(  "mid", "vow"){
+            override val subtitle: String = "incl. Innistrad: Double Feature"
         },
+        DuplicateBoxLabel("mh1", "mh2", "mh3", ),
+        object: GenericBoxLabel("Deck Building") {
+            override val subtitle: String = "Commander"
+            override val icon: ByteArray? by lazy { URI("https://c2.scryfall.com/file/scryfall-symbols/sets/cmd.svg?1647835200").renderSvgAsMythic() }
+        },
+        object: GenericBoxLabel("Deck Building") {
+            override val subtitle: String = "Pioneer & Pauper"
+        },
+//        *(listOf("fdc", "dsc", "blc" , "otc", "mkc", "lcc", "woc", "moc", "onc", "brc", "dmc", "ncc", "nec", "voc", "mic", "afc", "khc", "znc").reversed().chunked(12).withIndex().map { (i, it) ->
+//            object: DuplicateBoxLabel(*it.toTypedArray()) {
+//                override val subtitle: String = "Commander Sets ${romanNumerals[i+2]}"
+//            }
+//        }).toTypedArray(),
+//        object: DuplicateBoxLabel("pip", "who", "40k", "ltr", "ltc", "acr") {
+//            override val subtitle: String = "UB Sets"
+//        },
     ))
 }

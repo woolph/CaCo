@@ -32,6 +32,8 @@ import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.path
 import com.github.ajalt.mordant.animation.coroutines.animateInCoroutine
 import com.github.ajalt.mordant.rendering.TextColors
+import com.github.ajalt.mordant.terminal.danger
+import com.github.ajalt.mordant.terminal.prompt
 import com.github.ajalt.mordant.widgets.progress.*
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.asFlow
@@ -62,7 +64,8 @@ import kotlin.math.min
 
 class CaCoCli: NoOpCliktCommand(name="caco")
 
-class Ui: CliktCommand(help="User interface", treatUnknownOptionsAsArgs = true) {
+class Ui: CliktCommand() {
+    override val treatUnknownOptionsAsArgs: Boolean = true
     val args by argument().multiple()
 
     override fun run() {
@@ -70,7 +73,7 @@ class Ui: CliktCommand(help="User interface", treatUnknownOptionsAsArgs = true) 
     }
 }
 
-class ImportScryfall: CliktCommand(name = "scryfall", help="Importing the card data from Scryfall") {
+class ImportScryfall: CliktCommand(name = "scryfall") {
     val source by mutuallyExclusiveOptions(
         option("--bulk-data", help="which bulk data to import").convert { Either.Left(it) },
         option("--file", help="file to import").path(mustExist = true).convert { Either.Right(it) },
@@ -107,7 +110,7 @@ class ImportScryfall: CliktCommand(name = "scryfall", help="Importing the card d
 }
 
 
-class ImportSet: CliktCommand(name = "sets", help="Importing the card data from Scryfall") {
+class ImportSet: CliktCommand(name = "sets") {
     val setCodes by argument(help="sets to be imported").multiple().prompt("Enter the set codes to be imported/updated")
     override fun run() = runBlocking {
         newSuspendedTransaction {
@@ -129,7 +132,7 @@ class ImportSet: CliktCommand(name = "sets", help="Importing the card data from 
     }
 }
 
-class UpdatesPrices: CliktCommand(name = "prices", help="Updates the price data of the card data from Scryfall") {
+class UpdatesPrices: CliktCommand(name = "prices") {
     override fun run() = runBlocking {
         newSuspendedTransaction {
             downloadBulkData("default_cards") {
@@ -157,7 +160,7 @@ class UpdatesPrices: CliktCommand(name = "prices", help="Updates the price data 
     }
 }
 
-class ImportDeckboxCollection: CliktCommand(name = "deckbox-collection", help="Importing the collection from an Deckbox export CSV file") {
+class ImportDeckboxCollection: CliktCommand(name = "deckbox-collection") {
     val file by argument(help="The file to import").path(mustExist = true).default(Path(System.getProperty("user.home"), "Downloads"))
     override fun run() {
             if(file.isDirectory()) {
@@ -173,7 +176,7 @@ class ImportDeckboxCollection: CliktCommand(name = "deckbox-collection", help="I
     }
 }
 
-class HighValueTradables: CliktCommand(help="Print the tradables above a certain price threshold") {
+class HighValueTradables: CliktCommand() {
     val priceThreshold by option(help="The price threshold above which cards are considered 'high value'").double().default(1.0)
 
     override fun run() {
@@ -217,7 +220,7 @@ class HighValueTradables: CliktCommand(help="Print the tradables above a certain
     }
 }
 
-class EnterCards: CliktCommand(help="Interactive mode for entering several cards of one set ") {
+class EnterCards: CliktCommand() {
     val set by argument(help="The set code of the cards to be entered").convert {
         transaction {
             CardSet.findById(it.lowercase()) ?: throw IllegalArgumentException("No set found for set code $it")
@@ -255,14 +258,21 @@ class EnterCards: CliktCommand(help="Interactive mode for entering several cards
                     fun add(setNumber: String) {
                         val foil = setNumber.endsWith("*")
                         val setNumber2 = setNumber.removeSuffix("*").toInt().toString().padStart(3, '0')
-                        val card = set.cards.first { it.numberInSet == setNumber2 }
-                        echo("add #${card.numberInSet} \"${card.name}\" ${if (foil) " in \u001B[38:5:0m\u001B[48:5:214mf\u001B[48:5:215mo\u001B[48:5:216mi\u001B[48:5:217ml\u001B[0m" else ""}", trailingNewline = false)
-                        cardPossessionUpdates.compute(card to foil) { _, possessionUpdate ->
-                            (possessionUpdate ?: 0.also {
-                                terminal.danger(" \u001b[31mNeeded for collection!\u001b[0m")
-                            }) + 1
+                        val card = set.cards.firstOrNull { it.numberInSet == setNumber2 }
+                        if (card != null) {
+                            echo(
+                                "add #${card.numberInSet} \"${card.name}\" ${if (foil) " in \u001B[38:5:0m\u001B[48:5:214mf\u001B[48:5:215mo\u001B[48:5:216mi\u001B[48:5:217ml\u001B[0m" else ""}",
+                                trailingNewline = false
+                            )
+                            cardPossessionUpdates.compute(card to foil) { _, possessionUpdate ->
+                                (possessionUpdate ?: 0.also {
+                                    terminal.danger(" \u001b[31mNeeded for collection!\u001b[0m")
+                                }) + 1
+                            }
+                            echo()
+                        } else {
+                            terminal.danger("\u001b[31madd #${setNumber2} not found!\u001b[0m")
                         }
-                        echo()
                     }
                     fun remove(setNumber: String) {
                         val foil = setNumber.endsWith("*")
@@ -312,7 +322,7 @@ class EnterCards: CliktCommand(help="Interactive mode for entering several cards
     }
 }
 
-class PrintInventory: CliktCommand(name = "inventory", help="Printing inventory of certain sets") {
+class PrintInventory: CliktCommand(name = "inventory") {
     val output by option().path(canBeDir = false).required()
     val sets by argument(help="The set code of the cards to be entered").convert {
         transaction {
@@ -374,7 +384,7 @@ class PrintInventory: CliktCommand(name = "inventory", help="Printing inventory 
     }
 }
 
-class PrintCollectionBinderPageView: CliktCommand(name = "collection-pages", help="Printing a set as it would look like in binder pages (this might help sorting sets where the collection numbers are missing on the card)") {
+class PrintCollectionBinderPageView: CliktCommand(name = "collection-pages") {
     val output by option().path(canBeDir = true, canBeFile = false).required()
     val sets by argument(help="The set code of the cards to be entered").multiple().prompt("Enter the set codes to be imported/updated")
 
@@ -388,7 +398,7 @@ class PrintCollectionBinderPageView: CliktCommand(name = "collection-pages", hel
     }
 }
 
-class PrintPagePositions: CliktCommand(name = "page-position", help="Printing a set as it would look like in binder pages (this might help sorting sets where the collection numbers are missing on the card)") {
+class PrintPagePositions: CliktCommand(name = "page-position") {
     val pocketsPerPage by option(help="The number of pockets per page").int().default(9)
 
     override fun run() = runBlocking<Unit> {
@@ -396,7 +406,7 @@ class PrintPagePositions: CliktCommand(name = "page-position", help="Printing a 
     }
 }
 
-class ImportDecklists: CliktCommand(name = "deckbox-decks", help="importing decklists") {
+class ImportDecklists: CliktCommand(name = "deckbox-decks") {
     val username by option(help="Deckbox username").prompt("Enter the username of the deckbox user")
 
     override fun run() = runBlocking<Unit> {
@@ -406,7 +416,7 @@ class ImportDecklists: CliktCommand(name = "deckbox-decks", help="importing deck
     }
 }
 
-class PrintDeckboxDecks: CliktCommand(name = "deckbox-decks", help="printing decklists") {
+class PrintDeckboxDecks: CliktCommand(name = "deckbox-decks") {
     val username by option(help="Deckbox username").prompt("Enter the username of the deckbox user")
     val output by option().path(canBeDir = true, canBeFile = true)
 
@@ -435,7 +445,7 @@ class PrintDeckboxDecks: CliktCommand(name = "deckbox-decks", help="printing dec
     }
 }
 
-class PrintArchidektDecks: CliktCommand(name = "archidekt-decks", help="printing decklists from archidekt") {
+class PrintArchidektDecks: CliktCommand(name = "archidekt-decks") {
     val username by option(help="Archidekt username").prompt("Enter the username of the Archidekt user")
     val output by option().path(canBeDir = true, canBeFile = true)
 
@@ -464,7 +474,7 @@ class PrintArchidektDecks: CliktCommand(name = "archidekt-decks", help="printing
     }
 }
 
-class PrintDecklist: CliktCommand(name = "deckbox-deck", help="printing decklist") {
+class PrintDecklist: CliktCommand(name = "deckbox-deck") {
     val url by option(help="Deckbox decklist URL").convert { URI.create(it).toURL() }.prompt("Enter URL")
     val output by option().path(canBeDir = true, canBeFile = true)
 
@@ -477,7 +487,7 @@ class PrintDecklist: CliktCommand(name = "deckbox-deck", help="printing decklist
     }
 }
 
-class PrintMissingStats: CliktCommand(name = "missing-stats", help="printing the stats of collection missings things") {
+class PrintMissingStats: CliktCommand(name = "missing-stats") {
     override fun run() = runBlocking<Unit> {
 
         newSuspendedTransaction {
@@ -507,7 +517,7 @@ class PrintMissingStats: CliktCommand(name = "missing-stats", help="printing the
     }
 }
 
-class PrintManaBase: CliktCommand(name = "generate-manabase", help="printing decklist") {
+class PrintManaBase: CliktCommand(name = "generate-manabase") {
     val colorIdentity by option(help="The color identity to generate the mana base for").convert { ColorIdentity(it) }.prompt("Enter colorIdentity:")
     val basicLandTypeFactors by option(help="basicLandTypeFactors").double().default(0.1)
     val fastStartFactor by option(help="fastStartFactor").double().default(1.2)
@@ -521,7 +531,7 @@ class PrintManaBase: CliktCommand(name = "generate-manabase", help="printing dec
             maxPricePerCard = maxPricePerCard,
         )
 
-        generateManabase(selectionCriterion, sequence<String> { terminal.readLineOrNull(false) }.takeWhile { it.isNotBlank() }.map { DecklistEntry(it.removePrefix("1 ")) }.toList()).forEach { println(it) }
+        generateManabase(selectionCriterion, generateSequence { terminal.readLineOrNull(false) }.takeWhile { it.isNotBlank() }.map { DecklistEntry(it.removePrefix("1 ")) }.toList()).forEach { println(it) }
     }
 }
 
@@ -531,14 +541,14 @@ fun main(args: Array<String>) {
     CaCoCli()
         .subcommands(
             Ui(),
-            NoOpCliktCommand(name = "import", help="Importing data").subcommands(
+            NoOpCliktCommand(name = "import").subcommands(
                 ImportScryfall(),
                 ImportDeckboxCollection(),
                 UpdatesPrices(),
                 ImportSet(),
                 ImportDecklists(),
             ),
-            NoOpCliktCommand(name = "print", help="Printing data").subcommands(
+            NoOpCliktCommand(name = "print").subcommands(
                 HighValueTradables(),
                 PrintInventory(),
                 PrintCollectionBinderPageView(),

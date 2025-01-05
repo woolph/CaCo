@@ -22,7 +22,7 @@ import java.net.URI
 @Serializable
 data class PaginatedData<T: ScryfallBase>(
     @SerialName("object") val objectType: String,
-    @SerialName("total_cards") override val totalItems: Int,
+    @SerialName("total_cards") override val totalItems: Int? = null,
     val has_more: Boolean,
     @Contextual val next_page: String? = null,
     val data: List<T>,
@@ -53,10 +53,6 @@ internal inline fun <reified T: ScryfallBase> paginatedDataRequest(initialQuery:
 
                 emitAll(
                     paginatedData.data.asFlow()
-                        .updateProgressIndicator(
-                            progressIndicator,
-                            paginatedData.totalItems
-                        )
                         .filter { it.isValid() }
 //                    .onEach { LOG.trace("emitting $it") }
                 )

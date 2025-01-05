@@ -33,10 +33,13 @@ class ProgressIndicator(
     }
 }
 
-fun <T> Flow<T>.updateProgressIndicator(progressIndicator: ProgressIndicator?, totalNumber: Int): Flow<T> = progressIndicator?.let { pi ->
-    var numberOfProcessedItems: Int = 0
-    onEach {
-        numberOfProcessedItems++
-        pi.update(numberOfProcessedItems, totalNumber)
+fun <T> Flow<T>.updateProgressIndicator(progressIndicator: ProgressIndicator?, totalNumber: Int?): Flow<T> =
+    if (progressIndicator != null && totalNumber != null) {
+        var numberOfProcessedItems: Int = 0
+        onEach {
+            numberOfProcessedItems++
+            progressIndicator.update(numberOfProcessedItems, totalNumber)
+        }
+    } else {
+        this
     }
-} ?: this

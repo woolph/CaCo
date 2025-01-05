@@ -229,46 +229,46 @@ data class ScryfallCard(
         !(promo_types.contains("promopack") && promo_types.contains("stamped"))
                 && !(promo_types.contains("prerelease") && promo_types.contains("datestamped"))
 
-    fun update(card: Card) = card.apply {
-        val isPromo = promo|| collector_number.contains(patternPromoCollectorNumber)
+    fun update(card: Card) = card.also {
+        val isPromo = promo
         val isToken = set_type == "token"
         val isMemorabilia = set_type == "memorabilia" // art series, commander special cards (like OC21)
 
-        set = ScryfallCardSet[set_id]
-        numberInSet = paddingCollectorNumber(when {
+        it.set = ScryfallCardSet[set_id]
+        it.numberInSet = paddingCollectorNumber(when {
             isMemorabilia -> "M$collector_number"
-//            isPromo && (this@ScryfallCard.id != set) -> "$collector_number P" // FIXME fix this condition
+            isPromo -> "$collector_number P" // FIXME fix this condition
             isToken -> "T$collector_number"
             else -> collector_number
         })
-        name = this@ScryfallCard.name
-        arenaId = arena_id
-        rarity = this@ScryfallCard.rarity.parseRarity()
-        promo = isPromo
-        token = isToken
-        image = image_uris?.get("png") ?: card_faces?.get(0)?.image_uris?.get("png")
-        cardmarketUri = purchase_uris.get("cardmarket")
+        it.name = name
+        it.arenaId = arena_id
+        it.rarity = rarity.parseRarity()
+        it.promo = isPromo
+        it.token = isToken
+        it.image = image_uris?.get("png") ?: card_faces?.get(0)?.image_uris?.get("png")
+        it.cardmarketUri = purchase_uris.get("cardmarket")
 
-        extra = !booster
-        nonfoilAvailable = nonfoil
-        foilAvailable = foil
-        fullArt = full_art
-        extendedArt = frame_effects.contains("extendedart")
+        it.extra = !booster
+        it.nonfoilAvailable = nonfoil
+        it.foilAvailable = foil
+        it.fullArt = full_art
+        it.extendedArt = frame_effects.contains("extendedart")
 
-        colorIdentity = color_identity.toColorIdentity()
+        it.colorIdentity = color_identity.toColorIdentity()
 
-        manaCost = mana_cost ?: card_faces?.mapNotNull { it.mana_cost }?.joinToString(" // ")
-        manaValue = cmc?.toFloat() ?: 0.0f
-        oracleText = sequence {
+        it.manaCost = mana_cost ?: card_faces?.mapNotNull { it.mana_cost }?.joinToString(" // ")
+        it.manaValue = cmc?.toFloat() ?: 0.0f
+        it.oracleText = sequence {
             oracle_text?.let { yield(it) }
             yieldAll(card_faces?.asSequence()?.map { it.oracle_text } ?: emptySequence())
         }.joinToString("\n")
-        price = prices["eur"]?.toDouble()
-        priceFoil = prices["eur_foil"]?.toDouble()
-        type = type_line ?: card_faces?.mapNotNull { it.type_line }?.joinToString(" // ")
+        it.price = prices["eur"]?.toDouble()
+        it.priceFoil = prices["eur_foil"]?.toDouble()
+        it.type = type_line ?: card_faces?.mapNotNull { it.type_line }?.joinToString(" // ")
 
         val patternSpecialDeckRestrictions = Regex("A deck can have (any number of cards|only one card|up to (\\w+) cards) named ${this@ScryfallCard.name}\\.")
-        specialDeckRestrictions = oracle_text?.let { patternSpecialDeckRestrictions.find(it) }?.let {
+        it.specialDeckRestrictions = oracle_text?.let { patternSpecialDeckRestrictions.find(it) }?.let {
             when {
                 it.groupValues[1] == "any number of cards" -> Int.MAX_VALUE // TODO
                 it.groupValues[1] == "only one card" -> 1 // TODO

@@ -2,6 +2,7 @@ package at.woolph.caco.cli
 
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
+import com.github.ajalt.mordant.terminal.prompt
 
 class PagePositionCalculator(
     val terminal: Terminal,

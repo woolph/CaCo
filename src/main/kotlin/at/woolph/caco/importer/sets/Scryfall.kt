@@ -18,7 +18,7 @@ import kotlin.math.min
 
 private val LOG = LoggerFactory.getLogger("at.woolph.caco.importer.sets.Scryfall")
 
-val patternPromoCollectorNumber = Regex("([s★c])$")
+//val patternPromoCollectorNumber = Regex("([s★c])$")
 
 /**
  * pads the given collectors number while retaining non-number prefix and non-number suffix
@@ -28,7 +28,7 @@ val patternPromoCollectorNumber = Regex("([s★c])$")
  * @return padded collector number
  */
 fun paddingCollectorNumber(collectorNumber: String): String {
-    val pattern = Regex("^([^\\d]*)(\\d*)([^\\d]*)$")
+    val pattern = Regex("^([^\\d]*)(\\d{1,4})([^\\d]*)$")
     val (prefix, number, suffix) = pattern.find(collectorNumber)?.let {
         Triple(it.groupValues[1].let { if(it == "TCH") "CH" else it }, it.groupValues[2].toInt(), it.groupValues[3])
     } ?: throw IllegalArgumentException("collectors number \"$collectorNumber\" does not match the regex $pattern")

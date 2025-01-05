@@ -121,8 +121,8 @@ class PaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
 
 							set?.cards?.forEach {
 								((Cards innerJoin CardPossessions)
-										.slice(CardPossessions.id.count(), Cards.name, Cards.token, Cards.promo, Cards.numberInSet, CardPossessions.condition, CardPossessions.foil, CardPossessions.language)
-										.select { CardPossessions.card.eq(it.id) }
+										.select(CardPossessions.id.count(), Cards.name, Cards.token, Cards.promo, Cards.numberInSet, CardPossessions.condition, CardPossessions.foil, CardPossessions.language)
+										.where { CardPossessions.card.eq(it.id) }
 										.groupBy(CardPossessions.card, CardPossessions.condition, CardPossessions.foil, CardPossessions.language))
 										.forEach {
 											val count = it[CardPossessions.id.count()]

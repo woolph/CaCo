@@ -16,6 +16,8 @@ import kotlinx.coroutines.launch
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.font.PDType1Font
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts
+import org.jetbrains.exposed.sql.Op
+import org.jetbrains.exposed.sql.SqlExpressionBuilder
 import org.jetbrains.exposed.sql.count
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -106,7 +108,17 @@ class EnglishPaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
 							out.println("Count,Tradelist Count,Name,Edition,Card Number,CardCondition,Language,Foil,Signed,Artist Proof,Altered Art,Misprint,Promo,Textless,My Price")
 
 							set?.cards?.forEach {
-								((Cards innerJoin CardPossessions).slice(CardPossessions.id.count(), Cards.name, Cards.token, Cards.promo, Cards.numberInSet, CardPossessions.condition, CardPossessions.foil, CardPossessions.language).select { CardPossessions.card.eq(it.id) }.groupBy(CardPossessions.card, CardPossessions.condition, CardPossessions.foil, CardPossessions.language)).forEach {
+								((Cards innerJoin CardPossessions).select(
+									CardPossessions.id.count(),
+									Cards.name,
+									Cards.token,
+									Cards.promo,
+									Cards.numberInSet,
+									CardPossessions.condition,
+									CardPossessions.foil,
+									CardPossessions.language
+								)
+									.where { CardPossessions.card.eq(it.id) }.groupBy(CardPossessions.card, CardPossessions.condition, CardPossessions.foil, CardPossessions.language)).forEach {
 									val count = it[CardPossessions.id.count()]
 									val cardName = it[Cards.name]
 									val cardNumberInSet = it[Cards.numberInSet]
