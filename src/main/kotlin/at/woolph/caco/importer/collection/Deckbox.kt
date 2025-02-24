@@ -98,15 +98,15 @@ fun importDeckbox(file: Path) {
                             else -> CardCondition.UNKNOWN
                         }
                         val isPromo = edition.startsWith("Promos: ") || edition.startsWith("Promo Pack: ") ||
-                                printingNote in promoPrintingNotes
+                            edition.endsWith(" Promos") || printingNote in promoPrintingNotes
                         var isTheListCard = false
                         val setCode = nextLine["Edition Code"]!!.lowercase().let {
                             if (isPromo)
-                                it.removePrefix("P")
+                                it.removePrefix("p")
                             else
                                 it
                         }.let {
-                            if (it == "PLIST") {
+                            if (it == "plist") {
                                 isTheListCard = true
                                 printingNote.lowercase()
                             } else {
@@ -210,7 +210,7 @@ fun importDeckbox(file: Path) {
         }
     }
 }
-val setsWithUnreliableCollectorNumbers = listOf("ITP")
+val setsWithUnreliableCollectorNumbers = listOf("itp")
 fun getCard(setCode: String, setName: String, cardNumber: String, token: Boolean, cardName: String, rarity: Rarity?, manaCost: String?, interactiveMode: Boolean, reliableCardNumber: Boolean, promo: Boolean): Card {
 //    val cardSetJoin = Join(ScryfallCardSets, CardSets,
 //        onColumn = ScryfallCardSets.set, otherColumn = CardSets.id,
