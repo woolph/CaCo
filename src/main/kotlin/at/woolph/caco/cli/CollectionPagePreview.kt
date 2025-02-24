@@ -3,7 +3,6 @@ package at.woolph.caco.cli
 import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.imagecache.ImageCache
 import at.woolph.libs.pdf.*
-import be.quodlibet.boxable.HorizontalAlignment
 import com.github.ajalt.mordant.animation.coroutines.animateInCoroutine
 import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.terminal.Terminal

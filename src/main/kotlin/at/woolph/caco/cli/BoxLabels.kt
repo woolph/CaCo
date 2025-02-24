@@ -4,9 +4,7 @@ import at.woolph.caco.binderlabels.*
 import at.woolph.caco.datamodel.Databases
 import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.libs.pdf.*
-import be.quodlibet.boxable.HorizontalAlignment
 import org.apache.pdfbox.pdmodel.common.PDRectangle
-import org.apache.pdfbox.pdmodel.font.PDType0Font
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.awt.Color
 import java.net.URI

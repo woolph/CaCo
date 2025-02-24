@@ -4,7 +4,7 @@ import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.parseRarity
-import at.woolph.caco.newOrUpdate
+import at.woolph.caco.utils.newOrUpdate
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.filter
@@ -228,6 +228,9 @@ data class ScryfallCard(
     fun isNoPromoPackStampedAndNoPrereleasePackStampedVersion() =
         !(promo_types.contains("promopack") && promo_types.contains("stamped"))
                 && !(promo_types.contains("prerelease") && promo_types.contains("datestamped"))
+
+    fun isImportWorthy() = isNoPromoPackStampedAndNoPrereleasePackStampedVersion() &&
+        layout != "art_series" && !digital && set != "ced"
 
     fun update(card: Card) = card.also {
         val isPromo = promo

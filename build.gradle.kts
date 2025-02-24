@@ -38,7 +38,7 @@ dependencies {
 	implementation("org.json:json:20220924")
 	implementation("com.opencsv:opencsv:5.7.1")
 	implementation("javax.xml.bind:jaxb-api:2.4.0-b180830.0359")
-	implementation("org.apache.pdfbox:pdfbox:3.0.2")
+	implementation("org.apache.pdfbox:pdfbox:3.0.4")
 	implementation("com.github.dhorions:boxable:1.7.0")
 	implementation("org.apache.xmlgraphics:batik-rasterizer:1.14")
 	implementation("org.apache.xmlgraphics:batik-codec:1.14")

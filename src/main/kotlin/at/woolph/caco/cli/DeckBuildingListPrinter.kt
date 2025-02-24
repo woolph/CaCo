@@ -4,14 +4,12 @@ import at.woolph.caco.datamodel.Databases
 import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.datamodel.sets.*
 import at.woolph.libs.pdf.*
-import be.quodlibet.boxable.HorizontalAlignment
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.font.PDType1Font
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.awt.Color
 import java.nio.file.Path
-import java.util.*
 
 class DeckBuildingListPrinter {
     // TODO exclude from list every CardPossession which is used for a deck

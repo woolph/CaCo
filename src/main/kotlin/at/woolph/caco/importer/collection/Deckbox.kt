@@ -9,7 +9,6 @@ import at.woolph.caco.importer.sets.paddingCollectorNumber
 import com.opencsv.CSVReader
 import com.opencsv.CSVWriter
 import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.io.File
 import java.io.FileReader
@@ -63,7 +62,10 @@ fun importDeckbox(file: Path) {
         CSVWriter(FileWriter(File("not-imported.csv"))).use { writer ->
             CSVReader(FileReader(file.toFile())).use { reader ->
                 val header = reader.readNext().also {
-                    writer.writeNext(it)
+                    writer.writeNext(buildList {
+                        addAll(it)
+                        add("Error")
+                    }.toTypedArray())
                 }.withIndex().associate { it.value to it.index }
 
                 operator fun Array<String>.get(column: String): String? = header[column]?.let { this[it] }
@@ -72,10 +74,15 @@ fun importDeckbox(file: Path) {
                 var nextLine: Array<String>? = reader.readNext()
                 while (nextLine != null) {
                     try {
+                        val magicGameDayCard = nextLine["Edition Code"] == "MGDC"
                         val printingNote = nextLine["Printing Note"]!!
                         val count = nextLine["Count"]!!.toInt()
                         val cardName = nextLine["Name"]!!
-                        val edition = nextLine["Edition"]!!
+                        val edition =  if (magicGameDayCard) {
+                            "Promos: $printingNote"  // mapping game day promos to the correct set
+                        } else {
+                            nextLine["Edition"]!!
+                        }
                         val setName = mapSetName(
                             edition.removeSuffix(" Promo Pack").removePrefix("Prerelease Events: ").removePrefix("Extras: ")
                                 .removePrefix("Promos: ").removePrefix("Promo Pack: ")
@@ -125,6 +132,7 @@ fun importDeckbox(file: Path) {
                         }
                         val stampPlaneswalkerSymbol = nextLine["Promo"] == "promo"
                         val markPlaneswalkerSymbol = isTheListCard || nextLine["Artist Proof"] == "proof"
+
                         val cardNumber = mapSetNumber(nextLine["Card Number"]!!, setName).let {
                             if (printingNote matches Regex("[a-z]")) {
                                 "$it$printingNote"
@@ -170,7 +178,9 @@ fun importDeckbox(file: Path) {
                                 cardName,
                                 rarity,
                                 manaCost,
-                                interactiveMode = false
+                                interactiveMode = false,
+                                reliableCardNumber = !magicGameDayCard,
+                                promo = isPromo,
                             )
 
                             repeat(count) {
@@ -188,7 +198,10 @@ fun importDeckbox(file: Path) {
                     } catch (e: Exception) {
                         println("unable to import: ${e.message}")
                         countOfUnparsed++
-                        writer.writeNext(nextLine)
+                        writer.writeNext(buildList {
+                            addAll(nextLine)
+                            add("${e.message}")
+                        }.toTypedArray())
                     }
                     nextLine = reader.readNext()
                 }
@@ -198,7 +211,7 @@ fun importDeckbox(file: Path) {
     }
 }
 val setsWithUnreliableCollectorNumbers = listOf("ITP")
-fun getCard(setCode: String, setName: String, cardNumber: String, token: Boolean, cardName: String, rarity: Rarity?, manaCost: String?, interactiveMode: Boolean): Card {
+fun getCard(setCode: String, setName: String, cardNumber: String, token: Boolean, cardName: String, rarity: Rarity?, manaCost: String?, interactiveMode: Boolean, reliableCardNumber: Boolean, promo: Boolean): Card {
 //    val cardSetJoin = Join(ScryfallCardSets, CardSets,
 //        onColumn = ScryfallCardSets.set, otherColumn = CardSets.id,
 //        joinType = JoinType.INNER,
@@ -216,7 +229,7 @@ fun getCard(setCode: String, setName: String, cardNumber: String, token: Boolean
 //        return@mapNotNull Card.findById(it[Cards.id])
 //    }.map{it.name}.toList()
 
-    val reliableCardNumber = setCode !in setsWithUnreliableCollectorNumbers
+    val reliableCardNumber = reliableCardNumber && setCode !in setsWithUnreliableCollectorNumbers
 
     val card = if (reliableCardNumber) {
         val cards = (Cards innerJoin ScryfallCardSets innerJoin CardSets).select(Cards.id).where {
@@ -225,13 +238,13 @@ fun getCard(setCode: String, setName: String, cardNumber: String, token: Boolean
             return@mapNotNull Card.findById(it[Cards.id])
         }.toList()
 
-        cards.filter { it.name == cardName }.singleOrNull()
+      cards.singleOrNull { it.name == cardName }
     } else {
         (Cards innerJoin ScryfallCardSets innerJoin CardSets).select(Cards.id).where {
             CardSets.id.eq(setCode.lowercase()) and (Cards.name.eq(cardName))
         }.mapNotNull {
             return@mapNotNull Card.findById(it[Cards.id])
-        }.singleOrNull()
+        }.singleOrNull { it.promo == promo }
     }
 
 
@@ -251,14 +264,14 @@ fun getCard(setCode: String, setName: String, cardNumber: String, token: Boolean
         }.mapNotNull { Card.findById(it[Cards.id]) }.toTypedArray()
 
         if (possibleCards.isEmpty()) {
-            throw Exception("card #$cardNumber (\"$cardName\") not found in set $setName")
+            throw Exception("card #$cardNumber (\"$cardName\") not found in set [$setCode] $setName")
         }
 
         println("$setName $cardNumber $cardName -> please select index: (just press enter if no card matches!):")
         possibleCards.forEachIndexed { index, card ->  println("$index ${card.set.set.name} ${card.numberInSet} ${card.name}") }
 
         val selectedCard = readLine()!!.toIntOrNull()?.let { possibleCards.getOrNull(it) } ?:
-            throw Exception("card #$cardNumber (\"$cardName\") not found in set $setName")
+            throw Exception("card #$cardNumber (\"$cardName\") not found in set [$setCode] $setName")
 
         if (!setNameMapping.containsKey(setName) && setName != selectedCard.set.set.name) {
             println("should we add a new set mapping setNameMapping[\"$setName\"] = \"${selectedCard.set.set.name}\"?")
@@ -269,7 +282,7 @@ fun getCard(setCode: String, setName: String, cardNumber: String, token: Boolean
         }
         return selectedCard
     } else {
-        throw Exception("card $cardNumber (\"$cardName\") not found in set $setName")
+        throw Exception("card $cardNumber (\"$cardName\") not found in set [$setCode] $setName")
     }
 }
 val promoSetCodes = listOf(

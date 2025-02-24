@@ -1,7 +1,5 @@
 package at.woolph.caco.datamodel.collection
 
-import at.woolph.caco.datamodel.decks.Builds.default
-import at.woolph.caco.datamodel.decks.Builds.index
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.Cards
 import org.jetbrains.exposed.dao.IntEntity

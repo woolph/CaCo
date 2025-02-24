@@ -3,7 +3,7 @@ package at.woolph.caco.importer.sets
 import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.httpclient.useHttpClient
-import at.woolph.caco.newOrUpdate
+import at.woolph.caco.utils.newOrUpdate
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -71,7 +71,7 @@ internal fun loadSetsFromScryfall(): Flow<ScryfallSet> =
     .filter(ScryfallSet::isNonDigitalSetWithCards)
 
 fun importSets(): Flow<CardSet> = flow {
-    val sets = loadSetsFromScryfall().filter { it.set_type != "memorabilia" }.toList()
+    val sets = loadSetsFromScryfall().filter(ScryfallSet::isImportWorthy).toList()
 
     sets.filter(ScryfallSet::isRootSet).forEach {
         CardSet.newOrUpdate(it.code) { it.update(this) }

@@ -2,7 +2,7 @@ package at.woolph.caco.imagecache
 
 import at.woolph.caco.datamodel.Databases
 import at.woolph.caco.imagecache.CachedImage.Companion.transform
-import at.woolph.caco.newOrUpdate
+import at.woolph.caco.utils.newOrUpdate
 import javafx.scene.image.Image
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.dao.Entity

@@ -1,8 +1,6 @@
 package at.woolph.caco.cli
 
 import at.woolph.libs.pdf.*
-import be.quodlibet.boxable.HorizontalAlignment
-import be.quodlibet.boxable.VerticalAlignment
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.font.PDType1Font
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts

@@ -2,7 +2,7 @@ package at.woolph.caco.importer.sets
 
 import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
-import at.woolph.caco.newOrUpdate
+import at.woolph.caco.utils.newOrUpdate
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -39,6 +39,7 @@ data class ScryfallSet(
     fun isRootSet() = parent_set_code == null || !code.endsWith(parent_set_code)
     fun update(cardSet: CardSet) = cardSet.apply {
         name = this@ScryfallSet.name
+        type = this@ScryfallSet.set_type
         dateOfRelease = this@ScryfallSet.released_at
         officalCardCount = this@ScryfallSet.card_count
         icon = this@ScryfallSet.icon_svg_uri
@@ -49,4 +50,6 @@ data class ScryfallSet(
             set = updatedCardSet
         }
     }
+
+    fun isImportWorthy() = (set_type != "memorabilia" || code == "30a" || code == "p30a")
 }

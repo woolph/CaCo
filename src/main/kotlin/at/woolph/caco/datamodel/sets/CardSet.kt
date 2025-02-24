@@ -13,8 +13,6 @@ import org.apache.batik.transcoder.image.ImageTranscoder
 import org.apache.batik.transcoder.image.PNGTranscoder
 import org.jetbrains.exposed.dao.Entity
 import org.jetbrains.exposed.dao.EntityClass
-import org.jetbrains.exposed.dao.UUIDEntity
-import org.jetbrains.exposed.dao.UUIDEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.sql.javatime.date
@@ -22,33 +20,13 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
 import java.net.URI
-import java.util.*
-
-object ScryfallCardSets : IdTable<UUID>() {
-    override val id = uuid("id").entityId()
-    override val primaryKey = PrimaryKey(id)
-
-    val setCode = varchar("setCode", length = 10).index()
-    val set = reference("set", CardSets).index()
-    val name = varchar("name", length = 256).index()
-}
-
-class ScryfallCardSet(id: EntityID<UUID>) : UUIDEntity(id) {
-    companion object : UUIDEntityClass<ScryfallCardSet>(ScryfallCardSets)
-
-    var setCode by ScryfallCardSets.setCode
-    var name by ScryfallCardSets.name
-
-    var set by CardSet referencedOn ScryfallCardSets.set
-
-    val cards by Card referrersOn Cards.set
-}
 
 object CardSets : IdTable<String>() {
     override val id = varchar("id", length = 6).entityId()
     override val primaryKey = PrimaryKey(id)
 
     val name = varchar("name", length = 256).index()
+    val type = varchar("type", length = 256).index()
     val dateOfRelease = date("dateOfRelease").index()
     val officalCardCount = integer("officalCardCount").default(0)
     val digitalOnly = bool("digitalOnly").default(false).index()
@@ -61,6 +39,7 @@ class CardSet(id: EntityID<String>) : Entity<String>(id) {
 
     var shortName by CardSets.id
     var name by CardSets.name
+    var type by CardSets.type
     var dateOfRelease by CardSets.dateOfRelease
     var officalCardCount by CardSets.officalCardCount
     var digitalOnly by CardSets.digitalOnly

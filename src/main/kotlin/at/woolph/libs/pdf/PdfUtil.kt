@@ -1,7 +1,5 @@
 package at.woolph.libs.pdf
 
-import be.quodlibet.boxable.HorizontalAlignment
-import be.quodlibet.boxable.VerticalAlignment
 import org.apache.pdfbox.pdmodel.PDDocument
 import org.apache.pdfbox.pdmodel.PDPage
 import org.apache.pdfbox.pdmodel.PDPageContentStream
@@ -349,6 +347,9 @@ fun Node.drawText(text: String, font: Font, x: Float, y:Float, color: Color, max
 
 	drawText(printedText, font, x, y, color)
 }
+enum class HorizontalAlignment {
+	LEFT, CENTER, RIGHT
+}
 
 fun Node.drawText(text: String, font: Font, horizontalAlignment: HorizontalAlignment, shiftX: Float, y: Float, color: Color) {
 	val startX = when(horizontalAlignment) {
@@ -357,6 +358,9 @@ fun Node.drawText(text: String, font: Font, horizontalAlignment: HorizontalAlign
 		HorizontalAlignment.RIGHT -> box.upperRightX - font.getWidth(text)
 	}
 	drawText(text, font, startX + shiftX, box.upperRightY - y, color)
+}
+enum class VerticalAlignment {
+	TOP, MIDDLE, BOTTOM
 }
 
 fun Node.drawText(text: String, font: Font, verticalAlignment: VerticalAlignment, x: Float, color: Color) {
