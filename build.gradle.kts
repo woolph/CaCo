@@ -76,13 +76,12 @@ application {
 	mainClass.set("at.woolph.caco.MainKt")
 }
 
-//
-//spotless {
-//	kotlin {
-//		ktlint("0.48.2")
-//		licenseHeader("/* Copyright \$YEAR Wolfgang Mayer */")
-//	}
-//	kotlinGradle {
-//		ktlint("0.48.2")
-//	}
-//}
+spotless {
+	kotlin {
+		ktlint()
+		licenseHeader("/* Copyright \$YEAR Wolfgang Mayer */")
+	}
+	kotlinGradle {
+		ktlint()
+	}
+}

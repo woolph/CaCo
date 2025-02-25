@@ -14,6 +14,9 @@ import java.io.File
 import java.io.FileReader
 import java.io.FileWriter
 import java.nio.file.Path
+import kotlin.collections.contains
+import kotlin.text.lowercase
+import kotlin.text.removeSuffix
 
 fun String.parseLanguageDeckbox(): CardLanguage = when (this) {
 	"English" -> CardLanguage.ENGLISH
@@ -55,8 +58,7 @@ fun CardCondition.toDeckboxCondition(): String = when (this) {
 fun importDeckbox(file: Path) {
     println("importing deckbox collection export file $file")
     transaction {
-        val knownSets = CardSet.all().map { it.id.value }.toSet()
-        val promoPrintingNotes = listOf("Bundle Foil Promo", "Promo", "Buy-A-Box Promo")
+        val knownSets = CardSet.all().associate { it.id.value to it.name }
         CardPossessions.deleteAll()
 
         CSVWriter(FileWriter(File("not-imported.csv"))).use { writer ->
@@ -74,20 +76,26 @@ fun importDeckbox(file: Path) {
                 var nextLine: Array<String>? = reader.readNext()
                 while (nextLine != null) {
                     try {
-                        val magicGameDayCard = nextLine["Edition Code"] == "MGDC"
+                        val (setCode, setName, isPromo, token, isTheListCard) = editionToSetName(
+                            nextLine["Edition Code"]!!,
+                            nextLine["Edition"]!!,
+                            nextLine["Printing Note"]!!,
+                            knownSets,
+                        )
+//                        val isPromoSetCodeWithActualEditionInPrintingNode = nextLine["Edition Code"]?.lowercase() in promoSetCodeWithActualEditionInPrintingNode
                         val printingNote = nextLine["Printing Note"]!!
                         val count = nextLine["Count"]!!.toInt()
                         val cardName = nextLine["Name"]!!
-                        val edition =  if (magicGameDayCard) {
-                            "Promos: $printingNote"  // mapping game day promos to the correct set
-                        } else {
-                            nextLine["Edition"]!!
-                        }
-                        val setName = mapSetName(
-                            edition.removeSuffix(" Promo Pack").removePrefix("Prerelease Events: ").removePrefix("Extras: ")
-                                .removePrefix("Promos: ").removePrefix("Promo Pack: ")
-                        )
-                        val token = edition.startsWith("Extras: ")
+//                        val edition =  if (isPromoSetCodeWithActualEditionInPrintingNode) {
+//                            "Promos: $printingNote"  // mapping game day promos to the correct set
+//                        } else {
+//                            nextLine["Edition"]!!
+//                        }
+//                        val setName = mapSetName(
+//                            edition.removeSuffix(" Promo Pack").removePrefix("Prerelease Events: ").removePrefix("Extras: ")
+//                                .removePrefix("Promos: ").removePrefix("Promo Pack: ")
+//                        )
+//                        val token = edition.startsWith("Extras: ")
                         val language = nextLine["Language"]!!.parseLanguageDeckbox()
                         val condition = when (nextLine["Condition"]) {
                             "Mint", "Near Mint" -> CardCondition.NEAR_MINT
@@ -97,34 +105,34 @@ fun importDeckbox(file: Path) {
                             "Poor" -> CardCondition.POOR
                             else -> CardCondition.UNKNOWN
                         }
-                        val isPromo = edition.startsWith("Promos: ") || edition.startsWith("Promo Pack: ") ||
-                            edition.endsWith(" Promos") || printingNote in promoPrintingNotes
-                        var isTheListCard = false
-                        val setCode = nextLine["Edition Code"]!!.lowercase().let {
-                            if (isPromo)
-                                it.removePrefix("p")
-                            else
-                                it
-                        }.let {
-                            if (it == "plist") {
-                                isTheListCard = true
-                                printingNote.lowercase()
-                            } else {
-                                it
-                            }
-                        }.let {
-                            setCodeMapping.getOrDefault(it, it)
-                        }.let {
-                            if (it !in knownSets) {
-                                CardSets.select(CardSets.id).where { CardSets.name.eq(setName) }
-                                    .mapNotNull { it[CardSets.id].value }
-                                    .singleOrNull() ?: it
-                            } else {
-                                it
-                            }
-                        }
+//                        val isPromo = edition.startsWith("Promos: ") || edition.startsWith("Promo Pack: ") ||
+//                            edition.endsWith(" Promos") || printingNote in promoPrintingNotes
+//                        var isTheListCard = false
+//                        val setCode = nextLine["Edition Code"]!!.lowercase().let {
+//                            if (isPromo)
+//                                it.removePrefix("p")
+//                            else
+//                                it
+//                        }.let {
+//                            if (it == "plist") {
+//                                isTheListCard = true
+//                                printingNote.lowercase()
+//                            } else {
+//                                it
+//                            }
+//                        }.let {
+//                            setCodeMapping.getOrDefault(it, it)
+//                        }.let {
+//                            if (it !in knownSets) {
+//                                CardSets.select(CardSets.id).where { CardSets.name.eq(setName) }
+//                                    .mapNotNull { it[CardSets.id].value }
+//                                    .singleOrNull() ?: it
+//                            } else {
+//                                it
+//                            }
+//                        }
 
-                        val stampPrereleaseDate = edition.startsWith("Prerelease Events: ")
+                        val stampPrereleaseDate = nextLine["Edition"]!!.startsWith("Prerelease Events: ")
                         val foil = when {
                             stampPrereleaseDate -> true
                             nextLine["Foil"] == "foil" -> true
@@ -166,9 +174,9 @@ fun importDeckbox(file: Path) {
                         if (setCode.length < 3) {
                             println("skipping $cardName because setCode $setCode is not 3 letters long for $setName")
                         } else if (token && cardName.contains(" // ")) {
-                            println("skipping $cardName because it is an Double Sided Token which is not supported")
+//                            println("skipping $cardName because it is an Double Sided Token which is not supported")
                         } else if (cardName.startsWith("Art Card:")) {
-                            println("skipping $cardName because it is an Art Card")
+//                            println("skipping $cardName because it is an Art Card")
                         } else {
                             val card = getCard(
                                 setCode,
@@ -179,7 +187,6 @@ fun importDeckbox(file: Path) {
                                 rarity,
                                 manaCost,
                                 interactiveMode = false,
-                                reliableCardNumber = !magicGameDayCard,
                                 promo = isPromo,
                             )
 
@@ -210,8 +217,63 @@ fun importDeckbox(file: Path) {
         }
     }
 }
-val setsWithUnreliableCollectorNumbers = listOf("itp")
-fun getCard(setCode: String, setName: String, cardNumber: String, token: Boolean, cardName: String, rarity: Rarity?, manaCost: String?, interactiveMode: Boolean, reliableCardNumber: Boolean, promo: Boolean): Card {
+
+data class MetaInfo(
+    val setCode: String,
+    val setName: String,
+    val promo: Boolean,
+    val isToken: Boolean,
+    val isTheListCard: Boolean,
+)
+
+val tokenPrefixes = listOf("Extras: ")
+val prereleasePrefix = listOf("Prerelease Events: ")
+val promoPrefixes = listOf("Promos: ", "Promo Pack: ")
+val promoSuffixes = listOf(" Buy-A-Box Promo", " Open House", " Promos", " Promo Pack", " Draft Weekend", " Planeswalker Weekend")
+val allPrefixes = prereleasePrefix + promoPrefixes + tokenPrefixes
+val allSuffixes = promoSuffixes
+
+fun editionToSetName(editionCode: String, edition: String, printingNote: String, knownSets: Map<String, String>): MetaInfo {
+    return when {
+        editionCode.lowercase() == "plist" -> {
+            val setCode = printingNote.lowercase()
+            val setName = knownSets.entries.firstOrNull { it.key == setCode }?.value ?: throw Exception("The List Card set code $setCode unknown")
+            MetaInfo(setCode, setName, false, false, true)
+        }
+        editionCode.lowercase() in promoSetCodeWithActualEditionInPrintingNode -> {
+
+            val setName = mapSetName(allSuffixes.fold(allPrefixes.fold(printingNote, String::removePrefix), String::removeSuffix))
+            val setCode = knownSets.entries.firstOrNull { it.value == setName }?.key ?: throw Exception("Card from PromoSet with Actual Set in PrintingNote ($setName) unknown")
+
+            MetaInfo(setCode, setName, true, false, false)
+        }
+        else -> {
+            val isPromo = promoPrefixes.any(edition::startsWith) || promoSuffixes.any(edition::endsWith) || printingNote in promoPrintingNotes
+            val isToken = tokenPrefixes.any(edition::startsWith)
+
+            val setName = mapSetName(allSuffixes.fold(allPrefixes.fold(edition, String::removePrefix), String::removeSuffix))
+            val setCode = editionCode.lowercase().let {
+                if (isPromo)
+                    it.removePrefix("p")
+                else
+                    it
+            }.let {
+                setCodeMapping.getOrDefault(it, it)
+            }.let {
+                if (it !in knownSets) {
+                    knownSets.entries.firstOrNull { it.value == setName }?.key ?: it
+                } else {
+                    it
+                }
+            }
+            return MetaInfo(setCode, setName, isPromo, isToken, false)
+        }
+    }
+}
+
+val promoPrintingNotes = listOf("Bundle Foil Promo", "Promo", "Buy-A-Box Promo")
+
+fun getCard(setCode: String, setName: String, cardNumber: String, token: Boolean, cardName: String, rarity: Rarity?, manaCost: String?, interactiveMode: Boolean, promo: Boolean): Card {
 //    val cardSetJoin = Join(ScryfallCardSets, CardSets,
 //        onColumn = ScryfallCardSets.set, otherColumn = CardSets.id,
 //        joinType = JoinType.INNER,
@@ -229,24 +291,21 @@ fun getCard(setCode: String, setName: String, cardNumber: String, token: Boolean
 //        return@mapNotNull Card.findById(it[Cards.id])
 //    }.map{it.name}.toList()
 
-    val reliableCardNumber = reliableCardNumber && setCode !in setsWithUnreliableCollectorNumbers
-
-    val card = if (reliableCardNumber) {
-        val cards = (Cards innerJoin ScryfallCardSets innerJoin CardSets).select(Cards.id).where {
+    fun cardByNumber(): Card? =
+        (Cards innerJoin ScryfallCardSets innerJoin CardSets).select(Cards.id).where {
             CardSets.id.eq(setCode.lowercase()) and (Cards.numberInSet.eq(cardNumber))
         }.mapNotNull {
             return@mapNotNull Card.findById(it[Cards.id])
-        }.toList()
+        }.singleOrNull { it.name == cardName }
 
-      cards.singleOrNull { it.name == cardName }
-    } else {
+    fun cardByName(): Card? =
         (Cards innerJoin ScryfallCardSets innerJoin CardSets).select(Cards.id).where {
             CardSets.id.eq(setCode.lowercase()) and (Cards.name.eq(cardName))
         }.mapNotNull {
             return@mapNotNull Card.findById(it[Cards.id])
         }.singleOrNull { it.promo == promo }
-    }
 
+    val card = cardByNumber() ?: cardByName()
 
     if (card != null) {
         return card
@@ -285,13 +344,14 @@ fun getCard(setCode: String, setName: String, cardNumber: String, token: Boolean
         throw Exception("card $cardNumber (\"$cardName\") not found in set [$setCode] $setName")
     }
 }
-val promoSetCodes = listOf(
+val promoSetCodeWithActualEditionInPrintingNode = listOf(
     "mlp",
     "lpromos",
     "bftcp",
     "fnmp",
     "mgdc",
     "rep",
+    "mbp",
 )
 val setCodeMapping = mutableMapOf(
     "gu" to "ulg",
@@ -336,8 +396,8 @@ val setNameMapping = mutableMapOf(
     "Secret Lair Drop Series" to "Secret Lair Drop",
     "Modern Masters 2017 Edition" to "Modern Masters 2017",
     "Modern Masters 2015 Edition" to "Modern Masters 2015",
-    "Ravnica Allegiance Weekend" to "RNA Ravnica Weekend",
-    "Guilds of Ravnica Weekend" to "GRN Ravnica Weekend",
+    "RNA Ravnica Weekend" to "Ravnica Allegiance Weekend",
+    "GRN Ravnica Weekend" to "Guilds of Ravnica Weekend",
     "Modern Horizons Foil" to "Modern Horizons",
     "Jumpstart Front Cards" to "Jumpstart",
     "Fate Reforged Clash Pack Promos" to "Fate Reforged Clash Pack", // TODO eventually integrate CP2 cards as promo cards to FRF
@@ -355,12 +415,17 @@ val setNameMapping = mutableMapOf(
     "Warhammer 40,000" to "Warhammer 40,000 Commander",
     "The Lord of the Rings: Tales of Middle-earth Commander" to "Tales of Middle-earth Commander",
     "Lost Caverns of Ixalan Commander" to "The Lost Caverns of Ixalan Commander",
+    "2017 Ixalan Treasure Chest" to "XLN Treasure Chest",
+//    "Ixalan Open House" to "Ixalan",
+//    "Ixalan Buy-A-Box Promo" to "Ixalan",
+//    "Amonkhet Buy-A-Box Promo" to "Amonkhet",
+//    "Rivals of Ixalan Draft Weekend" to "Rivals of Ixalan",
 )
 
 val setNumberMapping = mutableMapOf<String, Map<IntRange, Int>>(
     "Portal Second Age" to mapOf(
         1..30 to +60,
-//        70..60 to 0,
+//        31..60 to 0,
         61..90 to +60,
 //        91..120 to 0,
         121..150 to -120,
@@ -489,6 +554,7 @@ val setNumberMapping = mutableMapOf<String, Map<IntRange, Int>>(
 )
 
 fun mapSetName(setName: String) = setNameMapping[setName] ?: setName
+
 fun mapSetNumber(setNumber: String, setName: String) = setNumberMapping[setName]?.let { mapData ->
         setNumber.toIntOrNull()?.let { setNumberInt ->
             val delta = mapData.asSequence().firstOrNull { it.key.contains(setNumberInt) }?.value ?: 0

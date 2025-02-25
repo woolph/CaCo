@@ -13,6 +13,7 @@ import at.woolph.caco.command.PrintDeckboxDecks
 import at.woolph.caco.command.PrintDecklist
 import at.woolph.caco.command.PrintInventory
 import at.woolph.caco.command.PrintManaBase
+import at.woolph.caco.command.PrintMissingCommander
 import at.woolph.caco.command.PrintMissingStats
 import at.woolph.caco.command.PrintPagePositions
 import at.woolph.caco.command.Ui
@@ -43,6 +44,7 @@ fun main(args: Array<String>) {
                 PrintDeckboxDecks(),
                 PrintArchidektDecks(),
                 PrintMissingStats(),
+                PrintMissingCommander(),
                 // TODO PrintMissingForDecks(),
                 // TODO PrintMissingForCollection(),
                 // TODO PrintDuplicatesRanked(), // by Price and or EDHREC Rank
