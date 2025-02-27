@@ -51,5 +51,12 @@ data class ScryfallSet(
         }
     }
 
-    fun isImportWorthy() = (set_type != "memorabilia" || code == "30a" || code == "p30a")
+    companion object {
+        val memorabiliaWhiteList = listOf(
+            "ptg",
+            "30a",
+            "p30a",
+        )
+    }
+    val isImportWorthy: Boolean get() = (set_type != "memorabilia" || code.startsWith("f")  || code.startsWith("o") || code in memorabiliaWhiteList)
 }

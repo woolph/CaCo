@@ -13,28 +13,8 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 import java.io.InputStream
-import kotlin.math.max
-import kotlin.math.min
 
 private val LOG = LoggerFactory.getLogger("at.woolph.caco.importer.sets.Scryfall")
-
-//val patternPromoCollectorNumber = Regex("([s★c])$")
-
-/**
- * pads the given collectors number while retaining non-number prefix and non-number suffix
- * for better results when alphabetic sorting of the collector numbers
- * e.g. "T3p" returns "T003p"
- * @param collectorNumber as gained by scryfall API
- * @return padded collector number
- */
-fun paddingCollectorNumber(collectorNumber: String): String {
-    val pattern = Regex("^([^\\d]*)(\\d{1,4})([^\\d]*)$")
-    val (prefix, number, suffix) = pattern.find(collectorNumber)?.let {
-        Triple(it.groupValues[1].let { if(it == "TCH") "CH" else it }, it.groupValues[2].toInt(), it.groupValues[3])
-    } ?: throw IllegalArgumentException("collectors number \"$collectorNumber\" does not match the regex $pattern")
-	val numberPadding = min(max(3 - prefix.length, 1), 3)
-    return String.format("%s%0${numberPadding}d%s", prefix, number, suffix)
-}
 
 // TODO import MDFC replacements (STX, KHM, ...)
 // TODO import double sided tokens as they are printed (especially those of the commander precons)
@@ -71,12 +51,12 @@ internal fun loadSetsFromScryfall(): Flow<ScryfallSet> =
     .filter(ScryfallSet::isNonDigitalSetWithCards)
 
 fun importSets(): Flow<CardSet> = flow {
-    val sets = loadSetsFromScryfall().filter(ScryfallSet::isImportWorthy).toList()
+    val (importWorthySets, _) = loadSetsFromScryfall().toList().partition(ScryfallSet::isImportWorthy::get)
 
-    sets.filter(ScryfallSet::isRootSet).forEach {
-        CardSet.newOrUpdate(it.code) { it.update(this) }
+    importWorthySets.filter(ScryfallSet::isRootSet).forEach { scryfallSet ->
+        CardSet.newOrUpdate(scryfallSet.code) { scryfallSet.update(this) }
     }
-    sets.forEach {
+    importWorthySets.forEach {
         try {
             val setId = it.id
             val setFound = CardSet.findById(it.code)

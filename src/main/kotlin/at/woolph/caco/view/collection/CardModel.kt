@@ -2,7 +2,6 @@ package at.woolph.caco.view.collection
 
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.imagecache.ImageCache
-import io.ktor.http.content.*
 import javafx.beans.property.Property
 import javafx.scene.image.Image
 import org.slf4j.LoggerFactory
@@ -44,11 +43,13 @@ open class CardModel(card: Card): ItemViewModel<Card>(card), Comparable<CardMode
 		get() = sequenceOf(name, nameDE).mapNotNull { it.value }
 
 	override fun compareTo(other: CardModel): Int {
-		// TODO dateOfRelease not reachable
-//		if (set.value != other.set.value) {
-//			return set.value.set.dateOfRelease.compareTo(other.set.value.set.dateOfRelease)
-//		}
-		return numberInSet.value.compareTo(other.numberInSet.value)
+		if (set.value != other.set.value) {
+			val lengthCompare = set.value.setCode.length.compareTo(other.set.value.setCode.length)
+			if (lengthCompare != 0)
+				return lengthCompare
+			return set.value.setCode.compareTo(other.set.value.setCode)
+		}
+		return numberInSet.value.toInt().compareTo(other.numberInSet.value.toInt())
 	}
 
 	suspend fun getCachedImage(): Image? =

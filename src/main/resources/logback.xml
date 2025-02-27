@@ -14,8 +14,8 @@
         </encoder>
     </appender>
 
-    <logger name="Exposed" level="INFO"/>
-    <root level="TRACE">
+    <root level="INFO">
         <appender-ref ref="FILE"/>
     </root>
+    <logger name="at.woolph" level="info"/>
 </configuration>

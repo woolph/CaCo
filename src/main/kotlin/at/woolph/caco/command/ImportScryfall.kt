@@ -2,6 +2,8 @@ package at.woolph.caco.command
 
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.importer.sets.ScryfallCard
+import at.woolph.caco.importer.sets.ScryfallCard.SetNotInDatabaseException
+import at.woolph.caco.importer.sets.ScryfallSet
 import at.woolph.caco.importer.sets.downloadBulkData
 import at.woolph.caco.importer.sets.importSets
 import at.woolph.caco.importer.sets.jsonSerializer
@@ -16,7 +18,6 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.path
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.decodeToSequence
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
@@ -42,8 +43,13 @@ class ImportScryfall: CliktCommand(name = "scryfall") {
                 Card.newOrUpdate(it.id) {
                   it.update(this)
                 }
+              } catch (t: SetNotInDatabaseException) {
+                if (t.setType != "memorabilia" || it.set in ScryfallSet.memorabiliaWhiteList)
+                  log.error("error while importing card ${it.name}: ${t.message}", if (log.isDebugEnabled) t else null)
+                else
+                  log.debug("not importing card ${it.name} cause set is not to be imported")
               } catch (t: Throwable) {
-                log.error("error while importing card ${it.name}", t)
+                log.error("error while importing card ${it.name}: ${t.message}", if (log.isDebugEnabled) t else null)
               }
             }
         }

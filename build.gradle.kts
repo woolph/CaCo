@@ -65,6 +65,9 @@ tasks.withType<Test> {
 
 kotlin {
 	jvmToolchain(libs.versions.jvmTarget.get().toInt())
+	compilerOptions {
+		freeCompilerArgs.add("-Xwhen-guards")
+	}
 }
 
 javafx {

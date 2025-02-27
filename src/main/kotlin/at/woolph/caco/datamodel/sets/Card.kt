@@ -25,8 +25,8 @@ object Cards : IdTable<UUID>() {
     val rarity = enumeration("rarity", Rarity::class).index()
     val promo = bool("promo").default(false).index()
     val token = bool("token").default(false).index()
-    val image = varchar("imageURI", length = 256).nullable()
-    val cardmarketUri = varchar("cardmarketUri", length = 256).nullable()
+    val image = varchar("imageURI", length = 512).nullable()
+    val cardmarketUri = varchar("cardmarketUri", length = 512).nullable()
 
     val extra = bool("extra").default(false)
     val nonfoilAvailable = bool("nonfoilAvailable").default(true)
@@ -37,7 +37,7 @@ object Cards : IdTable<UUID>() {
 
     val manaCost = varchar("manaCost", length = 256).nullable()
     val manaValue = float("manaValue").index()
-    val oracleText = varchar("oracleText", length = 1024)
+    val oracleText = varchar("oracleText", length = 4096)
     val type = varchar("type", length = 256).nullable()
     val colorIdentity = integer("colorIdentity")
 
@@ -89,7 +89,7 @@ class Card(id: EntityID<UUID>) : UUIDEntity(id) {
 
     var colorIdentity by Cards.colorIdentity.transform(
         { it.colorIdentity.fold(0) { acc: Int, manaColor: ManaColor -> (acc or (1 shl manaColor.ordinal)) } },
-        { ColorIdentity(ManaColor.values().asSequence()
+        { ColorIdentity(ManaColor.entries.asSequence()
             .filter { manaColor -> (it and (1 shl manaColor.ordinal)) != 0 }.toEnumSet())
         })
 
@@ -107,7 +107,7 @@ class Card(id: EntityID<UUID>) : UUIDEntity(id) {
                 ((!isCreature || oracleTextAll("when", "enters")))) ||
                 (!isCreature && !oracleText.contains(Regex("pays?", RegexOption.IGNORE_CASE)) &&
                 oracleTextAll("look", "library", "put", "your hand"))) ||
-                !isLand && oracleText.contains(Regex("cycling( \\{(0|1|2)\\}|—pay \\d+ life)", RegexOption.IGNORE_CASE))
+                !isLand && oracleText.contains(Regex("cycling( \\{([012])\\}|—pay \\d+ life)", RegexOption.IGNORE_CASE))
     }
 
     val blacklistCheapRamp = listOf(

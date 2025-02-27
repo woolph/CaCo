@@ -349,6 +349,9 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : Coro
 							vGrow = Priority.ALWAYS
 						}
 
+						column<CardPossessionModel, String>("Set", { it.value.set.map { it.setCode } }).apply {
+							contentWidth(5.0, useAsMin = true, useAsMax = true)
+						}
 						column("Number", CardPossessionModel::numberInSet) {
 							contentWidth(5.0, useAsMin = true, useAsMax = true)
 						}

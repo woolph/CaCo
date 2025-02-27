@@ -226,24 +226,20 @@ data class ScryfallCard(
     override fun isValid() = objectType == "card"
 
     fun isNoPromoPackStampedAndNoPrereleasePackStampedVersion() =
-        !(promo_types.contains("promopack") && promo_types.contains("stamped"))
-                && !(promo_types.contains("prerelease") && promo_types.contains("datestamped"))
+        !(promo_types.contains("promopack") && promo_types.contains("stamped") && set !in listOf("ppp1"))
+                && !(promo_types.contains("prerelease") && promo_types.contains("datestamped") && set !in listOf("pmh1", "pbng"))
 
     fun isImportWorthy() = isNoPromoPackStampedAndNoPrereleasePackStampedVersion() &&
         layout != "art_series" && !digital && set != "ced"
 
+    class SetNotInDatabaseException(val set: String, val setName: String, val setType: String): Exception("set not found $set $setName")
+
     fun update(card: Card) = card.also {
         val isPromo = promo
         val isToken = set_type == "token"
-        val isMemorabilia = set_type == "memorabilia" // art series, commander special cards (like OC21)
 
-        it.set = ScryfallCardSet[set_id]
-        it.numberInSet = paddingCollectorNumber(when {
-            isMemorabilia -> "M$collector_number"
-            isPromo -> "$collector_number P" // FIXME fix this condition
-            isToken -> "T$collector_number"
-            else -> collector_number
-        })
+        it.set = ScryfallCardSet.findById(set_id) ?: throw SetNotInDatabaseException(set, set_name, set_type)
+        it.numberInSet = collector_number
         it.name = name
         it.arenaId = arena_id
         it.rarity = rarity.parseRarity()

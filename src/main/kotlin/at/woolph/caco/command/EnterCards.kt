@@ -2,6 +2,8 @@ package at.woolph.caco.command
 
 import at.woolph.caco.datamodel.collection.CardCondition
 import at.woolph.caco.datamodel.collection.CardLanguage
+import at.woolph.caco.datamodel.collection.CardPossession
+import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.importer.collection.setNameMapping
@@ -18,6 +20,7 @@ import com.github.ajalt.clikt.parameters.options.prompt
 import com.github.ajalt.clikt.parameters.options.validate
 import com.github.ajalt.mordant.terminal.danger
 import com.github.ajalt.mordant.terminal.prompt
+import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.io.File
 
@@ -36,8 +39,21 @@ class EnterCards: CliktCommand() {
         .prompt("Select the language of the cards")
         .validate { it != CardLanguage.UNKNOWN }
 
+  /** TODO make it configurable */
+  val languageRankingList = listOf(
+    CardLanguage.ENGLISH,
+    CardLanguage.GERMAN,
+  )
+
     override fun run() {
       transaction {
+        /** this is a list of languages to be looked for while checking, if I need the entered card for collection or not
+         * (picture this: I'm entering cards for a set in German, but I'm preferring collecting English cards, so when I have the card in English already, I don't need the German one;
+         * on the other hand, if I don't have the card in English, I need the German one; now let's say I'm entering cards in English, then I don't need to check for my German stock,
+         * because I want to replace them anyway if this is the only printing I have)
+         */
+        val languagesToBeChecked = languageRankingList.takeWhile { it != language }.toMutableList().apply { add(language) }
+
         echo("enter cards for ${set.shortName} ${set.name}")
         echo("language = $language")
         echo("condition = $condition")
@@ -49,16 +65,30 @@ class EnterCards: CliktCommand() {
             fun increment() = PossessionUpdate(count + 1)
           }
 
-          val cardPossessionUpdates = mutableMapOf<Pair<Card, Boolean>, Int>()
+          data class PossessionUpdate2(
+            val count: Int = 0,
+            val alreadyCollected: Int,
+          ) {
+            fun increment() = PossessionUpdate2(count + 1, alreadyCollected)
+            fun decrement() = if (count > 0) PossessionUpdate2(count - 1, alreadyCollected) else this
+            fun isNeeded() = (count + alreadyCollected) == 0
+
+
+          }
+          fun newPossessionUpdate2(card: Card, foil: Boolean) =
+            PossessionUpdate2(0, CardPossession.find { CardPossessions.card.eq(card.id) and CardPossessions.foil.eq(foil) }.count { it.language in languagesToBeChecked }.toInt())
+
+          val cardPossessionUpdates = mutableMapOf<Pair<Card, Boolean>, PossessionUpdate2>()
 
           lateinit var prevSetNumber: String
           var setNumber = terminal.prompt("collector number")!!.also {
             stdinPrint.println(it)
           }
+
           while (setNumber.isNotBlank()) {
             fun add(setNumber: String) {
               val foil = setNumber.endsWith("*")
-              val setNumber2 = setNumber.removeSuffix("*").toInt().toString().padStart(3, '0')
+              val setNumber2 = setNumber.removeSuffix("*").toInt().toString()
               val card = set.cards.firstOrNull { it.numberInSet == setNumber2 }
               if (card != null) {
                 echo(
@@ -66,9 +96,11 @@ class EnterCards: CliktCommand() {
                   trailingNewline = false
                 )
                 cardPossessionUpdates.compute(card to foil) { _, possessionUpdate ->
-                  (possessionUpdate ?: 0.also {
-                    terminal.danger(" \u001b[31mNeeded for collection!\u001b[0m")
-                  }) + 1
+                  ((possessionUpdate ?: newPossessionUpdate2(card, foil)).also {
+                    if (it.isNeeded()) {
+                      terminal.danger(" \u001b[31mNeeded for collection!\u001b[0m")
+                    }
+                  }).increment()
                 }
                 echo()
               } else {
@@ -78,14 +110,14 @@ class EnterCards: CliktCommand() {
 
             fun remove(setNumber: String) {
               val foil = setNumber.endsWith("*")
-              val setNumber2 = setNumber.removeSuffix("*").toInt().toString().padStart(3, '0')
+              val setNumber2 = setNumber.removeSuffix("*").toInt().toString()
               val card = set.cards.first { it.numberInSet == setNumber2 }
               echo(
                 "removed #${card.numberInSet} \"${card.name}\" ${if (foil) " in \u001B[38:5:0m\u001B[48:5:214mf\u001B[48:5:215mo\u001B[48:5:216mi\u001B[48:5:217ml\u001B[0m" else ""}",
                 trailingNewline = false
               )
               cardPossessionUpdates.computeIfPresent(card to foil) { _, possessionUpdate ->
-                possessionUpdate - 1
+                possessionUpdate.decrement()
               }
               echo()
             }
@@ -125,8 +157,8 @@ class EnterCards: CliktCommand() {
                   else -> it
                 }
               }
-              if (possessionUpdate > 0) {
-                out.println("${possessionUpdate},0,\"$cardName\",\"$setName\",$cardNumberInSet,$condition,$language,${if (foil) "foil" else ""},,,,,,,")
+              if (possessionUpdate.count > 0) {
+                out.println("${possessionUpdate.count},0,\"$cardName\",\"$setName\",$cardNumberInSet,$condition,$language,${if (foil) "foil" else ""},,,,,,,")
               }
             }
           }
