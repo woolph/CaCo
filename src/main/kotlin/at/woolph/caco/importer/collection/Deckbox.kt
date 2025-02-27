@@ -387,6 +387,7 @@ val setNameMapping = mutableMapOf(
     "Oversized: Commander 2018" to "Commander 2018 Oversized",
     "Oversized: Commander 2019" to "Commander 2019 Oversized",
     "Oversized: Commander 2020" to "Commander 2020 Oversized",
+    "Oversized: Adventures in the Forgotten Realms" to "Adventures in the Forgotten Realms Oversized",
 )
 
 fun mapSetNumber(setNumber: String, setName: String) = setNumberMapping[setName]?.let { mapData ->
