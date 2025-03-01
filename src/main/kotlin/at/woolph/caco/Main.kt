@@ -2,6 +2,7 @@ package at.woolph.caco
 
 import at.woolph.caco.command.CaCoCli
 import at.woolph.caco.command.EnterCards
+import at.woolph.caco.command.ExportCollectionArchidekt
 import at.woolph.caco.command.HighValueTradables
 import at.woolph.caco.command.ImportDeckboxCollection
 import at.woolph.caco.command.ImportDecklists
@@ -28,6 +29,9 @@ fun main(args: Array<String>) {
     CaCoCli()
         .subcommands(
             Ui(),
+            NoOpCliktCommand(name = "export").subcommands(
+                ExportCollectionArchidekt(),
+            ),
             NoOpCliktCommand(name = "import").subcommands(
                 ImportScryfall(),
                 ImportDeckboxCollection(),

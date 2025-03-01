@@ -13,6 +13,7 @@ import java.io.File
 import java.io.FileReader
 import java.io.FileWriter
 import java.nio.file.Path
+import java.time.LocalDate
 import kotlin.collections.contains
 import kotlin.text.lowercase
 import kotlin.text.removeSuffix
@@ -48,6 +49,7 @@ fun importDeckbox(file: Path) {
                         )
                         val printingNote = nextLine["Printing Note"]!!
                         val count = nextLine["Count"]!!.toInt()
+                        val dateAdded = nextLine["Last Updated"]?.split(" ")?.get(0)?.let { LocalDate.parse(it) }
 
                         val language = nextLine["Language"]!!.parseLanguageDeckbox()
                         val condition = when (nextLine["Condition"]) {
@@ -161,6 +163,7 @@ fun importDeckbox(file: Path) {
                                     this.stampPrereleaseDate = stampPrereleaseDate
                                     this.stampPlaneswalkerSymbol = stampPlaneswalkerSymbol
                                     this.markPlaneswalkerSymbol = markPlaneswalkerSymbol
+                                    this.dateOfAddition = dateAdded ?: LocalDate.now()
                                 }
                             }
                         }

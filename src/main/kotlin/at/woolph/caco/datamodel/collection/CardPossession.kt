@@ -6,12 +6,12 @@ import org.jetbrains.exposed.dao.IntEntity
 import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IntIdTable
-import org.jetbrains.exposed.sql.javatime.CurrentDateTime
-import org.jetbrains.exposed.sql.javatime.datetime
+import org.jetbrains.exposed.sql.javatime.CurrentDate
+import org.jetbrains.exposed.sql.javatime.date
 
 object CardPossessions : IntIdTable() {
     val card = reference("card", Cards).index()
-	val datetimeOfAddition = datetime("datetimeOfAddition").index().defaultExpression(CurrentDateTime)
+	val dateOfAddition = date("dateOfAddition").index().defaultExpression(CurrentDate)
     val language = enumeration("language", CardLanguage::class).default(CardLanguage.UNKNOWN).index()
     val condition = enumeration("condition", CardCondition::class).default(CardCondition.UNKNOWN).index()
     val foil = bool("foil").default(false).index()
@@ -40,7 +40,7 @@ class CardPossession(id: EntityID<Int>) : IntEntity(id) {
     companion object : IntEntityClass<CardPossession>(CardPossessions)
 
     var card by Card referencedOn CardPossessions.card
-	var datetimeOfAddition by CardPossessions.datetimeOfAddition
+	var dateOfAddition by CardPossessions.dateOfAddition
     var language by CardPossessions.language
     var condition by CardPossessions.condition
     var foil by CardPossessions.foil
