@@ -21,12 +21,12 @@ class UpdatesPrices: CliktCommand(name = "prices") {
             .filter(ScryfallCard::isNoPromoPackStampedAndNoPrereleasePackStampedVersion)
             .collect {
               try {
-                Card.Companion.newOrUpdate(it.id) {
-                  it.update(this)
-                  cardmarketUri = it.purchase_uris["cardmarket"]
+                Card.Companion.newOrUpdate(it.id) { card ->
+                  it.update(card)
+                  card.cardmarketUri = it.purchase_uris["cardmarket"]
 
-                  price = it.prices["eur"]?.toDouble()
-                  priceFoil = it.prices["eur_foil"]?.toDouble()
+                  card.price = it.prices["eur"]?.toDouble()
+                  card.priceFoil = it.prices["eur_foil"]?.toDouble()
                 }
               } catch (t: Throwable) {
                 log.error("error while updating price for card ${it.name}", t)

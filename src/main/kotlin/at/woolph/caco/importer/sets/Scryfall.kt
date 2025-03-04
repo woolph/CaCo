@@ -30,7 +30,7 @@ suspend fun importSet(setCode: String): CardSet = useHttpClient(Dispatchers.IO) 
     val scryfallSet = response.body<ScryfallSet>()
 
     if (scryfallSet.isNonDigitalSetWithCards()) {
-        CardSet.newOrUpdate(scryfallSet.code) { scryfallSet.update(this@newOrUpdate) }
+        CardSet.newOrUpdate(scryfallSet.code, scryfallSet::update)
     } else {
         throw Exception("result is not a set or it's digital or does not have any cards")
     }
@@ -65,7 +65,7 @@ fun importSets(): Flow<CardSet> = flow {
     val (importWorthySets, _) = loadSetsFromScryfall().toList().partition(ScryfallSet::isImportWorthy::get)
 
     importWorthySets.filter(ScryfallSet::isRootSet).forEach { scryfallSet ->
-        CardSet.newOrUpdate(scryfallSet.code) { scryfallSet.update(this) }
+        CardSet.newOrUpdate(scryfallSet.code, scryfallSet::update)
     }
     importWorthySets.forEach {
         try {
@@ -74,10 +74,10 @@ fun importSets(): Flow<CardSet> = flow {
                 ?: it.parent_set_code?.let { CardSet.findById(it) }
                 ?: throw NoSuchElementException("no card set found for code ${it.code} or ${it.parent_set_code}")
 
-            ScryfallCardSet.newOrUpdate(setId) {
-                setCode = it.code
-                name = it.name
-                set = setFound
+            ScryfallCardSet.newOrUpdate(setId) { scryfallCardSet ->
+                scryfallCardSet.setCode = it.code
+                scryfallCardSet.name = it.name
+                scryfallCardSet.set = setFound
             }
         } catch (t: Throwable) {
             LOG.error("error while importing set ${it.name}", t)
@@ -86,10 +86,10 @@ fun importSets(): Flow<CardSet> = flow {
 
     // FIXME ask scryfall to add these oversized dungeon tokens to their database
     val oafrId = UUID.fromString("c954ce81-07b0-4881-b350-af3d7780ec22")
-    ScryfallCardSet.newOrUpdate(oafrId) {
-        setCode = "oafr"
-        name = "Adventures in the Forgotten Realms Oversized"
-        set = CardSet["afr"]
+    ScryfallCardSet.newOrUpdate(oafrId) { scryfallCardSet ->
+        scryfallCardSet.setCode = "oafr"
+        scryfallCardSet.name = "Adventures in the Forgotten Realms Oversized"
+        scryfallCardSet.set = CardSet["afr"]
     }
 
     mapOf(
@@ -99,13 +99,13 @@ fun importSets(): Flow<CardSet> = flow {
     ).forEach { (nonOversizedVersionId, oversizedVersionId) ->
         val nonOversizedVersion = loadCard(nonOversizedVersionId)
         val id0 = UUID.fromString(oversizedVersionId)
-        Card.newOrUpdate(id0) {
+        Card.newOrUpdate(id0) { card ->
             nonOversizedVersion.copy(
                 oversized = true,
                 id = id0,
                 set = "oafr",
                 set_id = oafrId,
-            ).update(this)
+            ).update(card)
         }
     }
 

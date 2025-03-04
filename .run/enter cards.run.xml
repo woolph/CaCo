@@ -3,7 +3,7 @@
     <option name="ALTERNATIVE_JRE_PATH" value="temurin-17" />
     <option name="MAIN_CLASS_NAME" value="at.woolph.caco.MainKt" />
     <module name="CaCo.main" />
-    <option name="PROGRAM_PARAMETERS" value="enter-cards dft --language=DE" />
+    <option name="PROGRAM_PARAMETERS" value="enter-cards inr --language=EN" />
     <shortenClasspath name="NONE" />
     <method v="2">
       <option name="Make" enabled="true" />

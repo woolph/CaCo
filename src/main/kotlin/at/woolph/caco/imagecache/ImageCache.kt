@@ -39,8 +39,8 @@ object ImageCache {
         newSuspendedTransaction(Dispatchers.IO, Databases.imageCache) {
             CachedImage.findById(id)?.content ?: imageLoader()?.also { renderedImage ->
                 try {
-                    CachedImage.newOrUpdate(id) {
-                        content = renderedImage
+                    CachedImage.newOrUpdate(id) { cachedImage ->
+                        cachedImage.content = renderedImage
                     }
                 } catch(e: Throwable) {
                     null

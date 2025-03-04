@@ -234,6 +234,12 @@ data class ScryfallCard(
 
     class SetNotInDatabaseException(val set: String, val setName: String, val setType: String): Exception("set not found $set $setName")
 
+    fun updateTheListPendant(card: Card) = card.also {
+        if (it.theListVersion != null && it.theListVersion != id)
+            throw IllegalStateException("the card ${it.name} has already a different scryfall id ${it.theListVersion} for a 'The List' version of that card")
+        it.theListVersion = Card.findById(id)
+    }
+
     fun update(card: Card) = card.also {
         val isPromo = promo
         val isToken = set_type == "token"
@@ -311,9 +317,7 @@ suspend fun CardSet.importCardsOfSet(additionalLanguages: List<String> = emptyLi
     loadCardsFromScryfall()
         .filter(ScryfallCard::isNoPromoPackStampedAndNoPrereleasePackStampedVersion)
         .collect {
-            Card.newOrUpdate(it.id) {
-                it.update(this)
-            }
+            Card.newOrUpdate(it.id, it::update)
         }
 
     additionalLanguages.forEach { language ->

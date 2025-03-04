@@ -1,6 +1,9 @@
 package at.woolph.caco.command
 
 import at.woolph.caco.datamodel.sets.Card
+import at.woolph.caco.datamodel.sets.Cards
+import at.woolph.caco.datamodel.sets.ScryfallCardSet
+import at.woolph.caco.datamodel.sets.ScryfallCardSets
 import at.woolph.caco.importer.sets.ScryfallCard
 import at.woolph.caco.importer.sets.ScryfallCard.SetNotInDatabaseException
 import at.woolph.caco.importer.sets.ScryfallSet
@@ -20,6 +23,8 @@ import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.decodeToSequence
+import org.jetbrains.exposed.sql.Op
+import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.slf4j.LoggerFactory
 import java.io.InputStream
@@ -40,8 +45,15 @@ class ImportScryfall: CliktCommand(name = "scryfall") {
             .filter(ScryfallCard::isImportWorthy)
             .collect {
               try {
-                Card.newOrUpdate(it.id) {
-                  it.update(this)
+                Card.newOrUpdate(it.id, it::update)
+
+                if (it.set == "plst") {
+                  val (setCode, collectorNumber) = it.collector_number.split("-", limit = 2)
+                  val set = ScryfallCardSet.find { ScryfallCardSets.setCode eq setCode }.single()
+                  Card.findSingleByAndUpdate(
+                    Op.build { Cards.set eq set.id and (Cards.numberInSet eq collectorNumber) },
+                    it::updateTheListPendant,
+                  )
                 }
               } catch (t: SetNotInDatabaseException) {
                 if (t.setType != "memorabilia" || it.set in ScryfallSet.memorabiliaWhiteList)

@@ -24,12 +24,6 @@ object CardPossessions : IntIdTable() {
     val stampPlaneswalkerSymbol = bool("stampPlaneswalkerSymbol").default(false).index()
 
 	/**
-	 * indicates that the card has the planeswalker symbol in the lower left corner (like the cards from
-	 * mystery booster or cards from "The List")
-	 */
-	val markPlaneswalkerSymbol = bool("markPlaneswalkerSymbol").default(false).index()
-
-	/**
 	 *
 	 */
 	val tradeLock = bool("tradeLock").default(false).index()
@@ -46,7 +40,6 @@ class CardPossession(id: EntityID<Int>) : IntEntity(id) {
     var foil by CardPossessions.foil
     var stampPrereleaseDate by CardPossessions.stampPrereleaseDate
     var stampPlaneswalkerSymbol by CardPossessions.stampPlaneswalkerSymbol
-    var markPlaneswalkerSymbol by CardPossessions.markPlaneswalkerSymbol
     var tradeLock by CardPossessions.tradeLock
     var location by CardPossessions.location
     //var prereleasePromo by CardPossessions.prereleasePromo

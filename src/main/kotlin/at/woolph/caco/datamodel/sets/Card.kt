@@ -10,13 +10,16 @@ import at.woolph.caco.importer.sets.toEnumSet
 import org.jetbrains.exposed.dao.*
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
+import org.jetbrains.exposed.sql.SizedIterable
+import org.jetbrains.exposed.sql.emptySized
 import java.net.URI
 import java.util.*
 
 object Cards : IdTable<UUID>() {
-    override val id = uuid("id").entityId()
+    override val id = uuid("scryfallId").entityId()
     override val primaryKey = PrimaryKey(id)
 
+    val theListVersion = reference("theListVersion", Cards).nullable()
     val set = reference("set", ScryfallCardSets).index()
     val numberInSet = varchar("number", length = 10).index()
     val name = varchar("name", length = 256).index()
@@ -49,7 +52,9 @@ class Card(id: EntityID<UUID>) : UUIDEntity(id) {
     companion object : UUIDEntityClass<Card>(Cards) {
         val CARD_DRAW_PATTERN = Regex("draws? (|a |two |three )cards?", RegexOption.IGNORE_CASE)
     }
+    val scryfallId: UUID get() = id.value
 
+    var theListVersion by Card optionalReferencedOn  Cards.theListVersion
     var set by ScryfallCardSet referencedOn Cards.set
     var numberInSet by Cards.numberInSet
     var name by Cards.name
@@ -93,8 +98,10 @@ class Card(id: EntityID<UUID>) : UUIDEntity(id) {
             .filter { manaColor -> (it and (1 shl manaColor.ordinal)) != 0 }.toEnumSet())
         })
 
-    val possessions by CardPossession referrersOn CardPossessions.card
-    val arenaPossessions by ArenaCardPossession referrersOn ArenaCardPossessions.card
+    val possessions by CardPossession referrersOn CardPossessions
+    val arenaPossessions by ArenaCardPossession referrersOn ArenaCardPossessions
+    val theListPossessions: SizedIterable<CardPossession>
+        get() = theListVersion?.possessions ?: emptySized()
 
     val isCreature: Boolean get() = type?.contains("Creature") == true
     val isLand: Boolean get() = type?.contains("Land") == true

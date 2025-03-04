@@ -22,6 +22,7 @@ import kotlin.text.removeSuffix
 fun importDeckbox(file: Path) {
     println("importing deckbox collection export file $file")
     transaction {
+        val theListSet = ScryfallCardSet.find { ScryfallCardSets.setCode eq "plst" }.single()
         val knownSets = ScryfallCardSet.all().associate { it.setCode to it.name }
         CardPossessions.deleteAll()
 
@@ -37,18 +38,20 @@ fun importDeckbox(file: Path) {
                 operator fun Array<String>.get(column: String): String? = header[column]?.let { this[it] }
 
                 var countOfUnparsed = 0
+                var importedCards = 0
                 generateSequence { reader.readNext() }.filter { it.size > 1 }.forEach { nextLine ->
                     try {
+                        val count = nextLine["Count"]!!.toInt()
                         val (setCode, setName, isPromo, token, isTheListCard) = editionToSetName(
                             nextLine["Edition Code"]!!,
                             nextLine["Edition"]!!,
                             nextLine["Printing Note"]!!,
                             nextLine["Name"]!!,
                             nextLine["Promo"] == "promo",
+                            nextLine["Artist Proof"] == "proof",
                             knownSets,
                         )
                         val printingNote = nextLine["Printing Note"]!!
-                        val count = nextLine["Count"]!!.toInt()
                         val dateAdded = nextLine["Last Updated"]?.split(" ")?.get(0)?.let { LocalDate.parse(it) }
 
                         val language = nextLine["Language"]!!.parseLanguageDeckbox()
@@ -121,6 +124,13 @@ fun importDeckbox(file: Path) {
                             }
                         }.let {
                             when(setCode) {
+                                "plst" -> {
+                                    if (nextLine["Artist Proof"] == "proof") {
+                                        "${mapEditionCode(nextLine["Edition Code"]!!).uppercase()}-$it"
+                                    } else {
+                                        Card.find { Cards.set eq theListSet.id and (Cards.name eq cardName and (Cards.numberInSet like "$printingNote-%")) }.singleOrNull()?.numberInSet ?: throw Exception("The List Card $cardName not found")
+                                    }
+                                }
                                 "prwk" -> "A%02d".format(it.toInt())
                                 "prw2" -> "B%02d".format(it.toInt())
                                 else -> it
@@ -162,9 +172,9 @@ fun importDeckbox(file: Path) {
                                     this.foil = foil
                                     this.stampPrereleaseDate = stampPrereleaseDate
                                     this.stampPlaneswalkerSymbol = stampPlaneswalkerSymbol
-                                    this.markPlaneswalkerSymbol = markPlaneswalkerSymbol
                                     this.dateOfAddition = dateAdded ?: LocalDate.now()
                                 }
+                                importedCards ++
                             }
                         }
                     } catch (e: Exception) {
@@ -176,7 +186,11 @@ fun importDeckbox(file: Path) {
                         }.toTypedArray())
                     }
                 }
-                println("unable to import $countOfUnparsed cards")
+                if (countOfUnparsed > 0) {
+                    println("unable to import $countOfUnparsed lines")
+                } else {
+                    println("all cards imported successfully ($importedCards in total)!!")
+                }
             }
         }
     }
@@ -211,16 +225,17 @@ fun determineScryfallSetName(edition: String, isPromo: Boolean, isToken: Boolean
     }
 }
 
-fun editionToSetName(editionCode: String, edition: String, printingNote: String, deckboxCardName: String, isPromo: Boolean, knownSets: Map<String, String>): MetaInfo {
+fun editionToSetName(editionCode: String, edition: String, printingNote: String, deckboxCardName: String, isPromo: Boolean, isTheListCardStoredAsRegularVersionWithArtistProofTag: Boolean, knownSets: Map<String, String>): MetaInfo {
     val isSubstituteCard = deckboxCardName == "Double-Faced Card Placeholder"
+    val printingNote = if (isTheListCardStoredAsRegularVersionWithArtistProofTag) editionCode else printingNote
+    val editionCode = if (isTheListCardStoredAsRegularVersionWithArtistProofTag) "plist" else editionCode
     return when(val lowercaseEditionCode = editionCode.lowercase()) {
         "plist" -> {
-            val isPromo = false
             val isToken = false
-            val setCode = printingNote.lowercase()
+            val setCode = "plst"
             val setName = knownSets[setCode] ?: throw Exception("The List Card set code $setCode unknown")
 
-            MetaInfo(setCode, setName, isPromo, isToken, true, isSubstituteCard)
+            MetaInfo(setCode, setName, isPromo, isToken, true, isSubstituteCard, isSetNumberReliable = false)
         }
         "ptc" if deckboxCardName == "Silent Sentinel" -> MetaInfo("pbng", "Born of the Gods Promos", true, false, false, false)
         "rep" if deckboxCardName == "Rukh Egg" -> MetaInfo("p8ed", "Eight Edition Promos", true, false, false, false)
@@ -339,6 +354,7 @@ val setCodeMapping = mutableMapOf(
     "fe" to "fem",
     "hm" to "hml",
     "le" to "leg",
+    "dd3_jvc" to "dd2",
 )
 
 fun mapSetName(setName: String) = setNameMapping[setName] ?: setName

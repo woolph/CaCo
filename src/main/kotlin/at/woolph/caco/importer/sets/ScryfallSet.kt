@@ -44,10 +44,10 @@ data class ScryfallSet(
         officalCardCount = this@ScryfallSet.card_count
         icon = this@ScryfallSet.icon_svg_uri
     }.also { updatedCardSet ->
-        ScryfallCardSet.newOrUpdate(this@ScryfallSet.id) {
-            setCode = this@ScryfallSet.code
-            name = this@ScryfallSet.name
-            set = updatedCardSet
+        ScryfallCardSet.newOrUpdate(this@ScryfallSet.id) { scryfallCardSet ->
+            scryfallCardSet.setCode = this@ScryfallSet.code
+            scryfallCardSet.name = this@ScryfallSet.name
+            scryfallCardSet.set = updatedCardSet
         }
     }
 
