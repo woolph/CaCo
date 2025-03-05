@@ -1,0 +1,93 @@
+### authenticate
+POST https://archidekt.com/api/rest-auth/login/
+Content-Type: application/json
+
+{
+    "email": "{{email}}",
+    "password": "{{password}}"
+}
+
+> {% client.global.set("access_token", response.body.access_token); %}
+
+### import collection
+POST https://archidekt.com/api/collection/upload/v2/
+Authorization: JWT {{access_token}}
+Content-Type: multipart/form-data; ; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="fileType"
+
+csv
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="blob"
+Content-Type: text/csv
+
+< ./import.csv
+
+--WebAppBoundary
+Content-Disposition: form-data; name="chunk"
+
+1
+
+--WebAppBoundary
+Content-Disposition: form-data; name="chunkSize"
+
+2000
+
+--WebAppBoundary
+Content-Disposition: form-data; name="ifFound"
+
+add
+
+--WebAppBoundary
+Content-Disposition: form-data; name="skip"
+
+true
+
+--WebAppBoundary
+Content-Disposition: form-data; name="defaultGame"
+
+1
+
+--WebAppBoundary
+Content-Disposition: form-data; name="defaultLanguage"
+
+1
+
+--WebAppBoundary
+Content-Disposition: form-data; name="defaultCondition"
+
+1
+
+--WebAppBoundary
+Content-Disposition: form-data; name="skipAmbiguousImports"
+
+true
+
+--WebAppBoundary
+Content-Disposition: form-data; name="columns[0]"
+
+quantity
+
+--WebAppBoundary
+Content-Disposition: form-data; name="columns[1]"
+
+modifier
+
+--WebAppBoundary
+Content-Disposition: form-data; name="columns[2]"
+
+condition
+
+--WebAppBoundary
+Content-Disposition: form-data; name="columns[3]"
+
+language
+
+--WebAppBoundary
+Content-Disposition: form-data; name="columns[4]"
+
+uid
+
+--WebAppBoundary--
