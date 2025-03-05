@@ -6,7 +6,7 @@ import at.woolph.caco.datamodel.collection.ArenaCardPossession
 import at.woolph.caco.datamodel.collection.ArenaCardPossessions
 import at.woolph.caco.datamodel.collection.CardPossession
 import at.woolph.caco.datamodel.collection.CardPossessions
-import at.woolph.caco.importer.sets.toEnumSet
+import at.woolph.caco.masterdata.import.toEnumSet
 import org.jetbrains.exposed.dao.*
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable

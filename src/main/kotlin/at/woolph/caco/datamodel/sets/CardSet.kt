@@ -1,6 +1,6 @@
 package at.woolph.caco.datamodel.sets
 
-import at.woolph.caco.imagecache.ImageCache
+import at.woolph.caco.masterdata.imagecache.ImageCache
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.request.*

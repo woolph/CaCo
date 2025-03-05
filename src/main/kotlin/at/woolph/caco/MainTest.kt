@@ -1,7 +1,5 @@
 package at.woolph.caco
 
-import at.woolph.caco.importer.deck.ArchidektDecklist
-import at.woolph.caco.importer.deck.request
 import kotlinx.coroutines.runBlocking
 
 fun main() = runBlocking {

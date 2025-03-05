@@ -1,6 +1,6 @@
 package at.woolph.caco.gui
 
-import at.woolph.caco.importer.sets.ProgressIndicator
+import at.woolph.caco.masterdata.import.ProgressIndicator
 import at.woolph.caco.view.collection.PaperCollectionView
 import at.woolph.caco.view.decks.DecksView
 import at.woolph.libs.ktfx.view

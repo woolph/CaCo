@@ -1,9 +1,9 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="enter cards" type="JetRunConfigurationType">
+  <configuration default="false" name="import collection archidekt" type="JetRunConfigurationType">
     <option name="ALTERNATIVE_JRE_PATH" value="temurin-17" />
     <option name="MAIN_CLASS_NAME" value="at.woolph.caco.MainKt" />
     <module name="CaCo.main" />
-    <option name="PROGRAM_PARAMETERS" value="collection enter-cards inr --language=EN" />
+    <option name="PROGRAM_PARAMETERS" value="import collection --format=archidekt &quot;C:\Users\001121673\Downloads\&quot;" />
     <shortenClasspath name="NONE" />
     <method v="2">
       <option name="Make" enabled="true" />

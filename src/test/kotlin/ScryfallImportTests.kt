@@ -1,11 +1,10 @@
-import at.woolph.caco.importer.sets.ScryfallCard
-import at.woolph.caco.importer.sets.ScryfallSet
-import at.woolph.caco.importer.sets.jsonSerializer
-import at.woolph.caco.importer.sets.paginatedDataRequest
+import at.woolph.caco.masterdata.import.ScryfallCard
+import at.woolph.caco.masterdata.import.ScryfallSet
+import at.woolph.caco.masterdata.import.jsonSerializer
+import at.woolph.caco.masterdata.import.paginatedDataRequest
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
-import kotlinx.serialization.decodeFromString
 import java.util.*
 
 class ScryfallImportTests {

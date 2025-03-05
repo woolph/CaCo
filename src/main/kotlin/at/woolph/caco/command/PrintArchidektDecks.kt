@@ -1,7 +1,7 @@
 package at.woolph.caco.command
 
 import at.woolph.caco.decks.DecklistPrinter
-import at.woolph.caco.importer.deck.ArchidektDeckImporter
+import at.woolph.caco.decks.ArchidektDeckImporter
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.terminal
 import com.github.ajalt.clikt.parameters.options.option

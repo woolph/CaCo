@@ -1,6 +1,6 @@
 package at.woolph.caco.command
 
-import at.woolph.caco.importer.deck.DeckboxDeckImporter
+import at.woolph.caco.decks.DeckboxDeckImporter
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.prompt
