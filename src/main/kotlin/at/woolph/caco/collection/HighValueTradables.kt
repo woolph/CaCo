@@ -24,7 +24,7 @@ class HighValueTradables: CliktCommand() {
                 it2.name.value == card.name.value && it2.extra.value == card.extra.value
               }.count() > 1) {
               val numberInSetWithSameName = cardsSorted.asSequence().filter { it2 ->
-                it2.name.value == card.name.value && it2.extra.value == card.extra.value && it2.numberInSet.value < card.numberInSet.value
+                it2.name.value == card.name.value && it2.extra.value == card.extra.value && it2.collectorNumber.value < card.collectorNumber.value
               }.count() + 1
               " (V.$numberInSetWithSameName)"
             } else {

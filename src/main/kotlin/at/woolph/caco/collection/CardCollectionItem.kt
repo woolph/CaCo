@@ -17,7 +17,6 @@ data class CardCollectionItemId(
   val condition: CardCondition,
   val stampPrereleaseDate: Boolean = false,
   val stampPlaneswalkerSymbol: Boolean = false,
-
 )
 data class CardCollectionItem(
   val quantity : UInt,
@@ -66,6 +65,22 @@ data class CardCollectionItem(
         ),
         dateAdded = record[CardPossessions.dateOfAddition],
       )
-    }
+    }.filter(CardCollectionItem::isNotEmpty)
   }
 }
+
+fun Iterable<CardPossession>.asCardCollectionItems(): Iterable<CardCollectionItem> =
+  groupBy { CardCollectionItemId(
+    card = it.card,
+    foil = it.foil,
+    language = it.language,
+    condition = it.condition,
+    stampPrereleaseDate = it.stampPrereleaseDate,
+    stampPlaneswalkerSymbol = it.stampPlaneswalkerSymbol
+  ) }.mapValues { (_, cardPossessions) -> cardPossessions.count() }
+    .map { (cardCollectionItemId, quantity) ->
+      CardCollectionItem(
+        quantity.toUInt(),
+        cardCollectionItemId,
+      )
+    }

@@ -1,5 +1,7 @@
 package at.woolph.caco.collection
 
+import at.woolph.caco.datamodel.collection.CardCondition
+import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.ScryfallCardSets
 import com.opencsv.CSVWriter
@@ -47,3 +49,27 @@ internal fun CardCollectionItem.toDeckboxCsvRow(): Array<String> = arrayOf(
   "",
   // dateAdded.toString(),// TODO add dateAdded?!
 )
+
+internal fun CardLanguage.toLanguageDeckbox(): String = when (this) {
+  CardLanguage.ENGLISH -> "English"
+  CardLanguage.GERMAN -> "German"
+  CardLanguage.JAPANESE -> "Japanese"
+  CardLanguage.RUSSIAN -> "Russian"
+  CardLanguage.SPANISH -> "Spanish"
+  CardLanguage.KOREAN -> "Korean"
+  CardLanguage.ITALIAN -> "Italian"
+  CardLanguage.PORTUGUESE -> "Portuguese"
+  CardLanguage.FRENCH -> "French"
+  CardLanguage.CHINESE -> "Chinese"
+  CardLanguage.CHINESE_TRADITIONAL -> "Traditional Chinese"
+  else -> throw Exception("unknown language")
+}
+
+internal fun CardCondition.toDeckboxCondition(): String = when (this) {
+  CardCondition.NEAR_MINT -> "Near Mint"
+  CardCondition.EXCELLENT -> "Good (Lightly Played)"
+  CardCondition.GOOD -> "Played"
+  CardCondition.PLAYED -> "Heavily Played"
+  CardCondition.POOR -> "Poor"
+  else -> throw Exception("unknown condition")
+}

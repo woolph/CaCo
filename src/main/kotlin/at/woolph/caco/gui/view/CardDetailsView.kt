@@ -99,7 +99,7 @@ class CardDetailsView(val cardProperty: SimpleObjectProperty<CardModel?> = Simpl
 	val coroutineScope = CoroutineScope(SupervisorJob() + CoroutineName("CardDetailsView"))
 
 	init {
-		labelNumberInSet.textProperty().bind(cardProperty.selectNullable { it?.numberInSet }.toStringBinding())
+		labelNumberInSet.textProperty().bind(cardProperty.selectNullable { it?.collectorNumber }.toStringBinding())
 		labelRarity.textProperty().bind(cardProperty.selectNullable { it?.rarity }.toStringBinding())
 		labelCardName.textProperty().bind(cardProperty.selectNullable { it?.name })
 

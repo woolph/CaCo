@@ -1,15 +1,14 @@
 package at.woolph.caco.gui.view.collection
 
+import at.woolph.caco.collection.CardCollectionItem
+import at.woolph.caco.collection.CardCollectionItemId
+import at.woolph.caco.collection.exportDeckbox
 import at.woolph.caco.datamodel.collection.CardCondition
 import at.woolph.caco.datamodel.collection.CardLanguage
-import at.woolph.caco.datamodel.collection.CardPossession
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.datamodel.sets.Foil
 import at.woolph.caco.datamodel.sets.Rarity
-import at.woolph.caco.collection.setNameMapping
-import at.woolph.caco.collection.toDeckboxCondition
-import at.woolph.caco.collection.toLanguageDeckbox
 import at.woolph.caco.gui.view.CardDetailsView
 import at.woolph.caco.gui.view.filteredBy
 import javafx.beans.property.SimpleBooleanProperty
@@ -95,58 +94,10 @@ class BulkAdditionDialog(val collectionSettings: CollectionSettings, val set: Ca
             && (filterRarityMythic.get() || cardInfo.rarity.value != Rarity.MYTHIC)
     }
 
-    val buttonTypeExport = ButtonType("Export")
-
     fun updateCards() {
         cards.setAll(transaction {
             set.cards.toList().map { CardModel(it) }
         })
-    }
-
-    fun bulkAdd() { // TODO update card set view
-        transaction {
-            cards.forEach { cardInfo ->
-                cardInfo.bulkAdditionNonPremium.value.let { toBeAdded ->
-                    if (toBeAdded > 0) {
-                        repeat(toBeAdded) {
-                            CardPossession.new {
-                                this.card = cardInfo.item
-                                this.language = languageProperty.value
-                                this.condition = conditionProperty.value
-                                this.foil = false
-                            }
-                        }
-                    }
-                }
-                cardInfo.bulkAdditionPremium.value.let { toBeAdded ->
-                    if (toBeAdded > 0) {
-                        repeat(toBeAdded) {
-                            CardPossession.new {
-                                this.card = cardInfo.item
-
-                                this.language = languageProperty.value
-                                this.condition = conditionProperty.value
-                                this.foil = true
-                            }
-                        }
-                    }
-                }
-				cardInfo.bulkAdditionPrereleasePromo.value.let { toBeAdded ->
-					if (toBeAdded > 0) {
-						repeat(toBeAdded) {
-							CardPossession.new {
-								this.card = cardInfo.item
-
-								this.language = languageProperty.value
-								this.condition = conditionProperty.value
-								this.foil = true
-								this.stampPrereleaseDate = true
-							}
-						}
-					}
-				}
-            }
-        }
     }
 
     init {
@@ -262,7 +213,7 @@ class BulkAdditionDialog(val collectionSettings: CollectionSettings, val set: Ca
                             vGrow = Priority.ALWAYS
                         }
 
-                        column("#", CardModel::numberInSet) {
+                        column("#", CardModel::collectorNumber) {
 							tooltip("Collector Number")
                             contentWidth(5.0, useAsMin = true, useAsMax = true)
                         }
@@ -325,43 +276,44 @@ class BulkAdditionDialog(val collectionSettings: CollectionSettings, val set: Ca
             defaultAction { false }
             button(ButtonType.APPLY) {
                 action {
-                    chooseFile("Choose File to Export to", arrayOf(FileChooser.ExtensionFilter("CSV", "*.csv")),  mode = FileChooserMode.Save, initialDirectory = File(System.getProperty("user.home"))).single().let {
-                        transaction {
-                          // TODO use CardCollectionItem to export
-                            it.printWriter().use { out ->
-                                out.println("Count,Tradelist Count,Name,Edition,Card Number,Condition,Language,Foil,Signed,Artist Proof,Altered Art,Misprint,Promo,Textless,My Price")
-                                cards.forEach { cardInfo ->
-                                    val cardName = cardInfo.item.name
-                                    val cardNumberInSet = cardInfo.item.collectorNumber
-                                    val token = cardInfo.item.token
-                                    val promo = cardInfo.item.promo
-                                    val condition = conditionProperty.value.toDeckboxCondition()
-                                    val prereleasePromo = false
-                                    val language = languageProperty.value.toLanguageDeckbox()
-                                    val setName = setNameMapping.asSequence().firstOrNull { it.value == set.name }?.key ?: set.name.let {
-                                      when {
-                                        prereleasePromo -> "Prerelease Events: ${it}"
-                                        token -> "Extras: ${it}"
-                                        else -> it
-                                      }
-                                    }
+                  val cardCollectionItems = cards.flatMap { cardInfo -> listOf(
+                    CardCollectionItem(
+                      cardInfo.bulkAdditionNonPremium.value.toUInt(),
+                      CardCollectionItemId(
+                        card = cardInfo.item,
+                        foil = false,
+                        language = languageProperty.value,
+                        condition = conditionProperty.value,
+                      )
+                    ),
+                    CardCollectionItem(
+                      cardInfo.bulkAdditionPremium.value.toUInt(),
+                      CardCollectionItemId(
+                        card = cardInfo.item,
+                        foil = true,
+                        language = languageProperty.value,
+                        condition = conditionProperty.value,
+                      )
+                    ),
+                    CardCollectionItem(
+                      cardInfo.bulkAdditionPrereleasePromo.value.toUInt(),
+                      CardCollectionItemId(
+                        card = cardInfo.item,
+                        foil = true,
+                        language = languageProperty.value,
+                        condition = conditionProperty.value,
+                        stampPrereleaseDate = true,
+                      )
+                    ),
+                  ) }.filter(CardCollectionItem::isNotEmpty)
 
-                                    cardInfo.bulkAdditionNonPremium.value.let { toBeAdded ->
-                                        if (toBeAdded > 0) {
-                                            out.println("$toBeAdded,0,\"$cardName\",\"$setName\",$cardNumberInSet,$condition,$language,,,,,,,,")
-                                        }
-                                    }
-                                    cardInfo.bulkAdditionPremium.value.let { toBeAdded ->
-                                        if (toBeAdded > 0) {
-                                            out.println("$toBeAdded,0,\"$cardName\",\"$setName\",$cardNumberInSet,$condition,$language,foil,,,,,,,")
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                  transaction {
+                    chooseFile("Choose File to Export to", arrayOf(FileChooser.ExtensionFilter("CSV", "*.csv")),  mode = FileChooserMode.Save, initialDirectory = File(System.getProperty("user.home"))).single().let {
+                      cardCollectionItems.exportDeckbox(it.toPath())
                     }
-                    bulkAdd()
-                    true
+                    cardCollectionItems.forEach(CardCollectionItem::addToCollection)
+                  }
+                  true
                 }
             }
             button(ButtonType.CANCEL)

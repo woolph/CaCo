@@ -31,7 +31,9 @@ object CardPossessions : IntIdTable() {
 }
 
 class CardPossession(id: EntityID<Int>) : IntEntity(id) {
-    companion object : IntEntityClass<CardPossession>(CardPossessions)
+    companion object : IntEntityClass<CardPossession>(CardPossessions) {
+      fun find(card: Card) = find { CardPossessions.card eq card.id }
+    }
 
     var card by Card referencedOn CardPossessions.card
 	var dateOfAddition by CardPossessions.dateOfAddition
@@ -42,5 +44,4 @@ class CardPossession(id: EntityID<Int>) : IntEntity(id) {
     var stampPlaneswalkerSymbol by CardPossessions.stampPlaneswalkerSymbol
     var tradeLock by CardPossessions.tradeLock
     var location by CardPossessions.location
-    //var prereleasePromo by CardPossessions.prereleasePromo
 }

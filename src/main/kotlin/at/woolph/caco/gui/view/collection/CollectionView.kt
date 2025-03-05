@@ -354,7 +354,7 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : Coro
 						column<CardPossessionModel, String>("Set", { it.value.set.map { it.setCode } }).apply {
 							contentWidth(5.0, useAsMin = true, useAsMax = true)
 						}
-						column("Number", CardPossessionModel::numberInSet) {
+						column("Number", CardPossessionModel::collectorNumber) {
 							contentWidth(5.0, useAsMin = true, useAsMax = true)
 						}
 						column("Rarity", CardPossessionModel::rarity) {
