@@ -45,16 +45,16 @@ class PrintInventory: CliktCommand(name = "inventory") {
                 drawText("Inventory ${set.name}", fontTitle, HorizontalAlignment.CENTER, 0f, 10f, Color.BLACK)
 
                 // TODO calc metrics for all sets (so that formatting is the same for all pages)
-                set.cards.sortedBy { it.numberInSet }.filter { !it.promo }.let {
+                set.cards.sortedBy { it.collectorNumber }.filter { !it.promo }.let {
                   frame(marginTop = fontTitle.height + 20f) {
                     columns((it.size - 1) / 100 + 1, 100, 5f, 3.5f, fontLine) {
                       var i = 0
                       it.filter { !it.token }.forEach {
                         echo("${it.name} processing")
-                        val ownedCountEN = it.possessions.filter { it.language == CardLanguage.ENGLISH }.count()
-                        val ownedCountDE = it.possessions.filter { it.language == CardLanguage.GERMAN }.count()
+                        val ownedCountEN = it.possessions.count { it.language == CardLanguage.ENGLISH }
+                        val ownedCountDE = it.possessions.count { it.language == CardLanguage.GERMAN }
                         this@columns.get(i) {
-                          drawTextWithRects("${it.rarity} ${it.numberInSet} ${it.name}", ownedCountEN, ownedCountDE)
+                          drawTextWithRects("${it.rarity} ${it.collectorNumber} ${it.name}", ownedCountEN, ownedCountDE)
                         }
                         i++
                         echo("${it.name} done")
@@ -68,10 +68,10 @@ class PrintInventory: CliktCommand(name = "inventory") {
                       i++
                       */
                       it.filter { it.token }.forEach {
-                        val ownedCountEN = it.possessions.filter { it.language == CardLanguage.ENGLISH }.count()
-                        val ownedCountDE = it.possessions.filter { it.language == CardLanguage.GERMAN }.count()
+                        val ownedCountEN = it.possessions.count { it.language == CardLanguage.ENGLISH }
+                        val ownedCountDE = it.possessions.count { it.language == CardLanguage.GERMAN }
                         this@columns.get(i) {
-                          drawTextWithRects("T ${it.numberInSet} ${it.name}", ownedCountEN, ownedCountDE)
+                          drawTextWithRects("T ${it.collectorNumber} ${it.name}", ownedCountEN, ownedCountDE)
                         }
                         i++
                       }

@@ -10,8 +10,8 @@ import at.woolph.caco.datamodel.sets.Rarity
 import at.woolph.caco.collection.setNameMapping
 import at.woolph.caco.collection.toDeckboxCondition
 import at.woolph.caco.collection.toLanguageDeckbox
-import at.woolph.caco.view.CardDetailsView
-import at.woolph.caco.view.filteredBy
+import at.woolph.caco.gui.view.CardDetailsView
+import at.woolph.caco.gui.view.filteredBy
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleIntegerProperty
 import javafx.beans.property.SimpleObjectProperty
@@ -203,10 +203,10 @@ class BulkAdditionDialog(val collectionSettings: CollectionSettings, val set: Ca
                     form {
 						fieldset("Addition Setup") { // TODO move to own dialog
 							field("Language") {
-								combobox(languageProperty, CardLanguage.values().toList())
+								combobox(languageProperty, CardLanguage.entries)
 							}
 							field("CardCondition") {
-								combobox(conditionProperty, CardCondition.values().asList())
+								combobox(conditionProperty, CardCondition.entries)
 							}
 						}
                         fieldset("Card Info") {
@@ -327,22 +327,23 @@ class BulkAdditionDialog(val collectionSettings: CollectionSettings, val set: Ca
                 action {
                     chooseFile("Choose File to Export to", arrayOf(FileChooser.ExtensionFilter("CSV", "*.csv")),  mode = FileChooserMode.Save, initialDirectory = File(System.getProperty("user.home"))).single().let {
                         transaction {
+                          // TODO use CardCollectionItem to export
                             it.printWriter().use { out ->
                                 out.println("Count,Tradelist Count,Name,Edition,Card Number,Condition,Language,Foil,Signed,Artist Proof,Altered Art,Misprint,Promo,Textless,My Price")
                                 cards.forEach { cardInfo ->
                                     val cardName = cardInfo.item.name
-                                    val cardNumberInSet = cardInfo.item.numberInSet
+                                    val cardNumberInSet = cardInfo.item.collectorNumber
                                     val token = cardInfo.item.token
                                     val promo = cardInfo.item.promo
                                     val condition = conditionProperty.value.toDeckboxCondition()
                                     val prereleasePromo = false
                                     val language = languageProperty.value.toLanguageDeckbox()
-                                    val setName = setNameMapping.asSequence().firstOrNull { it.value == set.name }?.key ?: set.name?.let {
-                                        when {
-                                            prereleasePromo -> "Prerelease Events: ${it}"
-                                            token -> "Extras: ${it}"
-                                            else -> it
-                                        }
+                                    val setName = setNameMapping.asSequence().firstOrNull { it.value == set.name }?.key ?: set.name.let {
+                                      when {
+                                        prereleasePromo -> "Prerelease Events: ${it}"
+                                        token -> "Extras: ${it}"
+                                        else -> it
+                                      }
                                     }
 
                                     cardInfo.bulkAdditionNonPremium.value.let { toBeAdded ->

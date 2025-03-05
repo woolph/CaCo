@@ -1,8 +1,8 @@
 package at.woolph.caco.gui
 
 import at.woolph.caco.masterdata.import.ProgressIndicator
-import at.woolph.caco.view.collection.PaperCollectionView
-import at.woolph.caco.view.decks.DecksView
+import at.woolph.caco.gui.view.collection.PaperCollectionView
+import at.woolph.caco.gui.view.decks.DecksView
 import at.woolph.libs.ktfx.view
 import javafx.collections.FXCollections
 import javafx.collections.ObservableList

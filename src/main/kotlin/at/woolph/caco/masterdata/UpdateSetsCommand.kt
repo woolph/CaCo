@@ -11,7 +11,7 @@ import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransacti
 import org.slf4j.LoggerFactory
 import java.util.Locale
 
-class ImportSet: CliktCommand(name = "update-sets") {
+class UpdateSetsCommand: CliktCommand(name = "update-sets") {
     val setCodes by argument(help="sets to be imported").multiple().prompt("Enter the set codes to be imported/updated")
     override fun run() = runBlocking {
       newSuspendedTransaction {

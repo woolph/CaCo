@@ -21,6 +21,7 @@ import com.github.ajalt.clikt.parameters.types.path
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.decodeToSequence
 import org.jetbrains.exposed.sql.Op
 import org.jetbrains.exposed.sql.and
@@ -30,9 +31,9 @@ import java.io.InputStream
 import kotlin.io.path.inputStream
 
 /**
- * imports the masterdata from scryfall into the database
+ * updates the masterdata from scryfall into the database
  */
-class MasterdataImportCommand: CliktCommand(name = "import") {
+class UpdateCommand: CliktCommand(name = "update") {
     val source by mutuallyExclusiveOptions(
         option("--bulk-data", help="which bulk data to import").convert { Either.Left(it) },
         option("--file", help="file to import").path(mustExist = true).convert { Either.Right(it) },
@@ -42,6 +43,7 @@ class MasterdataImportCommand: CliktCommand(name = "import") {
       newSuspendedTransaction {
         importSets().collect {}
 
+        @OptIn(ExperimentalSerializationApi::class)
         suspend fun processJson(it: InputStream) {
           jsonSerializer.decodeToSequence<ScryfallCard>(it).asFlow()
             .filter(ScryfallCard::isImportWorthy)
@@ -53,7 +55,7 @@ class MasterdataImportCommand: CliktCommand(name = "import") {
                   val (setCode, collectorNumber) = it.collector_number.split("-", limit = 2)
                   val set = ScryfallCardSet.Companion.find { ScryfallCardSets.setCode eq setCode }.single()
                   Card.Companion.findSingleByAndUpdate(
-                    Op.Companion.build { Cards.set eq set.id and (Cards.numberInSet eq collectorNumber) },
+                    Op.Companion.build { Cards.set eq set.id and (Cards.collectorNumber eq collectorNumber) },
                     it::updateTheListPendant,
                   )
                 }

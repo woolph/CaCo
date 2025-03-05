@@ -5,6 +5,7 @@ import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.parseRarity
 import at.woolph.caco.utils.newOrUpdate
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.filter
@@ -42,12 +43,10 @@ object LocalDateSerializer : KSerializer<LocalDate> {
 object URISerializer : KSerializer<URI> {
     override val descriptor = PrimitiveSerialDescriptor("URI", PrimitiveKind.STRING)
 
-    override fun deserialize(decoder: Decoder): URI {
-        try {
-            return URI.create(decoder.decodeString())
-        } catch (t: Throwable) {
-            return URI.create("about://version")
-        }
+    override fun deserialize(decoder: Decoder): URI = try {
+        URI.create(decoder.decodeString())
+    } catch (_: Throwable) {
+        URI.create("about://version")
     }
 
     override fun serialize(encoder: Encoder, value: URI) {
@@ -245,7 +244,7 @@ data class ScryfallCard(
         val isToken = set_type == "token"
 
         it.set = ScryfallCardSet.findById(set_id) ?: throw SetNotInDatabaseException(set, set_name, set_type)
-        it.numberInSet = collector_number
+        it.collectorNumber = collector_number
         it.name = name
         it.arenaId = arena_id
         it.rarity = rarity.parseRarity()
@@ -305,15 +304,16 @@ data class ScryfallCard(
         }
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 internal fun CardSet.loadCardsFromScryfall(language: String? = null, optional: Boolean = false): Flow<ScryfallCard> =
     scryfallCardSets.asFlow().flatMapConcat {
-        LOG.trace("loadCardsFromScryfall for $this for language $language")
+        LOG.trace("loadCardsFromScryfall for {} for language {}", this, language)
         paginatedDataRequest("https://api.scryfall.com/cards/search?q=${ language?.let {"lang%3A$it%20"} ?: "" }set%3A${it.setCode}&unique=prints&order=set", optional)
     }
 
 suspend fun CardSet.importCardsOfSet(additionalLanguages: List<String> = emptyList()) {
     // FIXME i want to represent every card as it is in reality (double sided token from commander or master sets etc.)
-    LOG.trace("import cards of set ${this.shortName}")
+    LOG.trace("import cards of set {}", this.shortName)
     loadCardsFromScryfall()
         .filter(ScryfallCard::isNoPromoPackStampedAndNoPrereleasePackStampedVersion)
         .collect {

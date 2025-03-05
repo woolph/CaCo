@@ -7,6 +7,7 @@ import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.enum
 import com.github.ajalt.clikt.parameters.types.path
+import org.jetbrains.exposed.sql.transactions.transaction
 import kotlin.io.path.Path
 
 class CollectionExportCommand: CliktCommand(name = "export") {
@@ -21,9 +22,11 @@ class CollectionExportCommand: CliktCommand(name = "export") {
       )
     )
     override fun run() {
-      when(format) {
-        CollectionFileFormat.ARCHIDEKT -> exportArchidekt(file)
-        CollectionFileFormat.DECKBOX -> throw NotImplementedError("Deckbox export is not implemented yet")
+      transaction {
+        when(format) {
+          CollectionFileFormat.ARCHIDEKT -> CardCollectionItem.getFromDatabase().exportArchidekt(file)
+          CollectionFileFormat.DECKBOX -> CardCollectionItem.getFromDatabase().exportDeckbox(file)
+        }
       }
     }
 }

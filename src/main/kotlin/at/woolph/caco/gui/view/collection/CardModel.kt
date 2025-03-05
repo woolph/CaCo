@@ -16,7 +16,7 @@ import javax.imageio.ImageIO
 open class CardModel(card: Card): ItemViewModel<Card>(card), Comparable<CardModel>{
 	val id = bind(Card::id)
 	val set = bind(Card::set)
-	val numberInSet = bind(Card::numberInSet)
+	val numberInSet = bind(Card::collectorNumber)
 	val name = bind(Card::name)
 	val nameDE = bind(Card::nameDE)
 	val arenaId = bind(Card::arenaId)

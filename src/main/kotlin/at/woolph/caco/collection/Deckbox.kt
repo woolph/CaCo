@@ -127,7 +127,7 @@ fun importDeckbox(file: Path) {
                                     if (nextLine["Artist Proof"] == "proof") {
                                         "${mapEditionCode(nextLine["Edition Code"]!!).uppercase()}-$it"
                                     } else {
-                                        Card.find { Cards.set eq theListSet.id and (Cards.name eq cardName and (Cards.numberInSet like "$printingNote-%")) }.singleOrNull()?.numberInSet ?: throw Exception("The List Card $cardName not found")
+                                        Card.find { Cards.set eq theListSet.id and (Cards.name eq cardName and (Cards.collectorNumber like "$printingNote-%")) }.singleOrNull()?.collectorNumber ?: throw Exception("The List Card $cardName not found")
                                     }
                                 }
                                 "prwk" -> "A%02d".format(it.toInt())
@@ -283,7 +283,7 @@ val promoPrintingNotes = listOf("Bundle Foil Promo", "Promo", "Buy-A-Box Promo")
 fun getCard(setCode: String, setName: String, cardNumber: String, token: Boolean, cardName: String, rarity: Rarity?, manaCost: String?, promo: Boolean): Card {
     fun cardByNumber(setCode: String, promo: Boolean? = null): Card? =
         (Cards innerJoin ScryfallCardSets).select(Cards.id)
-            .where { ScryfallCardSets.setCode.eq(setCode) and (Cards.numberInSet.eq(cardNumber)) }
+            .where { ScryfallCardSets.setCode.eq(setCode) and (Cards.collectorNumber.eq(cardNumber)) }
             .mapNotNull { Card.findById(it[Cards.id]) }
             .singleOrNull { it.name == cardName && (promo == null || it.promo == promo) }
 

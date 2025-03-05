@@ -76,10 +76,10 @@ class DeckBuildingListPrinter {
                                 val cardPrice = Cards.select(Cards.price).where { (Cards.name match cardName) }.mapNotNull { it[Cards.price]?.toDouble() }.minOrNull()
                                 val cardSets =
                                     CardPossessions.innerJoin(Cards).innerJoin(ScryfallCardSets).innerJoin(CardSets)
-                                        .select(CardSets.id, Cards.numberInSet).where {
+                                        .select(CardSets.id, Cards.collectorNumber).where {
                                             (Cards.name match cardName)
                                         }.mapNotNull {
-                                            "${it[CardSets.id].value.uppercase()} #${it[Cards.numberInSet].uppercase()}"
+                                            "${it[CardSets.id].value.uppercase()} #${it[Cards.collectorNumber].uppercase()}"
                                         }.groupingBy { it }
                                         .eachCount()
                                 DeckListEntry(amount, cardName, cardSets, cardPrice)

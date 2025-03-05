@@ -21,9 +21,8 @@ import com.github.ajalt.mordant.terminal.prompt
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.io.File
-import java.time.LocalDate
 import kotlin.io.path.Path
-import kotlin.io.path.writer
+import kotlin.toUInt
 
 class EnterCards: CliktCommand() {
   val format by option(help="The format to export the entered cards to")
@@ -66,12 +65,6 @@ class EnterCards: CliktCommand() {
       echo("condition = $condition")
 
       File("./import-${set.shortName}.stdin").printWriter().use { stdinPrint ->
-        data class PossessionUpdate(
-          val count: Int = 1,
-        ) {
-          fun increment() = PossessionUpdate(count + 1)
-        }
-
         data class PossessionUpdate2(
           val count: Int = 0,
           val alreadyCollected: Int,
@@ -79,8 +72,6 @@ class EnterCards: CliktCommand() {
           fun increment() = PossessionUpdate2(count + 1, alreadyCollected)
           fun decrement() = if (count > 0) PossessionUpdate2(count - 1, alreadyCollected) else this
           fun isNeeded() = (count + alreadyCollected) == 0
-
-
         }
 
         fun newPossessionUpdate2(card: Card, foil: Boolean) =
@@ -100,10 +91,10 @@ class EnterCards: CliktCommand() {
           fun add(setNumber: String) {
             val foil = setNumber.endsWith("*")
             val setNumber2 = setNumber.removeSuffix("*").toInt().toString()
-            val card = set.cards.firstOrNull { it.numberInSet == setNumber2 }
+            val card = set.cards.firstOrNull { it.collectorNumber == setNumber2 }
             if (card != null) {
               echo(
-                "add #${card.numberInSet} \"${card.name}\" ${if (foil) " in \u001B[38:5:0m\u001B[48:5:214mf\u001B[48:5:215mo\u001B[48:5:216mi\u001B[48:5:217ml\u001B[0m" else ""}",
+                "add #${card.collectorNumber} \"${card.name}\" ${if (foil) " in \u001B[38:5:0m\u001B[48:5:214mf\u001B[48:5:215mo\u001B[48:5:216mi\u001B[48:5:217ml\u001B[0m" else ""}",
                 trailingNewline = false
               )
               cardPossessionUpdates.compute(card to foil) { _, possessionUpdate ->
@@ -122,9 +113,9 @@ class EnterCards: CliktCommand() {
           fun remove(setNumber: String) {
             val foil = setNumber.endsWith("*")
             val setNumber2 = setNumber.removeSuffix("*").toInt().toString()
-            val card = set.cards.first { it.numberInSet == setNumber2 }
+            val card = set.cards.first { it.collectorNumber == setNumber2 }
             echo(
-              "removed #${card.numberInSet} \"${card.name}\" ${if (foil) " in \u001B[38:5:0m\u001B[48:5:214mf\u001B[48:5:215mo\u001B[48:5:216mi\u001B[48:5:217ml\u001B[0m" else ""}",
+              "removed #${card.collectorNumber} \"${card.name}\" ${if (foil) " in \u001B[38:5:0m\u001B[48:5:214mf\u001B[48:5:215mo\u001B[48:5:216mi\u001B[48:5:217ml\u001B[0m" else ""}",
               trailingNewline = false
             )
             cardPossessionUpdates.computeIfPresent(card to foil) { _, possessionUpdate ->
@@ -150,45 +141,26 @@ class EnterCards: CliktCommand() {
           }
         }
 
-        // FIXME also add the cards actually to the collection!!!
+        // TODO use CardCollectionItem to begin with for entering that stuff
+        val cardCollectionItems = cardPossessionUpdates.map { (x, possessionUpdate) ->
+          val (cardInfo, foil) = x
+          CardCollectionItem(
+            possessionUpdate.count.toUInt(),
+            CardCollectionItemId(
+              cardInfo,
+              foil = foil,
+              language = language,
+              condition = condition,
+            ),
+          )
+        }
         val file = Path("./import-${set.shortName}.csv")
         when (format) {
-          CollectionFileFormat.DECKBOX ->
-            file.writer().use { out ->
-              out.write("Count,Tradelist Count,Name,Edition,Card Number,Condition,Language,Foil,Signed,Artist Proof,Altered Art,Misprint,Promo,Textless,My Price\n")
-              cardPossessionUpdates.forEach { (x, possessionUpdate) ->
-                val (cardInfo, foil) = x
-                val cardName = cardInfo.name
-                val cardNumberInSet = cardInfo.numberInSet
-                val token = cardInfo.token
-                val promo = cardInfo.promo
-                val condition = CardCondition.NEAR_MINT.toDeckboxCondition()
-                val prereleasePromo = false
-                val language = language.toLanguageDeckbox()
-                val setName = setNameMapping.asSequence().firstOrNull { it.value == set.name }?.key ?: set.name.let {
-                  when {
-                    prereleasePromo -> "Prerelease Events: ${it}"
-                    token -> "Extras: ${it}"
-                    else -> it
-                  }
-                }
-                if (possessionUpdate.count > 0) {
-                  out.write("${possessionUpdate.count},0,\"$cardName\",\"$setName\",$cardNumberInSet,$condition,$language,${if (foil) "foil" else ""},,,,,,,\n")
-                }
-              }
-            }
-          CollectionFileFormat.ARCHIDEKT -> cardPossessionUpdates.map { (x, possessionUpdate) ->
-            val (cardInfo, foil) = x
-            ArchidektCollectionExportItem(
-              possessionUpdate.count.toUInt(),
-              foil,
-              condition,
-              language,
-              cardInfo.scryfallId,
-              LocalDate.now(),
-            )
-          }.exportArchidekt(file)
+          CollectionFileFormat.DECKBOX -> cardCollectionItems.exportDeckbox(file)
+          CollectionFileFormat.ARCHIDEKT -> cardCollectionItems.exportArchidekt(file)
         }
+
+        cardCollectionItems.forEach(CardCollectionItem::addToCollection)
       }
     }
   }

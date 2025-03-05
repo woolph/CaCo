@@ -28,7 +28,7 @@ class CollectionImportCommand: CliktCommand(name = "import") {
     override fun run() {
       when(format) {
         CollectionFileFormat.DECKBOX -> importDeckbox(getDeckboxImportFile(file))
-        CollectionFileFormat.ARCHIDEKT -> throw NotImplementedError("Archidekt import is not implemented yet")
+        CollectionFileFormat.ARCHIDEKT -> importArchidekt(getArchidektImportFile(file))
       }
     }
 

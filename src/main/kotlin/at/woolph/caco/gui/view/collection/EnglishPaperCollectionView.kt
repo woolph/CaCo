@@ -25,8 +25,8 @@ class EnglishPaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
 	companion object {
 		val COLLECTION_SETTINGS = CollectionSettings(4, 1, 33,
 				{ !it.digitalOnly },
-				{ it.possessions.filter { it.language == CardLanguage.ENGLISH && !it.foil }.count() },
-				{ it.possessions.filter { it.language == CardLanguage.ENGLISH && it.foil }.count() })
+				{ it.possessions.count { it.language == CardLanguage.ENGLISH && !it.foil } },
+				{ it.possessions.count { it.language == CardLanguage.ENGLISH && it.foil } })
 	}
 
 	override fun CardPossessionModel.filterView(): Boolean = true
@@ -56,15 +56,15 @@ class EnglishPaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
 										drawText("Inventory ${set.name}", fontTitle, HorizontalAlignment.CENTER, 0f, box.upperRightY - 10f, Color.BLACK)
 
 										// TODO calc metrics for all sets (so that formatting is the same for all pages)
-										set.cards.sortedBy { it.numberInSet }.filter { !it.promo }.let {
+										set.cards.sortedBy { it.collectorNumber }.filter { !it.promo }.let {
 											frame(marginTop = fontTitle.height + 20f) {
 												columns((it.size - 1) / 100 + 1, 100, 5f, 3.5f, Font(PDType1Font(Standard14Fonts.FontName.HELVETICA), 6.0f)) {
 													var i = 0
 													it.filter { !it.token }.forEach {
-                                                        val ownedCountEN = it.possessions.filter { it.language == CardLanguage.ENGLISH }.count()
-                                                        val ownedCountDE = it.possessions.filter { it.language == CardLanguage.GERMAN }.count()
+                                                        val ownedCountEN = it.possessions.count { it.language == CardLanguage.ENGLISH }
+                                                        val ownedCountDE = it.possessions.count { it.language == CardLanguage.GERMAN }
 														this@columns.get(i) {
-															drawTextWithRects("${it.rarity} ${it.numberInSet} ${it.name}", ownedCountEN, ownedCountDE)
+															drawTextWithRects("${it.rarity} ${it.collectorNumber} ${it.name}", ownedCountEN, ownedCountDE)
 														}
 														i++
 													}
@@ -77,10 +77,10 @@ class EnglishPaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
 													i++
 													*/
 													it.filter { it.token }.forEach {
-                                                        val ownedCountEN = it.possessions.filter { it.language == CardLanguage.ENGLISH }.count()
-                                                        val ownedCountDE = it.possessions.filter { it.language == CardLanguage.GERMAN }.count()
-														this@columns.get(i) {
-															drawTextWithRects("T ${it.numberInSet} ${it.name}", ownedCountEN, ownedCountDE)
+                                                      val ownedCountEN = it.possessions.count { it.language == CardLanguage.ENGLISH }
+                                                      val ownedCountDE = it.possessions.count { it.language == CardLanguage.GERMAN }
+                                                      this@columns.get(i) {
+															drawTextWithRects("T ${it.collectorNumber} ${it.name}", ownedCountEN, ownedCountDE)
 														}
 														i++
 													}
@@ -98,6 +98,7 @@ class EnglishPaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
         }
         button("Export Collection") {
             action {
+				// TODO use CardCollectionItem
 				chooseFile("Choose File to Export to", arrayOf(FileChooser.ExtensionFilter("CSV", "*.csv")), mode = FileChooserMode.Save).singleOrNull()?.let {
 					it.printWriter().use { out ->
 						transaction {
@@ -109,7 +110,7 @@ class EnglishPaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
 									Cards.name,
 									Cards.token,
 									Cards.promo,
-									Cards.numberInSet,
+									Cards.collectorNumber,
 									CardPossessions.condition,
 									CardPossessions.foil,
 									CardPossessions.language
@@ -117,7 +118,7 @@ class EnglishPaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
 									.where { CardPossessions.card.eq(it.id) }.groupBy(CardPossessions.card, CardPossessions.condition, CardPossessions.foil, CardPossessions.language)).forEach {
 									val count = it[CardPossessions.id.count()]
 									val cardName = it[Cards.name]
-									val cardNumberInSet = it[Cards.numberInSet]
+									val cardNumberInSet = it[Cards.collectorNumber]
 									val token = it[Cards.token]
 									val promo = it[Cards.promo]
 									val condition = when (it[CardPossessions.condition]) {
@@ -151,7 +152,7 @@ class EnglishPaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
 				chooseFile("Choose File to Wants", arrayOf(FileChooser.ExtensionFilter("Text", "*.txt")), mode = FileChooserMode.Save).singleOrNull()?.let {
 					it.printWriter().use { out ->
 						transaction {
-							set?.cards?.sortedBy { it.numberInSet }?.filter { !it.promo }?.forEach {
+							set?.cards?.sortedBy { it.collectorNumber }?.filter { !it.promo }?.forEach {
 								val neededCount = max(0, collectionSettings.cardPossesionTargtNonPremium - it.possessions.count())
 								//val n = if(set.cards.count { that -> it.name == that.name } > 1) " (#${it.numberInSet})" else ""
 								if (neededCount > 0) {

@@ -32,12 +32,12 @@ class CollectionPagePreview(
 
         val cardList = transaction {
             CardSet.findById(setCode)?.cards ?: emptyList()
-        }.sortedBy { it.numberInSet }
+        }.sortedBy { it.collectorNumber }
 
         progress.update { total = cardList.size.toLong() }
 
         val endsWithLetter = Regex("\\d+")
-        val (ordinaryCardList, specialVersionCardList) = cardList.partition { it.numberInSet.matches(endsWithLetter) }
+        val (ordinaryCardList, specialVersionCardList) = cardList.partition { it.collectorNumber.matches(endsWithLetter) }
         val collectionPages = ordinaryCardList.chunked(9) + specialVersionCardList.chunked(9)
 
         createPdfDocument(file, PagePosition.LEFT) {
@@ -84,10 +84,10 @@ class CollectionPagePreview(
                                 try {
 //                                        print("card #$${card.numberInSet} ${card.name} image downloading\r")
                                     progress.update {
-                                        context = "card #\$${card.numberInSet} ${card.name} image downloading\r"
+                                        context = "card #\$${card.collectorNumber} ${card.name} image downloading\r"
                                     }
                                     card.thumbnail?.toURL()?.readBytes()
-                                } catch (t: Throwable) {
+                                } catch (_: Throwable) {
 //                                        print("card #\$${card.numberInSet} ${card.name} image is not loaded\r")
                                     null
                                 }
@@ -95,19 +95,19 @@ class CollectionPagePreview(
                             val cardImage = createFromByteArray(byteArray, card.name)
 //                            print("card #\$${card.numberInSet} ${card.name} image rendering\r")
                             progress.update {
-                                context = "card #\$${card.numberInSet} ${card.name} image rendering\r"
+                                context = "card #\$${card.collectorNumber} ${card.name} image rendering\r"
                             }
                             drawImage(cardImage, cardPosition.x, cardPosition.y, cardSize.x, cardSize.y)
 //                            print("card #\$${card.numberInSet} ${card.name} image rendered\r")
                             progress.update {
-                                context = "card #\$${card.numberInSet} ${card.name} image rendered\r"
+                                context = "card #\$${card.collectorNumber} ${card.name} image rendered\r"
                                 completed += 1
                             }
-                        } catch (t: Throwable) {
+                        } catch (_: Throwable) {
                             drawImage(mtgCardBack, cardPosition.x, cardPosition.y, cardSize.x, cardSize.y)
 //                            print("card #\$${card.numberInSet} ${card.name} cardback rendered\r")
                             progress.update {
-                                context = "card #\$${card.numberInSet} ${card.name} image rendered\r"
+                                context = "card #\$${card.collectorNumber} ${card.name} image rendered\r"
                                 completed += 1
                             }
                         }

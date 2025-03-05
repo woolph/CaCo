@@ -1,9 +1,9 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="import scryfall file" type="JetRunConfigurationType">
+  <configuration default="false" name="collection import deckbox" type="JetRunConfigurationType">
     <option name="ALTERNATIVE_JRE_PATH" value="temurin-17" />
     <option name="MAIN_CLASS_NAME" value="at.woolph.caco.MainKt" />
     <module name="CaCo.main" />
-    <option name="PROGRAM_PARAMETERS" value="import scryfall --file=C:\Users\001121673\Downloads\default-cards-20250223100834.json" />
+    <option name="PROGRAM_PARAMETERS" value="collection import --format=deckbox &quot;C:\Users\001121673\Downloads\&quot;" />
     <shortenClasspath name="NONE" />
     <method v="2">
       <option name="Make" enabled="true" />

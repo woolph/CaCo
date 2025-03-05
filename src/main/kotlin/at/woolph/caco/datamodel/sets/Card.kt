@@ -21,7 +21,7 @@ object Cards : IdTable<UUID>() {
 
     val theListVersion = reference("theListVersion", Cards).nullable()
     val set = reference("set", ScryfallCardSets).index()
-    val numberInSet = varchar("number", length = 10).index()
+    val collectorNumber = varchar("number", length = 10).index()
     val name = varchar("name", length = 256).index()
     val nameDE = varchar("nameDE", length = 256).index().nullable()
     val arenaId = integer("arenaId").nullable().index()
@@ -56,7 +56,7 @@ class Card(id: EntityID<UUID>) : UUIDEntity(id) {
 
     var theListVersion by Card optionalReferencedOn  Cards.theListVersion
     var set by ScryfallCardSet referencedOn Cards.set
-    var numberInSet by Cards.numberInSet
+    var collectorNumber by Cards.collectorNumber
     var name by Cards.name
     var nameDE by Cards.nameDE
     var arenaId by Cards.arenaId

@@ -5,8 +5,7 @@ import at.woolph.caco.collection.CollectionExportCommand
 import at.woolph.caco.collection.HighValueTradables
 import at.woolph.caco.collection.CollectionImportCommand
 import at.woolph.caco.command.ImportDecklists
-import at.woolph.caco.masterdata.MasterdataImportCommand
-import at.woolph.caco.masterdata.ImportSet
+import at.woolph.caco.masterdata.UpdateCommand
 import at.woolph.caco.command.PrintArchidektDecks
 import at.woolph.caco.command.PrintCollectionBinderPageView
 import at.woolph.caco.command.PrintDeckboxDecks
@@ -19,6 +18,7 @@ import at.woolph.caco.collection.PrintPagePositions
 import at.woolph.caco.gui.Ui
 import at.woolph.caco.masterdata.UpdatesPrices
 import at.woolph.caco.datamodel.Databases
+import at.woolph.caco.masterdata.UpdateSetsCommand
 import com.github.ajalt.clikt.core.*
 
 
@@ -39,9 +39,9 @@ fun main(args: Array<String>) {
                 EnterCards(),
             ),
             NoOpCliktCommand(name = "masterdata").subcommands(
-                MasterdataImportCommand(),
+                UpdateCommand(),
                 UpdatesPrices(),
-                ImportSet(),
+                UpdateSetsCommand(),
                 PrintCollectionBinderPageView(),
             ),
             NoOpCliktCommand(name = "decklists").subcommands(

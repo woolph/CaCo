@@ -3,7 +3,7 @@ package at.woolph.caco.gui.view
 import at.woolph.caco.datamodel.sets.renderSvg
 import at.woolph.caco.gui.Styles
 import at.woolph.caco.masterdata.imagecache.ImageCache
-import at.woolph.caco.view.collection.CardSetModel
+import at.woolph.caco.gui.view.collection.CardSetModel
 import at.woolph.libs.ktfx.*
 import javafx.beans.property.SimpleObjectProperty
 import javafx.scene.control.Label
@@ -15,6 +15,7 @@ import javafx.scene.shape.Shape
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.javafx.asFlow
@@ -23,6 +24,7 @@ import tornadofx.Fragment
 import tornadofx.*
 import kotlin.math.min
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class SetDetailsView(val setProperty: SimpleObjectProperty<CardSetModel?> = SimpleObjectProperty(null)) : Fragment() {
 	var set by setProperty
 

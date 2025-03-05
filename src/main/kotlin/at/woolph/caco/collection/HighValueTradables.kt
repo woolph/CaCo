@@ -2,8 +2,8 @@ package at.woolph.caco.collection
 
 import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.utils.Quadruple
-import at.woolph.caco.view.collection.CardPossessionModel
-import at.woolph.caco.view.collection.PaperCollectionView
+import at.woolph.caco.gui.view.collection.CardPossessionModel
+import at.woolph.caco.gui.view.collection.PaperCollectionView
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
@@ -17,7 +17,7 @@ class HighValueTradables: CliktCommand() {
     override fun run() {
       transaction {
         CardSet.Companion.all().map { set ->
-          val cardsSorted = set.cards.sortedBy { it.numberInSet }
+          val cardsSorted = set.cards.sortedBy { it.collectorNumber }
             .map { CardPossessionModel(it, PaperCollectionView.Companion.COLLECTION_SETTINGS) }
           set to cardsSorted.asSequence().flatMap { card ->
             val suffixName = if (cardsSorted.asSequence().filter { it2 ->

@@ -1,7 +1,7 @@
 package at.woolph.caco.gui.view
 
 import at.woolph.caco.gui.Styles
-import at.woolph.caco.view.collection.CardModel
+import at.woolph.caco.gui.view.collection.CardModel
 import at.woolph.libs.ktfx.selectNullable
 import at.woolph.libs.ktfx.toStringBinding
 import javafx.beans.property.SimpleBooleanProperty
@@ -14,6 +14,7 @@ import javafx.scene.shape.Shape
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.flow.collectLatest
@@ -40,6 +41,7 @@ import tornadofx.whenDocked
 import tornadofx.whenUndocked
 import kotlin.math.min
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class CardDetailsView(val cardProperty: SimpleObjectProperty<CardModel?> = SimpleObjectProperty(null)) : Fragment() {
 	var card by cardProperty
 
@@ -107,19 +109,19 @@ class CardDetailsView(val cardProperty: SimpleObjectProperty<CardModel?> = Simpl
 		whenDocked {
 			coroutineScope.launch(Dispatchers.Default) {
 				combine(
-					cardProperty.asFlow().onEach { LOG.trace("selected card changed to $it") },
+					cardProperty.asFlow().onEach { LOG.trace("selected card changed to {}", it) },
 					imageLoadingProperty.asFlow(),
 				) { cardModel, imageLoading -> Pair(cardModel, imageLoading) }
 					.collectLatest { (cardModel, imageLoading) ->
 						withContext(Dispatchers.Main.immediate) {
 							if (imageLoading) {
-								LOG.trace("loading image for $cardModel")
+								LOG.trace("loading image for {}", cardModel)
 								imageLoadingProgressIndicatorBackground.isVisible = true
 								imageLoadingProgressIndicator.isVisible = true
 								imageView.image = cardModel?.getCachedImage()
 								imageLoadingProgressIndicator.isVisible = false
 								imageLoadingProgressIndicatorBackground.isVisible = false
-								LOG.trace("loaded image for $cardModel")
+								LOG.trace("loaded image for {}", cardModel)
 							} else {
 								imageView.image = null
 								imageLoadingProgressIndicatorBackground.isVisible = true

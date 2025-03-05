@@ -1,6 +1,6 @@
 package at.woolph.caco.gui.view
 
-import at.woolph.caco.view.collection.CardModel
+import at.woolph.caco.gui.view.collection.CardModel
 import javafx.beans.value.ObservableBooleanValue
 import javafx.scene.control.ProgressIndicator
 import javafx.scene.control.Tooltip

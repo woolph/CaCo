@@ -7,9 +7,9 @@ import at.woolph.caco.masterdata.import.importCardsOfSet
 import at.woolph.caco.masterdata.import.importSet
 import at.woolph.caco.masterdata.import.importSets
 import at.woolph.caco.masterdata.import.update
-import at.woolph.caco.view.CardDetailsView
-import at.woolph.caco.view.CardImageTooltip
-import at.woolph.caco.view.filteredBy
+import at.woolph.caco.gui.view.CardDetailsView
+import at.woolph.caco.gui.view.CardImageTooltip
+import at.woolph.caco.gui.view.filteredBy
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleStringProperty
@@ -30,6 +30,7 @@ import javafx.scene.layout.Priority
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.flow.collectLatest
@@ -236,6 +237,7 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : Coro
         LOG.trace("setting intial value is done")
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     suspend fun updateCardsOnSetChange() {
         setProperty.asFlow().collectLatest { updateCards() }
     }
