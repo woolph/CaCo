@@ -18,6 +18,7 @@ import javafx.geometry.Pos
 import javafx.scene.Node
 import javafx.scene.control.ButtonBase
 import javafx.scene.control.Dialog
+import javafx.scene.control.ListView
 import javafx.scene.control.SelectionMode
 import javafx.scene.control.TableRow
 import javafx.scene.control.TableView
@@ -46,16 +47,16 @@ import tornadofx.View
 import tornadofx.button
 import tornadofx.center
 import tornadofx.column
-import tornadofx.combobox
 import tornadofx.contentWidth
 import tornadofx.getValue
 import tornadofx.hboxConstraints
 import tornadofx.label
+import tornadofx.left
+import tornadofx.listview
 import tornadofx.plusAssign
 import tornadofx.region
 import tornadofx.remainingWidth
 import tornadofx.runLater
-import tornadofx.setValue
 import tornadofx.splitpane
 import tornadofx.tableview
 import tornadofx.textfield
@@ -128,8 +129,9 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : Coro
     override val root = BorderPane()
 
     val setProperty = SimpleObjectProperty<CardSet?>()
-    var set by setProperty
+    val set by setProperty
 
+    val setFilterTextProperty = SimpleStringProperty("")
     val filterTextProperty = SimpleStringProperty("")
     val filterCompleteProperty = SimpleBooleanProperty(true)
     val filterNonFoilCompleteProperty = SimpleBooleanProperty(true)
@@ -139,12 +141,17 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : Coro
     val filterRarityRare = SimpleBooleanProperty(true)
     val filterRarityMythic = SimpleBooleanProperty(true)
 
+    lateinit var setListview: ListView<CardSet>
     lateinit var tvCards: TableView<CardPossessionModel>
 	lateinit var toggleButtonImageLoading: ToggleButton
 
     val sets = FXCollections.observableArrayList<CardSet>()
     val setsSorted = sets.sorted { t1: CardSet, t2: CardSet ->
         -t1.dateOfRelease.compareTo(t2.dateOfRelease)
+    }
+    val setsFiltered = setsSorted.filteredBy(listOf(setFilterTextProperty)) { set ->
+        set.name.contains(setFilterTextProperty.get(), ignoreCase = true) ||
+            set.shortName.value.contains(setFilterTextProperty.get(), ignoreCase = true)
     }
 
     val cards = FXCollections.observableArrayList<CardPossessionModel>()
@@ -187,7 +194,7 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : Coro
         LOG.trace("updateSets updating view")
         val oldSetSelected = set?.name
         sets.setAll(updatedSets)
-        set = sets.find { it.name == oldSetSelected }
+        setListview.selectionModel.select(sets.find { it.name == oldSetSelected })
         LOG.trace("updateSets view updated")
     }
 
@@ -232,7 +239,7 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : Coro
         updateSets()
         LOG.trace("setting the initial value")
         withContext(Dispatchers.Main.immediate) {
-            set = setsSorted.firstOrNull()
+            setListview.selectionModel.select(setsSorted.firstOrNull())
         }
         LOG.trace("setting intial value is done")
     }
@@ -251,18 +258,41 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : Coro
         title = "CaCo"
 
         with(root) {
+            left {
+                vbox {
+                    label("Search: ")
+                    textfield(setFilterTextProperty) {}
+                    setListview = listview(setsFiltered) {
+                        vboxConstraints {
+                            vGrow = Priority.ALWAYS
+                        }
+                        cellFormat {
+                            item.icon?.let {
+                                graphic = imageViewDelayed(coroutineScope, 24, 24) {
+                                    it.loadSetLogo(48f)
+                                }
+                            }
+                            text = item.name
+                        }
+                        setProperty.bind(selectionModel.selectedItemProperty())
+//                        selectionModel.selectedItemProperty().addListener { _, _, newSet ->
+//                            setProperty.set(newSet)
+//                        }
+                    }
+                }
+            }
             top {
                 toolbar {
 					toggleButtonImageLoading = togglebutton("\uD83D\uDDBC")
 
-                    combobox(setProperty, setsSorted) {
-                        cellFormat {
-                            graphic = imageViewDelayed(coroutineScope, 24, 24) {
-                                item?.icon?.loadSetLogo(48f)
-                            }
-                            text = item?.let { "${it.id.value.uppercase(Locale.getDefault())} - ${it.name}" }
-                        }
-                    }
+//                    combobox(setProperty, setsSorted) {
+//                        cellFormat {
+//                            graphic = imageViewDelayed(coroutineScope, 24, 24) {
+//                                item?.icon?.loadSetLogo(48f)
+//                            }
+//                            text = item?.let { "${it.id.value.uppercase(Locale.getDefault())} - ${it.name}" }
+//                        }
+//                    }
                     button("\u21BB All") {
                         action(coroutineScope) {
                             newSuspendedTransaction {
@@ -282,9 +312,9 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : Coro
                             AddSetsDialog(this@CollectionView).showAndAwait()?.let { setCodes ->
                                 newSuspendedTransaction {
                                     // TODO progress dialog
-                                    set = setCodes.split(',').map {
+                                    setListview.selectionModel.select(setCodes.split(',').map {
                                         addSet(it.trim().lowercase(Locale.getDefault()))
-                                    }.last()
+                                    }.last())
                                 }
                             }
                         }

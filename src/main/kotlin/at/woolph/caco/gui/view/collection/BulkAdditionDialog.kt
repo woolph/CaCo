@@ -2,6 +2,7 @@ package at.woolph.caco.gui.view.collection
 
 import at.woolph.caco.collection.CardCollectionItem
 import at.woolph.caco.collection.CardCollectionItemId
+import at.woolph.caco.collection.exportArchidekt
 import at.woolph.caco.collection.exportDeckbox
 import at.woolph.caco.datamodel.collection.CardCondition
 import at.woolph.caco.datamodel.collection.CardLanguage
@@ -262,6 +263,7 @@ class BulkAdditionDialog(val collectionSettings: CollectionSettings, val set: Ca
 						runLater {
                            if(selection != null)
                                selectionModel.select(items.find { it.item == selection })
+                           // FIXME check why this selection stuf does not work
                            else
                                selectionModel.selectFirst()
 
@@ -309,7 +311,7 @@ class BulkAdditionDialog(val collectionSettings: CollectionSettings, val set: Ca
 
                   transaction {
                     chooseFile("Choose File to Export to", arrayOf(FileChooser.ExtensionFilter("CSV", "*.csv")),  mode = FileChooserMode.Save, initialDirectory = File(System.getProperty("user.home"))).single().let {
-                      cardCollectionItems.exportDeckbox(it.toPath())
+                      cardCollectionItems.exportArchidekt(it.toPath())
                     }
                     cardCollectionItems.forEach(CardCollectionItem::addToCollection)
                   }
