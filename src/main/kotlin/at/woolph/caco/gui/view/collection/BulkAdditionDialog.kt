@@ -260,14 +260,12 @@ class BulkAdditionDialog(val collectionSettings: CollectionSettings, val set: Ca
                             bulkAddNumberTextField.clear()
                             bulkAddNumberTextField.requestFocus()
                         }
-						runLater {
-                           if(selection != null)
-                               selectionModel.select(items.find { it.item == selection })
-                           // FIXME check why this selection stuf does not work
-                           else
-                               selectionModel.selectFirst()
-
-						}
+                       if(selection != null) {
+                         val item = items.first { it.item.id == selection.id }
+                         selectionModel.select(item)
+                         scrollTo(item)
+                       } else
+                           selectionModel.selectFirst()
                     }
                 }
             }

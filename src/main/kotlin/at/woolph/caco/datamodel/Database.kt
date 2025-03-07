@@ -8,7 +8,6 @@ import at.woolph.caco.datamodel.decks.DeckCards
 import at.woolph.caco.datamodel.sets.CardSets
 import at.woolph.caco.datamodel.sets.Cards
 import at.woolph.caco.datamodel.sets.ScryfallCardSets
-import at.woolph.caco.masterdata.imagecache.CachedImages
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.TransactionManager
@@ -16,7 +15,6 @@ import org.jetbrains.exposed.sql.transactions.transaction
 
 object Databases {
     val cacoDatabase = Database.connect("jdbc:h2:~/.caco/caco-database", driver = "org.h2.Driver")
-    val imageCache = Database.connect("jdbc:h2:~/.caco/caco-image-cache", driver = "org.h2.Driver")
 
     init {
         TransactionManager.defaultDatabase = cacoDatabase
@@ -25,9 +23,6 @@ object Databases {
     fun init() {
         transaction(cacoDatabase) {
             SchemaUtils.createMissingTablesAndColumns(CardSets, ScryfallCardSets, Cards, CardPossessions, DeckArchetypes, Builds, DeckCards, ArenaCardPossessions)
-        }
-        transaction(imageCache) {
-            SchemaUtils.createMissingTablesAndColumns(CachedImages)
         }
     }
 }
