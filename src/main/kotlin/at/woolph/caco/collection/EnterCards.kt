@@ -90,7 +90,7 @@ class EnterCards: CliktCommand() {
         while (setNumber.isNotBlank()) {
           fun add(setNumber: String) {
             val foil = setNumber.endsWith("*")
-            val setNumber2 = setNumber.removeSuffix("*").toInt().toString()
+            val setNumber2 = setNumber.removeSuffix("*")
             val card = set.cards.firstOrNull { it.collectorNumber == setNumber2 }
             if (card != null) {
               echo(
