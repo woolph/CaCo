@@ -9,7 +9,7 @@ import kotlin.io.path.bufferedWriter
 fun Iterable<CardCollectionItem>.exportArchidekt(file: Path) {
   println("exporting collection for archidekt to $file")
     CSVWriter(file.bufferedWriter()).use { writer ->
-      writer.writeNext(arrayOf("Quantity","Finish","Condition","Language","Scryfall ID","Date Added"))
+      writer.writeNext(arrayOf("Quantity","Finish","Condition","Language","Scryfall ID","Card name","Set","Date added"))
       filter(CardCollectionItem::isNotEmpty).forEach { item -> writer.writeNext(item.toArchidektCsvRow()) }
     }
 }
@@ -34,5 +34,7 @@ internal fun CardCollectionItem.toArchidektCsvRow(): Array<String> = arrayOf(
     else -> cardCollectionItemId.language.toString()
   },
   cardCollectionItemId.card.scryfallId.toString(),
+  cardCollectionItemId.card.name,
+  cardCollectionItemId.card.set.setCode,
   dateAdded.toString(),
 )

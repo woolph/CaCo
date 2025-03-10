@@ -154,7 +154,7 @@ class EnterCards: CliktCommand() {
             ),
           )
         }
-        val file = Path("./import-${set.shortName}.csv")
+        val file = Path("./src/test/http-requests/import.csv")
         when (format) {
           CollectionFileFormat.DECKBOX -> cardCollectionItems.exportDeckbox(file)
           CollectionFileFormat.ARCHIDEKT -> cardCollectionItems.exportArchidekt(file)
