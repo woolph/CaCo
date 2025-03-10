@@ -89,14 +89,6 @@ class SetWithCommander(override val code: String, override val subCode: String):
 
 class SetWithCommanderAndAncillary(override val code: String, commanderCode: String, ancillaryCode: String): AbstractLabelItem(fetchCardSets(code, commanderCode, ancillaryCode))
 
-class TwoSetBlock(blockTitle: String, override val code: String, override val subCode: String): AbstractLabelItem(fetchCardSets(code, subCode)) {
-    override val title: String = blockTitle
-}
-
-class ThreeSetBlock(blockTitle: String, override val code: String, code1: String, code2: String): AbstractLabelItem(fetchCardSets(code, code1, code2)) {
-    override val title: String = blockTitle
-}
-
-class FiveSetBlock(blockTitle: String, code0: String, code1: String, code2: String, code3: String, code4: String): AbstractLabelItem(fetchCardSets(code0, code1, code2, code3, code4)) {
+class Block(blockTitle: String, override val code: String, vararg codes: String): AbstractLabelItem(fetchCardSets(code, *codes)) {
     override val title: String = blockTitle
 }
