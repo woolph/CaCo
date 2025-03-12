@@ -5,7 +5,7 @@ import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.collection.CardPossession
 import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.datamodel.sets.Card
-import at.woolph.caco.datamodel.sets.CardSet
+import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.terminal
 import com.github.ajalt.clikt.parameters.arguments.argument
@@ -31,7 +31,7 @@ class EnterCards: CliktCommand() {
 
   val set by argument(help="The set code of the cards to be entered").convert {
     transaction {
-      CardSet.Companion.findById(it.lowercase()) ?: throw IllegalArgumentException("No set found for set code $it")
+      ScryfallCardSet.findByCode(it.lowercase()) ?: throw IllegalArgumentException("No set found for set code $it")
     }
   }
 
@@ -60,11 +60,11 @@ class EnterCards: CliktCommand() {
       val languagesToBeChecked =
         languageRankingList.takeWhile { it != language }.toMutableList().apply { add(language) }
 
-      echo("enter cards for ${set.shortName} ${set.name}")
+      echo("enter cards for ${set.code} ${set.name}")
       echo("language = $language")
       echo("condition = $condition")
 
-      File("./import-${set.shortName}.stdin").printWriter().use { stdinPrint ->
+      File("./import-${set.code}.stdin").printWriter().use { stdinPrint ->
         data class PossessionUpdate2(
           val count: Int = 0,
           val alreadyCollected: Int,

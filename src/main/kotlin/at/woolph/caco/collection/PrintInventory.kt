@@ -1,7 +1,7 @@
 package at.woolph.caco.collection
 
 import at.woolph.caco.datamodel.collection.CardLanguage
-import at.woolph.caco.datamodel.sets.CardSet
+import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.libs.pdf.Font
 import at.woolph.libs.pdf.HorizontalAlignment
 import at.woolph.libs.pdf.columns
@@ -29,7 +29,7 @@ class PrintInventory: CliktCommand(name = "inventory") {
     val output by option().path(canBeDir = false).required()
     val sets by argument(help="The set code of the cards to be entered").convert {
       transaction {
-        CardSet.Companion.findById(it.lowercase()) ?: throw IllegalArgumentException("No set found for set code $it")
+        ScryfallCardSet.findByCode(it.lowercase()) ?: throw IllegalArgumentException("No set found for set code $it")
       }
     }.multiple().prompt("Enter the set codes to be imported/updated")
 

@@ -1,12 +1,12 @@
 package at.woolph.caco.gui.view.collection
 
-import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.datamodel.sets.Rarity
+import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.loadSetLogo
 import at.woolph.caco.masterdata.import.importCardsOfSet
 import at.woolph.caco.masterdata.import.importSet
 import at.woolph.caco.masterdata.import.importSets
-import at.woolph.caco.masterdata.import.update
+import at.woolph.caco.masterdata.import.reimport
 import at.woolph.caco.gui.view.CardDetailsView
 import at.woolph.caco.gui.view.CardImageTooltip
 import at.woolph.caco.gui.view.filteredBy
@@ -128,7 +128,7 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : Coro
 
     override val root = BorderPane()
 
-    val setProperty = SimpleObjectProperty<CardSet?>()
+    val setProperty = SimpleObjectProperty<ScryfallCardSet?>()
     val set by setProperty
 
     val setFilterTextProperty = SimpleStringProperty("")
@@ -141,17 +141,15 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : Coro
     val filterRarityRare = SimpleBooleanProperty(true)
     val filterRarityMythic = SimpleBooleanProperty(true)
 
-    lateinit var setListview: ListView<CardSet>
+    lateinit var setListview: ListView<ScryfallCardSet>
     lateinit var tvCards: TableView<CardPossessionModel>
 	lateinit var toggleButtonImageLoading: ToggleButton
 
-    val sets = FXCollections.observableArrayList<CardSet>()
-    val setsSorted = sets.sorted { t1: CardSet, t2: CardSet ->
-        -t1.dateOfRelease.compareTo(t2.dateOfRelease)
-    }
+    val sets = FXCollections.observableArrayList<ScryfallCardSet>()
+    val setsSorted = sets.sorted(ScryfallCardSet.releaseDateComparator)
     val setsFiltered = setsSorted.filteredBy(listOf(setFilterTextProperty)) { set ->
         set.name.contains(setFilterTextProperty.get(), ignoreCase = true) ||
-            set.shortName.value.contains(setFilterTextProperty.get(), ignoreCase = true)
+            set.code.contains(setFilterTextProperty.get(), ignoreCase = true)
     }
 
     val cards = FXCollections.observableArrayList<CardPossessionModel>()
@@ -183,14 +181,14 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : Coro
     suspend fun updateSets() {
         val updatedSets = newSuspendedTransaction(Dispatchers.IO) {
             LOG.trace("updateSets loading from DB")
-            CardSet.all().toList()
+            ScryfallCardSet.allRootSets()
         }.filter { collectionSettings.cardSetFilter(it) }
         LOG.trace("updateSets loaded from DB")
 
         updateSetsView(updatedSets)
     }
 
-    suspend fun updateSetsView(updatedSets: List<CardSet>) = withContext(Dispatchers.Main.immediate) {
+    suspend fun updateSetsView(updatedSets: List<ScryfallCardSet>) = withContext(Dispatchers.Main.immediate) {
         LOG.trace("updateSets updating view")
         val oldSetSelected = set?.name
         sets.setAll(updatedSets)
@@ -201,7 +199,7 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : Coro
     suspend fun updateCards() {
         val updatedCards = newSuspendedTransaction(Dispatchers.IO) {
             LOG.trace("updateCards loading from DB")
-            set?.cards?.toList()?.map { CardPossessionModel(it, collectionSettings) } ?: emptyList()
+            set?.cardsOfSelfAndNonRootChildSets?.toList()?.sorted()?.map { CardPossessionModel(it, collectionSettings) } ?: emptyList()
         }
         LOG.trace("updateCards loaded from DB")
         updateCardsView(updatedCards)
@@ -213,7 +211,7 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : Coro
         LOG.trace("updateCards view updated")
     }
 
-    suspend fun addSet(setCode: String): CardSet { // TODO Progress dialog
+    suspend fun addSet(setCode: String): ScryfallCardSet { // TODO Progress dialog
         val importedSet = importSet(setCode).reimportSet()
 
         updateSets()
@@ -226,8 +224,8 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : Coro
         updateSets()
     }
 
-    suspend fun CardSet.reimportSet(): CardSet = apply {
-        update()
+    suspend fun ScryfallCardSet.reimportSet(): ScryfallCardSet = apply {
+        reimport()
 //        LOG.info("reimport current set $this")
         importCardsOfSet(listOf("german"))
 
@@ -381,7 +379,7 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : Coro
 							vGrow = Priority.ALWAYS
 						}
 
-						column<CardPossessionModel, String>("Set", { it.value.set.map { it.setCode } }).apply {
+						column<CardPossessionModel, String>("Set", { it.value.set.map { it.code } }).apply {
 							contentWidth(5.0, useAsMin = true, useAsMax = true)
 						}
 						column("Number", CardPossessionModel::collectorNumber) {

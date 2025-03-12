@@ -1,7 +1,7 @@
 package at.woolph.caco.masterdata.import
 
 import at.woolph.caco.datamodel.sets.Card
-import at.woolph.caco.datamodel.sets.CardSet
+import at.woolph.caco.datamodel.sets.Legality
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.parseRarity
 import at.woolph.caco.utils.newOrUpdate
@@ -76,6 +76,7 @@ object ZonedDateTimeSerializer : KSerializer<ZonedDateTime> {
     }
 }
 val jsonSerializer = Json {
+    decodeEnumsCaseInsensitive = true
     ignoreUnknownKeys = true
     serializersModule = SerializersModule {
         contextual(LocalDate::class, LocalDateSerializer)
@@ -174,7 +175,7 @@ data class ScryfallCard(
     val keywords: Set<String>,
     val produced_mana: Set<MtgColor>? = null,
     val all_parts: List<ScryfallRelatedCard> = emptyList(),
-    val legalities: Map<String, String>,
+    val legalities: Map<String, Legality>,
     val games: Set<String>,
     val reserved: Boolean,
     val foil: Boolean,
@@ -211,6 +212,7 @@ data class ScryfallCard(
     val security_stamp: String? = null,
     val full_art: Boolean,
     val textless: Boolean,
+    val game_changer: Boolean,
     val booster: Boolean,
     val story_spotlight: Boolean,
     val edhrec_rank: Int? = null,
@@ -243,6 +245,8 @@ data class ScryfallCard(
         val isPromo = promo
         val isToken = set_type == "token"
 
+        it.gameChanger = game_changer
+        it.edhrecRank = edhrec_rank
         it.set = ScryfallCardSet.findById(set_id) ?: throw SetNotInDatabaseException(set, set_name, set_type)
         it.collectorNumber = collector_number
         it.name = name
@@ -305,15 +309,15 @@ data class ScryfallCard(
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
-internal fun CardSet.loadCardsFromScryfall(language: String? = null, optional: Boolean = false): Flow<ScryfallCard> =
-    scryfallCardSets.asFlow().flatMapConcat {
+internal fun ScryfallCardSet.loadCardsFromScryfall(language: String? = null, optional: Boolean = false): Flow<ScryfallCard> =
+    selfAndNonRootChildSets.asFlow().flatMapConcat {
         LOG.trace("loadCardsFromScryfall for {} for language {}", this, language)
-        paginatedDataRequest("https://api.scryfall.com/cards/search?q=${ language?.let {"lang%3A$it%20"} ?: "" }set%3A${it.setCode}&unique=prints&order=set", optional)
+        paginatedDataRequest("https://api.scryfall.com/cards/search?q=${ language?.let {"lang%3A$it%20"} ?: "" }set%3A${it.code}&unique=prints&order=set", optional)
     }
 
-suspend fun CardSet.importCardsOfSet(additionalLanguages: List<String> = emptyList()) {
+suspend fun ScryfallCardSet.importCardsOfSet(additionalLanguages: List<String> = emptyList()) {
     // FIXME i want to represent every card as it is in reality (double sided token from commander or master sets etc.)
-    LOG.trace("import cards of set {}", this.shortName)
+    LOG.trace("import cards of set {}", this.code)
     loadCardsFromScryfall()
         .filter(ScryfallCard::isNoPromoPackStampedAndNoPrereleasePackStampedVersion)
         .collect {

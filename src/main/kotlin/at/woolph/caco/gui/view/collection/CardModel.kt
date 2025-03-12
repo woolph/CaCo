@@ -13,7 +13,7 @@ import java.io.ByteArrayOutputStream
 import java.text.NumberFormat
 import javax.imageio.ImageIO
 
-open class CardModel(card: Card): ItemViewModel<Card>(card), Comparable<CardModel>{
+open class CardModel(card: Card): ItemViewModel<Card>(card) {
 	val id = bind(Card::id)
 	val set = bind(Card::set)
 	val collectorNumber = bind(Card::collectorNumber)
@@ -41,22 +41,6 @@ open class CardModel(card: Card): ItemViewModel<Card>(card), Comparable<CardMode
 
 	val names: Sequence<String>
 		get() = sequenceOf(name, nameDE).mapNotNull { it.value }
-
-	override fun compareTo(other: CardModel): Int {
-		if (set.value != other.set.value) {
-			val lengthCompare = set.value.setCode.length.compareTo(other.set.value.setCode.length)
-			if (lengthCompare != 0)
-				return lengthCompare
-			return set.value.setCode.compareTo(other.set.value.setCode)
-		}
-		val (prefix, number, suffix) = splitCollectorNumber(collectorNumber.value)
-		val (otherPrefix, otherNumber, otherSuffix) = splitCollectorNumber(other.collectorNumber.value)
-
-		return prefix.compareToNullable(otherPrefix)
-			?: number.compareToNullable(otherNumber)
-			?: suffix.compareToNullable(otherSuffix)
-			?: 0
-	}
 
 	suspend fun getCachedImage(): Image? =
 		ImageCache.getImage(image.value.toString()) {
@@ -98,23 +82,5 @@ open class CardModel(card: Card): ItemViewModel<Card>(card), Comparable<CardMode
 
 	companion object {
 		val LOG = LoggerFactory.getLogger(this::class.java.declaringClass)
-		private val COLLECTION_NUMBER_PATTERN = Regex("^(?<prefix>\\w+-)?(?<number>\\d+)(?<suffix>.+)?$")
-
-		fun splitCollectorNumber(collectorNumber: String): Triple<String?, Int, String?> {
-			val match = COLLECTION_NUMBER_PATTERN.find(collectorNumber) ?: return Triple(null, 0, null)
-			val prefix = match.groups["prefix"]?.value
-			val number = match.groups["number"]!!.value.toInt()
-			val suffix = match.groups["suffix"]?.value
-			return Triple(prefix, number, suffix)
-		}
-
-		fun <A: Comparable<A>> A?.compareToNullable(other: A?, isNullLowerWeightThanValue: Boolean = true): Int? {
-			if (this == null && other == null) return null
-			if (this == null) return if (isNullLowerWeightThanValue) -1 else 1
-			if (other == null) return if (isNullLowerWeightThanValue) 1 else -1
-			val compareResult = this.compareTo(other)
-			if (compareResult == 0) return null
-			return compareResult
-		}
 	}
 }

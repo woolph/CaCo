@@ -7,7 +7,7 @@ import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.datamodel.sets.Card
 import org.jetbrains.exposed.sql.Op
 import org.jetbrains.exposed.sql.count
-import java.time.LocalDate
+import java.time.Instant
 import kotlin.toUInt
 
 data class CardCollectionItemId(
@@ -21,7 +21,7 @@ data class CardCollectionItemId(
 data class CardCollectionItem(
   val quantity : UInt,
   val cardCollectionItemId: CardCollectionItemId,
-  val dateAdded: LocalDate = LocalDate.now(),
+  val dateAdded: Instant = Instant.now(),
 ) {
   fun addToCollection() {
     repeat(quantity.toInt()) {

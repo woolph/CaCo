@@ -1,6 +1,6 @@
 package at.woolph.caco.binderlabels
 
-import at.woolph.caco.datamodel.sets.CardSet
+import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.renderSvg
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.net.URI
@@ -48,14 +48,19 @@ open class GenericLabel(override val code: String, override val title: String, o
     override val mainIcon: ByteArray? by lazy { URI("https://c2.scryfall.com/file/scryfall-symbols/sets/default.svg?1647835200").renderSvgAsMythic() }
 }
 
-fun fetchCardSets(vararg codes: String): List<CardSet> = transaction {
-    codes.map { CardSet.findById(it) ?: throw IllegalArgumentException("no set with code $it found") }
+fun fetchCardSets(vararg codes: String): List<ScryfallCardSet> = transaction {
+    codes.map { code -> ScryfallCardSet.findByCode(code) ?: throw IllegalArgumentException("no set with code $code found") }
 }
-val CardSet?.lazyIconMythic: Lazy<ByteArray?> get() = lazy { this?.icon?.renderSvgAsMythic() }
-val CardSet?.lazyIconUncommon: Lazy<ByteArray?> get() = lazy { this?.icon?.renderSvgAsUncommon() }
+
+fun fetchCardSetsNullable(vararg codes: String?): List<ScryfallCardSet?> = transaction {
+    codes.map { it?.let { code -> ScryfallCardSet.findByCode(code) ?: throw IllegalArgumentException("no set with code $code found") } }
+}
+
+val ScryfallCardSet?.lazyIconMythic: Lazy<ByteArray?> get() = lazy { this?.icon?.renderSvgAsMythic() }
+val ScryfallCardSet?.lazyIconUncommon: Lazy<ByteArray?> get() = lazy { this?.icon?.renderSvgAsUncommon() }
 
 abstract class AbstractLabelItem(
-    val sets: List<CardSet>
+    val sets: List<ScryfallCardSet>
 ): MapLabelItem {
     override val title: String get() = sets[0].name
     override val subTitle: String?
@@ -67,8 +72,8 @@ abstract class AbstractLabelItem(
             }
         }
 
-    override val code: String get() = sets[0].shortName.value
-    override val subCode: String get() = sets.drop(1).joinToString("/") { it.shortName.value }
+    override val code: String get() = sets[0].code
+    override val subCode: String get() = sets.drop(1).joinToString("/") { it.code }
 
     override val mainIcon: ByteArray? by sets.getOrNull(0).lazyIconMythic
     override val subIconLeft: ByteArray? by sets.getOrNull(if (sets.size > 2) 1 else 2).lazyIconUncommon
@@ -77,7 +82,7 @@ abstract class AbstractLabelItem(
     override val subIconRight2: ByteArray? by sets.getOrNull(4).lazyIconUncommon
 }
 
-open class SimpleSet(override val code: String): AbstractLabelItem(fetchCardSets(code))
+open class SimpleSet(override val code: String): AbstractLabelItem(fetchCardSets(code).filterNotNull())
 
 open class SeparatePreconPartSet(code: String): SimpleSet(code) {
     override val subTitle: String? get() = "Preconstructed Commander Decks"

@@ -7,6 +7,9 @@ import at.woolph.caco.datamodel.collection.ArenaCardPossessions
 import at.woolph.caco.datamodel.collection.CardPossession
 import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.masterdata.import.toEnumSet
+import at.woolph.caco.utils.compareToNullable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.dao.*
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
@@ -46,11 +49,37 @@ object Cards : IdTable<UUID>() {
 
     val price = double("price").nullable()
     val priceFoil = double("priceFoil").nullable()
+    val gameChanger = bool("gameChanger").index()
+    val edhrecRank = integer("edhrecRank").nullable()
 }
 
-class Card(id: EntityID<UUID>) : UUIDEntity(id) {
+@Serializable
+enum class Legality {
+    Legal,
+    @SerialName("not_legal") NotLegal,
+    Restricted,
+    Banned,
+}
+
+class Card(id: EntityID<UUID>) : UUIDEntity(id), Comparable<Card> {
     companion object : UUIDEntityClass<Card>(Cards) {
         val CARD_DRAW_PATTERN = Regex("draws? (|a |two |three )cards?", RegexOption.IGNORE_CASE)
+
+        private fun compareCollectorNumberNullable(collectorNumber: String, otherCollectorNumber: String) : Int? {
+            val (prefix, number, suffix) = splitCollectorNumber(collectorNumber)
+            val (otherPrefix, otherNumber, otherSuffix) = splitCollectorNumber(otherCollectorNumber)
+            return prefix.compareToNullable(otherPrefix)
+                ?: number.compareToNullable(otherNumber)
+                ?: suffix.compareToNullable(otherSuffix)
+        }
+        private fun splitCollectorNumber(collectorNumber: String): Triple<String?, Int, String?> {
+            val match = COLLECTION_NUMBER_PATTERN.find(collectorNumber) ?: return Triple(null, 0, null)
+            val prefix = match.groups["prefix"]?.value
+            val number = match.groups["number"]!!.value.toInt()
+            val suffix = match.groups["suffix"]?.value
+            return Triple(prefix, number, suffix)
+        }
+        internal val COLLECTION_NUMBER_PATTERN = Regex("^(?<prefix>\\w+-)?(?<number>\\d+)(?<suffix>.+)?$")
     }
     val scryfallId: UUID get() = id.value
 
@@ -91,6 +120,8 @@ class Card(id: EntityID<UUID>) : UUIDEntity(id) {
 
     var price by Cards.price
     var priceFoil by Cards.priceFoil
+    var gameChanger by Cards.gameChanger
+    var edhrecRank by Cards.edhrecRank
 
     var colorIdentity by Cards.colorIdentity.transform(
         { it.colorIdentity.fold(0) { acc: Int, manaColor: ManaColor -> (acc or (1 shl manaColor.ordinal)) } },
@@ -147,4 +178,9 @@ class Card(id: EntityID<UUID>) : UUIDEntity(id) {
     private fun oracleTextAll(vararg keywords: String) = keywords.all { oracleText.contains(it, ignoreCase = true) }
     private fun oracleTextAny(vararg keywords: String) = keywords.any { oracleText.contains(it, ignoreCase = true) }
     private fun oracleTextNone(vararg keywords: String) = keywords.none { oracleText.contains(it, ignoreCase = true) }
+
+    override fun compareTo(other: Card): Int =
+        set.compareToNullable(other.set)
+            ?: compareCollectorNumberNullable(collectorNumber, other.collectorNumber)
+            ?: 0
 }

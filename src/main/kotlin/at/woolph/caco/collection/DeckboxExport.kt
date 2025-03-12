@@ -20,9 +20,9 @@ internal fun CardCollectionItem.toDeckboxCsvRow(): Array<String> = arrayOf(
   quantity.toString(),
   "0", // tradelist count
   cardCollectionItemId.card.name, // TODO reverse mapping of Emblems, Surgeon General Commander, etc.
-  (if (cardCollectionItemId.card.set.setCode == "plst")
+  (if (cardCollectionItemId.card.set.code == "plst")
     cardCollectionItemId.card.collectorNumber.split("-", limit = 2).first().lowercase().let { setCode ->
-      ScryfallCardSet.find { ScryfallCardSets.setCode eq setCode }.singleOrNull()?.name ?: "The List"
+      ScryfallCardSet.find { ScryfallCardSets.code eq setCode }.singleOrNull()?.name ?: "The List"
     } else cardCollectionItemId.card.set.name).let { setName ->
     (setNameMapping.asSequence().firstOrNull { it.value == setName }?.key ?: setName).let { mappedSetName ->
       when {
@@ -32,7 +32,7 @@ internal fun CardCollectionItem.toDeckboxCsvRow(): Array<String> = arrayOf(
       }
     }
   },
-  if (cardCollectionItemId.card.set.setCode == "plst") {
+  if (cardCollectionItemId.card.set.code == "plst") {
     cardCollectionItemId.card.collectorNumber.split("-", limit = 2).last()
   } else {
     cardCollectionItemId.card.collectorNumber
@@ -41,7 +41,7 @@ internal fun CardCollectionItem.toDeckboxCsvRow(): Array<String> = arrayOf(
   cardCollectionItemId.language.toLanguageDeckbox(),
   if (cardCollectionItemId.foil) "foil" else "",
   "",
-  if (cardCollectionItemId.card.set.setCode == "plst") "proof" else "",
+  if (cardCollectionItemId.card.set.code == "plst") "proof" else "",
   "",
   "",
   if (cardCollectionItemId.stampPlaneswalkerSymbol) "promo" else "",

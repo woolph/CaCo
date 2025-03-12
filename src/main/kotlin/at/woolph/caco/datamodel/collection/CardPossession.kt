@@ -6,12 +6,12 @@ import org.jetbrains.exposed.dao.IntEntity
 import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IntIdTable
-import org.jetbrains.exposed.sql.javatime.CurrentDate
-import org.jetbrains.exposed.sql.javatime.date
+import org.jetbrains.exposed.sql.javatime.CurrentTimestamp
+import org.jetbrains.exposed.sql.javatime.timestamp
 
 object CardPossessions : IntIdTable() {
     val card = reference("card", Cards).index()
-	val dateOfAddition = date("dateOfAddition").index().defaultExpression(CurrentDate)
+	val dateOfAddition = timestamp("dateOfAddition").index().defaultExpression(CurrentTimestamp)
     val language = enumeration("language", CardLanguage::class).default(CardLanguage.UNKNOWN).index()
     val condition = enumeration("condition", CardCondition::class).default(CardCondition.UNKNOWN).index()
     val foil = bool("foil").default(false).index()

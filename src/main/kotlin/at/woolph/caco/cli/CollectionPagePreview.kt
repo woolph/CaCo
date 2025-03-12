@@ -1,6 +1,6 @@
 package at.woolph.caco.cli
 
-import at.woolph.caco.datamodel.sets.CardSet
+import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.masterdata.imagecache.ImageCache
 import at.woolph.libs.pdf.*
 import com.github.ajalt.mordant.animation.coroutines.animateInCoroutine
@@ -31,7 +31,7 @@ class CollectionPagePreview(
         launch { progress.execute() }
 
         val cardList = transaction {
-            CardSet.findById(setCode)?.cards ?: emptyList()
+            ScryfallCardSet.findByCode(setCode)?.cards ?: emptyList()
         }.sortedBy { it.collectorNumber }
 
         progress.update { total = cardList.size.toLong() }

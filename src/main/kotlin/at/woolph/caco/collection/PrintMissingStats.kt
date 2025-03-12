@@ -3,7 +3,7 @@ package at.woolph.caco.collection
 import at.woolph.caco.currency.Currencies
 import at.woolph.caco.currency.CurrencyValue
 import at.woolph.caco.currency.Percentage
-import at.woolph.caco.datamodel.sets.CardSet
+import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import com.github.ajalt.clikt.core.CliktCommand
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
@@ -21,8 +21,8 @@ class PrintMissingStats: CliktCommand(name = "missing-stats") {
             get() = Percentage(1.0 - count.toDouble() / total)
         }
 
-        val missingStatsPerSet = CardSet.Companion.all().filter {
-          !it.digitalOnly && it.officalCardCount > 50
+        val missingStatsPerSet = ScryfallCardSet.all().filter {
+          !it.digitalOnly && it.cardCount > 50
         }.map {
           val overallCardCount = it.cards.count { !it.token }
           val missingCardsForCollection = it.cards.filter { card -> !card.token && card.possessions.count() < 1 }
@@ -33,7 +33,7 @@ class PrintMissingStats: CliktCommand(name = "missing-stats") {
 
         println("Set code\tSet name\tCompletion\tEstimated cost to complete\tMissing cards")
         missingStatsPerSet.forEach { (set, stats) ->
-          println("${set.shortName.value}\t${set.name}\t${stats.completionPercentage}\t${stats.costs}\t${stats.count}")
+          println("${set.code}\t${set.name}\t${stats.completionPercentage}\t${stats.costs}\t${stats.count}")
         }
       }
     }

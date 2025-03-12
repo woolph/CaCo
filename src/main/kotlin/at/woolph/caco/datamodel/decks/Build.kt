@@ -1,6 +1,6 @@
 package at.woolph.caco.datamodel.decks
 
-import at.woolph.caco.datamodel.sets.CardSets
+import at.woolph.caco.datamodel.sets.ScryfallCardSets
 import org.jetbrains.exposed.dao.IntEntity
 import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
@@ -15,7 +15,7 @@ object Builds : IntIdTable() {
     val version = varchar("version", length = 64).index().default("")
     val dateOfCreation = date("dateOfCreation").index()
     val dateOfLastModification = date("dateOfLastModification").index()
-	val latestSetConsidered = reference("latestSetConsidered", CardSets).index().nullable()
+	val latestSetConsidered = reference("latestSetConsidered", ScryfallCardSets).index().nullable()
     val comment = text("comment").nullable()
 
     val currentlyBuilt = bool("currentlyBuilt").default(false)

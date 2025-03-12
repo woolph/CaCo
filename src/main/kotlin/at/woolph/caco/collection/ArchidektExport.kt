@@ -4,6 +4,7 @@ import at.woolph.caco.datamodel.collection.CardCondition
 import at.woolph.caco.datamodel.collection.CardLanguage
 import com.opencsv.CSVWriter
 import java.nio.file.Path
+import java.time.LocalDate
 import kotlin.io.path.bufferedWriter
 
 fun Iterable<CardCollectionItem>.exportArchidekt(file: Path) {
@@ -35,6 +36,6 @@ internal fun CardCollectionItem.toArchidektCsvRow(): Array<String> = arrayOf(
   },
   cardCollectionItemId.card.scryfallId.toString(),
   cardCollectionItemId.card.name,
-  cardCollectionItemId.card.set.setCode,
-  dateAdded.toString(),
+  cardCollectionItemId.card.set.code,
+  LocalDate.from(dateAdded).toString(),
 )

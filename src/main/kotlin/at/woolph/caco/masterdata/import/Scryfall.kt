@@ -1,8 +1,8 @@
 package at.woolph.caco.masterdata.import
 
 import at.woolph.caco.datamodel.sets.Card
-import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
+import at.woolph.caco.datamodel.sets.SetType
 import at.woolph.caco.utils.httpclient.useHttpClient
 import at.woolph.caco.utils.newOrUpdate
 import io.ktor.client.call.*
@@ -18,9 +18,8 @@ import java.util.UUID
 
 private val LOG = LoggerFactory.getLogger("at.woolph.caco.importer.sets.Scryfall")
 
-// TODO import MDFC replacements (STX, KHM, ...)
 // TODO import double sided tokens as they are printed (especially those of the commander precons)
-suspend fun importSet(setCode: String): CardSet = useHttpClient(Dispatchers.IO) { client ->
+suspend fun importSet(setCode: String): ScryfallCardSet = useHttpClient(Dispatchers.IO) { client ->
     val response: HttpResponse = client.get("https://api.scryfall.com/sets/$setCode")
     LOG.info("importing set $setCode")
 
@@ -29,10 +28,10 @@ suspend fun importSet(setCode: String): CardSet = useHttpClient(Dispatchers.IO) 
 
     val scryfallSet = response.body<ScryfallSet>()
 
-    if (scryfallSet.isNonDigitalSetWithCards()) {
-        CardSet.newOrUpdate(scryfallSet.code, scryfallSet::update)
+    if (scryfallSet.isImportWorthy) {
+        ScryfallCardSet.newOrUpdate(scryfallSet.id, scryfallSet::update)
     } else {
-        throw Exception("result is not a set or it's digital or does not have any cards")
+        throw Exception("result is not considered import")
     }
 }
 
@@ -45,39 +44,30 @@ suspend fun loadCard(cardId: String): ScryfallCard = useHttpClient(Dispatchers.I
     return@useHttpClient response.body<ScryfallCard>()
 }
 
-suspend fun CardSet.update() = useHttpClient(Dispatchers.IO) { client ->
-    LOG.debug("update set ${this@update}")
-    val response: HttpResponse = client.get("https://api.scryfall.com/sets/${this@update.shortName}")
+suspend fun ScryfallCardSet.reimport() = useHttpClient(Dispatchers.IO) { client ->
+    LOG.debug("update set ${this@reimport}")
+    val response: HttpResponse = client.get("https://api.scryfall.com/sets/${this@reimport.code}")
 
     if (!response.status.isSuccess())
         throw Exception("request failed with status code ${response.status.description}")
 
     val scryfallSet: ScryfallSet = response.body()
 
-    scryfallSet.update(this@update)
+    scryfallSet.update(this@reimport)
 }
 
 internal fun loadSetsFromScryfall(): Flow<ScryfallSet> =
     paginatedDataRequest<ScryfallSet>("https://api.scryfall.com/sets")
-    .filter(ScryfallSet::isNonDigitalSetWithCards)
 
-fun importSets(): Flow<CardSet> = flow {
-    val (importWorthySets, _) = loadSetsFromScryfall().toList().partition(ScryfallSet::isImportWorthy::get)
+fun importSets(): Flow<ScryfallCardSet> = flow {
+    val (importWorthySets, _) = loadSetsFromScryfall().toList().partition(ScryfallSet::isImportWorthy)
 
-    importWorthySets.filter(ScryfallSet::isRootSet).forEach { scryfallSet ->
-        CardSet.newOrUpdate(scryfallSet.code, scryfallSet::update)
-    }
     importWorthySets.forEach {
         try {
             val setId = it.id
-            val setFound = CardSet.findById(it.code)
-                ?: it.parent_set_code?.let { CardSet.findById(it) }
-                ?: throw NoSuchElementException("no card set found for code ${it.code} or ${it.parent_set_code}")
 
             ScryfallCardSet.newOrUpdate(setId) { scryfallCardSet ->
-                scryfallCardSet.setCode = it.code
-                scryfallCardSet.name = it.name
-                scryfallCardSet.set = setFound
+                it.update(scryfallCardSet)
             }
         } catch (t: Throwable) {
             LOG.error("error while importing set ${it.name}", t)
@@ -85,11 +75,16 @@ fun importSets(): Flow<CardSet> = flow {
     }
 
     // FIXME ask scryfall to add these oversized dungeon tokens to their database
+    val afr = ScryfallCardSet.findByCode("afr") ?: throw Exception("set afr not found")
     val oafrId = UUID.fromString("c954ce81-07b0-4881-b350-af3d7780ec22")
     ScryfallCardSet.newOrUpdate(oafrId) { scryfallCardSet ->
-        scryfallCardSet.setCode = "oafr"
+        scryfallCardSet.code = "oafr"
         scryfallCardSet.name = "Adventures in the Forgotten Realms Oversized"
-        scryfallCardSet.set = CardSet["afr"]
+        scryfallCardSet.parentSetCode = afr.code
+        scryfallCardSet.cardCount = 3
+        scryfallCardSet.digitalOnly = false
+        scryfallCardSet.type = SetType.TOKEN
+        scryfallCardSet.releaseDate = afr.releaseDate
     }
 
     mapOf(
@@ -109,7 +104,11 @@ fun importSets(): Flow<CardSet> = flow {
         }
     }
 
-    emitAll(CardSet.all().asFlow())
+    // FIXME possessions are lost when importing to archidekt and reimporting the archidekt export!!!!!
+    // FIXME add oversized undercity dungeon
+    // FIXME prerelease-stamped promo-stamped are lost when importing to archidekt and reimporting the archidekt export!!!!! => add
+
+    emitAll(ScryfallCardSet.all().asFlow())
 }
 
 suspend fun downloadBulkData(type: String, block: suspend (InputStream) -> Unit) {

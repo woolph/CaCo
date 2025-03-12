@@ -53,7 +53,7 @@ class UpdateCommand: CliktCommand(name = "update") {
 
                 if (it.set == "plst") {
                   val (setCode, collectorNumber) = it.collector_number.split("-", limit = 2)
-                  val set = ScryfallCardSet.Companion.find { ScryfallCardSets.setCode eq setCode }.single()
+                  val set = ScryfallCardSet.Companion.find { ScryfallCardSets.code eq setCode }.single()
                   Card.Companion.findSingleByAndUpdate(
                     Op.Companion.build { Cards.set eq set.id and (Cards.collectorNumber eq collectorNumber) },
                     it::updateTheListPendant,

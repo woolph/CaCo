@@ -1,13 +1,13 @@
 package at.woolph.caco.gui.view.collection
 
-import at.woolph.caco.datamodel.sets.CardSet
+import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import tornadofx.ItemViewModel
 
-class CardSetModel(set: CardSet): ItemViewModel<CardSet>(set) {
-	val shortName = bind(CardSet::shortName)
-	val name = bind(CardSet::name)
-	val dateOfRelease = bind(CardSet::dateOfRelease)
-	val officalCardCount = bind(CardSet::officalCardCount)
-	val digitalOnly = bind(CardSet::digitalOnly)
-	val icon = bind(CardSet::icon)
+class CardSetModel(set: ScryfallCardSet): ItemViewModel<ScryfallCardSet>(set) {
+	val code = bind(ScryfallCardSet::code)
+	val name = bind(ScryfallCardSet::name)
+	val releaseDate = bind(ScryfallCardSet::releaseDate)
+	val officalCardCount = bind(ScryfallCardSet::cardCount)
+	val digitalOnly = bind(ScryfallCardSet::digitalOnly)
+	val icon = bind(ScryfallCardSet::icon)
 }

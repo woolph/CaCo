@@ -3,9 +3,9 @@ package at.woolph.caco.gui.view.collection
 import at.woolph.caco.collection.asCardCollectionItems
 import at.woolph.caco.collection.exportDeckbox
 import at.woolph.caco.datamodel.collection.CardLanguage
-import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.collection.importDeckbox
 import at.woolph.caco.datamodel.collection.CardPossession
+import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.libs.pdf.*
 import javafx.scene.control.ToolBar
 import javafx.stage.FileChooser
@@ -64,13 +64,13 @@ class PaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
 
 					transaction {
 						createPdfDocument(it.toPath()) {
-							CardSet.all().sortedByDescending { it.dateOfRelease }.forEach { set ->
+							ScryfallCardSet.allRootSets().sortedByDescending { it.releaseDate }.forEach { set ->
 								page(PDRectangle.A4) {
 									framePagePosition(50f, 20f, 20f, 20f) {
 										drawText("Inventory ${set.name}", fontTitle, HorizontalAlignment.CENTER, 0f, box.upperRightY - 10f, Color.BLACK)
 
 										// TODO calc metrics for all sets (so that formatting is the same for all pages)
-										set.cards.sortedBy { it.collectorNumber }.filter { !it.promo }.let {
+										set.cardsOfSelfAndNonRootChildSets.sorted().filter { !it.promo }.toList().let {
 											frame(marginTop = fontTitle.height + 20f) {
 												columns((it.size - 1) / 100 + 1, 100, 5f, 3.5f, Font(PDType1Font(Standard14Fonts.FontName.HELVETICA), 6.0f)) {
 													var i = 0
@@ -142,7 +142,7 @@ class PaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
 									card.extra.value -> ": Extras"
 									else -> ""
 								}
-								Triple(neededCount, "${card.name.value}$suffixName", card.set.value?.set?.name?.let { "$it$suffixSet" })
+								Triple(neededCount, "${card.name.value}$suffixName", card.set.value?.name?.let { "$it$suffixSet" })
 							}.filter { it.first > 0 }.joinToString("\n") {
 									"${it.first} ${it.second} (${it.third})"
 							}

@@ -1,8 +1,7 @@
 package at.woolph.caco.masterdata.import
 
-import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
-import at.woolph.caco.utils.newOrUpdate
+import at.woolph.caco.datamodel.sets.SetType
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -30,25 +29,25 @@ data class ScryfallSet(
     @Contextual val icon_svg_uri: URI,
     @Contextual val scryfall_uri: URI,
     @Contextual val search_uri: URI,
-    val set_type: String,
+    val set_type: SetType,
     val nonfoil_only: Boolean,
     val foil_only: Boolean,
 ): ScryfallBase {
     override fun isValid() = objectType == "set"
-    fun isNonDigitalSetWithCards() = !digital && card_count > 0
-    fun isRootSet() = parent_set_code == null || !code.endsWith(parent_set_code)
-    fun update(cardSet: CardSet) = cardSet.apply {
-        name = this@ScryfallSet.name
-        type = this@ScryfallSet.set_type
-        dateOfRelease = this@ScryfallSet.released_at
-        officalCardCount = this@ScryfallSet.card_count
-        icon = this@ScryfallSet.icon_svg_uri
-    }.also { updatedCardSet ->
-        ScryfallCardSet.newOrUpdate(this@ScryfallSet.id) { scryfallCardSet ->
-            scryfallCardSet.setCode = this@ScryfallSet.code
-            scryfallCardSet.name = this@ScryfallSet.name
-            scryfallCardSet.set = updatedCardSet
-        }
+
+    fun update(scryfallCardSet: ScryfallCardSet) {
+        scryfallCardSet.code = this@ScryfallSet.code
+        scryfallCardSet.name = this@ScryfallSet.name
+
+        scryfallCardSet.blockCode = block_code
+        scryfallCardSet.blockName = block
+        scryfallCardSet.digitalOnly = digital
+        scryfallCardSet.cardCount = card_count
+        scryfallCardSet.printedSize = printed_size
+        scryfallCardSet.type = set_type
+        scryfallCardSet.parentSetCode = parent_set_code
+        scryfallCardSet.releaseDate = this@ScryfallSet.released_at
+        scryfallCardSet.icon = this@ScryfallSet.icon_svg_uri
     }
 
     companion object {
@@ -58,5 +57,5 @@ data class ScryfallSet(
             "p30a",
         )
     }
-    val isImportWorthy: Boolean get() = (set_type != "memorabilia" || code.startsWith("f")  || code.startsWith("o") || code in memorabiliaWhiteList)
+    val isImportWorthy: Boolean get() = !digital && card_count > 0 && (set_type != SetType.MEMORABILIA || code.startsWith("f")  || code.startsWith("o") || code in memorabiliaWhiteList)
 }

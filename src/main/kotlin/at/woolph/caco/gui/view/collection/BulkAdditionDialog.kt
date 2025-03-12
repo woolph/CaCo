@@ -3,13 +3,12 @@ package at.woolph.caco.gui.view.collection
 import at.woolph.caco.collection.CardCollectionItem
 import at.woolph.caco.collection.CardCollectionItemId
 import at.woolph.caco.collection.exportArchidekt
-import at.woolph.caco.collection.exportDeckbox
 import at.woolph.caco.datamodel.collection.CardCondition
 import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.sets.Card
-import at.woolph.caco.datamodel.sets.CardSet
 import at.woolph.caco.datamodel.sets.Foil
 import at.woolph.caco.datamodel.sets.Rarity
+import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.gui.view.CardDetailsView
 import at.woolph.caco.gui.view.filteredBy
 import javafx.beans.property.SimpleBooleanProperty
@@ -58,7 +57,7 @@ import tornadofx.top
 import tornadofx.vboxConstraints
 import java.io.File
 
-class BulkAdditionDialog(val collectionSettings: CollectionSettings, val set: CardSet, val owner: View, imageLoading: Boolean, selection: Card? = null): Dialog<Boolean>() {
+class BulkAdditionDialog(val collectionSettings: CollectionSettings, val set: ScryfallCardSet, val owner: View, imageLoading: Boolean, selection: Card? = null): Dialog<Boolean>() {
 
     inner class CardModel(card: Card): CardPossessionModel(card, collectionSettings) {
         val bulkAdditionNonPremium = SimpleIntegerProperty(0)

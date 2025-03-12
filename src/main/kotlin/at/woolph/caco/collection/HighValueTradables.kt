@@ -1,6 +1,6 @@
 package at.woolph.caco.collection
 
-import at.woolph.caco.datamodel.sets.CardSet
+import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.utils.Quadruple
 import at.woolph.caco.gui.view.collection.CardPossessionModel
 import at.woolph.caco.gui.view.collection.PaperCollectionView
@@ -16,7 +16,7 @@ class HighValueTradables: CliktCommand() {
 
     override fun run() {
       transaction {
-        CardSet.Companion.all().map { set ->
+        ScryfallCardSet.all().map { set ->
           val cardsSorted = set.cards.sortedBy { it.collectorNumber }
             .map { CardPossessionModel(it, PaperCollectionView.Companion.COLLECTION_SETTINGS) }
           set to cardsSorted.asSequence().flatMap { card ->
@@ -44,13 +44,13 @@ class HighValueTradables: CliktCommand() {
               Quadruple(
                 excessNonPremium,
                 "${card.name.value}$suffixName",
-                card.set.value!!.set.name.let { "$it$suffixSet" },
+                card.set.value!!.name.let { "$it$suffixSet" },
                 card.price.value
               ),
               Quadruple(
                 excessPremium,
                 "${card.name.value}$suffixName(Foil)",
-                card.set.value!!.set.name.let { "$it$suffixSet" },
+                card.set.value!!.name.let { "$it$suffixSet" },
                 card.priceFoil.value
               ),
             )
