@@ -18,6 +18,7 @@ object CardPossessions : IntIdTable() {
     val foil = bool("foil").default(false).index()
     val cardVersion = enumeration<CardVersion>("cardVersion").default(CardVersion.OG).index()
 
+    val purchasePrice = double("purchasePrice").nullable()
 	/**
 	 *
 	 */
@@ -38,4 +39,5 @@ class CardPossession(id: EntityID<Int>) : IntEntity(id) {
     var cardVersion by CardPossessions.cardVersion
     var tradeLock by CardPossessions.tradeLock
     var location by CardPossessions.location
+    var purchasePrice by CardPossessions.purchasePrice
 }

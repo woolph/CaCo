@@ -90,4 +90,24 @@ Content-Disposition: form-data; name="columns[4]"
 
 uid
 
+--WebAppBoundary
+Content-Disposition: form-data; name="columns[5]"
+
+oracleCard__name
+
+--WebAppBoundary
+Content-Disposition: form-data; name="columns[6]"
+
+edition__editioncode
+
+--WebAppBoundary
+Content-Disposition: form-data; name="columns[7]"
+
+ignore
+
+--WebAppBoundary
+Content-Disposition: form-data; name="columns[8]"
+
+purchasePrice
+
 --WebAppBoundary--

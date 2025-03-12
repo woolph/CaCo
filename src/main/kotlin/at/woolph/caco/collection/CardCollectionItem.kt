@@ -32,6 +32,7 @@ data class CardCollectionItem(
   val quantity : UInt,
   val cardCollectionItemId: CardCollectionItemId,
   val dateAdded: Instant = Instant.now(),
+  val purchasePrice: Double? = null,
 ) {
   fun addToCollection() {
     repeat(quantity.toInt()) {
@@ -41,6 +42,8 @@ data class CardCollectionItem(
         this.condition = cardCollectionItemId.condition
         this.foil = cardCollectionItemId.foil
         this.cardVersion = cardCollectionItemId.cardVersion
+        this.purchasePrice = this@CardCollectionItem.purchasePrice
+        this.dateOfAddition = this@CardCollectionItem.dateAdded
       }
     }
   }
@@ -57,9 +60,11 @@ data class CardCollectionItem(
       CardPossessions.condition,
       CardPossessions.dateOfAddition,
       CardPossessions.cardVersion,
+      CardPossessions.purchasePrice,
       )
       .where(whereClause)
-    .groupBy(CardPossessions.card, CardPossessions.foil, CardPossessions.language, CardPossessions.condition, CardPossessions.dateOfAddition, CardPossessions.cardVersion)
+    .groupBy(CardPossessions.card, CardPossessions.foil, CardPossessions.language, CardPossessions.condition, CardPossessions.dateOfAddition, CardPossessions.cardVersion,
+      CardPossessions.purchasePrice)
     .map { record ->
       CardCollectionItem(
         quantity = record[CardPossessions.id.count()].toUInt(),
@@ -70,6 +75,7 @@ data class CardCollectionItem(
           condition = record[CardPossessions.condition],
           cardVersion = record[CardPossessions.cardVersion],
         ),
+        purchasePrice = record[CardPossessions.purchasePrice],
         dateAdded = record[CardPossessions.dateOfAddition],
       )
     }.filter(CardCollectionItem::isNotEmpty)
@@ -77,16 +83,19 @@ data class CardCollectionItem(
 }
 
 fun Iterable<CardPossession>.asCardCollectionItems(): Iterable<CardCollectionItem> =
-  groupBy { CardCollectionItemId(
+  groupBy { Triple(CardCollectionItemId(
     card = it.card,
     foil = it.foil,
     language = it.language,
     condition = it.condition,
     cardVersion = it.cardVersion,
-  ) }.mapValues { (_, cardPossessions) -> cardPossessions.count() }
-    .map { (cardCollectionItemId, quantity) ->
+  ), it.purchasePrice, it.dateOfAddition) }.mapValues { (_, cardPossessions) -> cardPossessions.count() }
+    .map { (cardCollectionItemIdAndPrice, quantity) ->
+      val (cardCollectionItemId, purchasePrice, dateOfAddition) = cardCollectionItemIdAndPrice
       CardCollectionItem(
         quantity.toUInt(),
         cardCollectionItemId,
+        dateAdded = dateOfAddition,
+        purchasePrice = purchasePrice,
       )
     }

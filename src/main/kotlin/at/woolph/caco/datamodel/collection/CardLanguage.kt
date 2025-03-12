@@ -9,7 +9,7 @@ enum class CardLanguage {
 		ENGLISH -> "en"
 		GERMAN -> "de"
 		RUSSIAN -> "ru"
-		JAPANESE -> "ja"
+		JAPANESE -> "jp"
 		SPANISH -> "es"
 		PORTUGUESE -> "pt"
 		ITALIAN -> "it"
@@ -25,7 +25,7 @@ enum class CardLanguage {
 			"en" -> ENGLISH
 			"de" -> GERMAN
 			"ru" -> RUSSIAN
-			"ja" -> JAPANESE
+			"jp" -> JAPANESE
 			"es" -> SPANISH
 			"pt" -> PORTUGUESE
 			"it" -> ITALIAN
