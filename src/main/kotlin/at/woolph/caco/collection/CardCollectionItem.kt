@@ -5,9 +5,11 @@ import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.collection.CardPossession
 import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.datamodel.sets.Card
+import at.woolph.caco.datamodel.sets.CardVersion
 import org.jetbrains.exposed.sql.Op
 import org.jetbrains.exposed.sql.count
 import java.time.Instant
+import java.util.UUID
 import kotlin.toUInt
 
 data class CardCollectionItemId(
@@ -15,9 +17,17 @@ data class CardCollectionItemId(
   val foil: Boolean,
   val language: CardLanguage,
   val condition: CardCondition,
-  val stampPrereleaseDate: Boolean = false,
-  val stampPlaneswalkerSymbol: Boolean = false,
-)
+  val cardVersion: CardVersion = CardVersion.OG,
+) {
+  init {
+    require(card.getActualScryfallId(cardVersion) != null) {
+      "The given card $card has no scryfallId available for the version $cardVersion"
+    }
+  }
+
+  val actualScryfallId: UUID get() = card.getActualScryfallId(cardVersion)!!
+}
+
 data class CardCollectionItem(
   val quantity : UInt,
   val cardCollectionItemId: CardCollectionItemId,
@@ -30,8 +40,7 @@ data class CardCollectionItem(
         this.language = cardCollectionItemId.language
         this.condition = cardCollectionItemId.condition
         this.foil = cardCollectionItemId.foil
-        this.stampPrereleaseDate = cardCollectionItemId.stampPrereleaseDate
-        this.stampPlaneswalkerSymbol = cardCollectionItemId.stampPlaneswalkerSymbol
+        this.cardVersion = cardCollectionItemId.cardVersion
       }
     }
   }
@@ -47,11 +56,10 @@ data class CardCollectionItem(
       CardPossessions.language,
       CardPossessions.condition,
       CardPossessions.dateOfAddition,
-      CardPossessions.stampPrereleaseDate,
-      CardPossessions.stampPlaneswalkerSymbol,
+      CardPossessions.cardVersion,
       )
       .where(whereClause)
-    .groupBy(CardPossessions.card, CardPossessions.foil, CardPossessions.language, CardPossessions.condition, CardPossessions.dateOfAddition)
+    .groupBy(CardPossessions.card, CardPossessions.foil, CardPossessions.language, CardPossessions.condition, CardPossessions.dateOfAddition, CardPossessions.cardVersion)
     .map { record ->
       CardCollectionItem(
         quantity = record[CardPossessions.id.count()].toUInt(),
@@ -60,8 +68,7 @@ data class CardCollectionItem(
           foil = record[CardPossessions.foil],
           language = record[CardPossessions.language],
           condition = record[CardPossessions.condition],
-          stampPrereleaseDate = record[CardPossessions.stampPrereleaseDate],
-          stampPlaneswalkerSymbol = record[CardPossessions.stampPlaneswalkerSymbol],
+          cardVersion = record[CardPossessions.cardVersion],
         ),
         dateAdded = record[CardPossessions.dateOfAddition],
       )
@@ -75,8 +82,7 @@ fun Iterable<CardPossession>.asCardCollectionItems(): Iterable<CardCollectionIte
     foil = it.foil,
     language = it.language,
     condition = it.condition,
-    stampPrereleaseDate = it.stampPrereleaseDate,
-    stampPlaneswalkerSymbol = it.stampPlaneswalkerSymbol
+    cardVersion = it.cardVersion,
   ) }.mapValues { (_, cardPossessions) -> cardPossessions.count() }
     .map { (cardCollectionItemId, quantity) ->
       CardCollectionItem(

@@ -45,22 +45,25 @@ class UpdateCommand: CliktCommand(name = "update") {
 
         @OptIn(ExperimentalSerializationApi::class)
         suspend fun processJson(it: InputStream) {
+          val prereleaseStampedVersions = mutableListOf<ScryfallCard>()
+          val promopackStampedVersions = mutableListOf<ScryfallCard>()
+          val theListVersions = mutableListOf<ScryfallCard>()
+
           jsonSerializer.decodeToSequence<ScryfallCard>(it).asFlow()
             .filter(ScryfallCard::isImportWorthy)
             .collect {
               try {
-                Card.Companion.newOrUpdate(it.id, it::update)
-
-                if (it.set == "plst") {
-                  val (setCode, collectorNumber) = it.collector_number.split("-", limit = 2)
-                  val set = ScryfallCardSet.Companion.find { ScryfallCardSets.code eq setCode }.single()
-                  Card.Companion.findSingleByAndUpdate(
-                    Op.Companion.build { Cards.set eq set.id and (Cards.collectorNumber eq collectorNumber) },
-                    it::updateTheListPendant,
-                  )
+                when {
+                  it.isPrereleaseStampedVersion -> prereleaseStampedVersions.add(it)
+                  it.isPromopackStampedVersion -> promopackStampedVersions.add(it)
+                  it.isTheListVersion ->  {
+                    theListVersions.add(it)
+                    Card.newOrUpdate(it.id, it::update)
+                  }
+                  else -> Card.newOrUpdate(it.id, it::update)
                 }
               } catch (t: ScryfallCard.SetNotInDatabaseException) {
-                if (t.setType != "memorabilia" || it.set in ScryfallSet.Companion.memorabiliaWhiteList)
+                if (t.setType != "memorabilia" || it.set in ScryfallSet.memorabiliaWhiteList)
                   log.error("error while importing card ${it.name}: ${t.message}", if (log.isDebugEnabled) t else null)
                 else
                   log.debug("not importing card ${it.name} cause set is not to be imported")
@@ -68,6 +71,41 @@ class UpdateCommand: CliktCommand(name = "update") {
                 log.error("error while importing card ${it.name}: ${t.message}", if (log.isDebugEnabled) t else null)
               }
             }
+          theListVersions.forEach {
+            try {
+              val (setCode, collectorNumber) = it.collector_number.split("-", limit = 2)
+              val set = ScryfallCardSet.find { ScryfallCardSets.code eq setCode.lowercase() }.single()
+              Card.findSingleByAndUpdate(
+                Op.build { Cards.set eq set.id and (Cards.collectorNumber eq collectorNumber) },
+                it::updateTheListVersion,
+              )
+            } catch (t: ScryfallCard.SetNotInDatabaseException) {
+              if (t.setType != "memorabilia" || it.set in ScryfallSet.memorabiliaWhiteList)
+                log.error("error while importing card ${it.name}: ${t.message}", if (log.isDebugEnabled) t else null)
+              else
+                log.debug("not importing card ${it.name} cause set is not to be imported")
+            } catch (t: Throwable) {
+              log.error("error while importing card ${it.collector_number} ${it.name}: ${t.message} ", if (log.isDebugEnabled) t else null)
+            }
+          }
+          prereleaseStampedVersions.forEach {
+            val setCode = it.set.removePrefix("p")
+            val collectorNumber = it.collector_number.removeSuffix("s")
+            val set = ScryfallCardSet.find { ScryfallCardSets.code eq setCode }.single()
+            Card.findSingleByAndUpdate(
+              Op.build { Cards.set eq set.id and (Cards.collectorNumber eq collectorNumber) },
+              it::updatePrereleaseStampedVersion,
+            )
+          }
+          promopackStampedVersions.forEach {
+            val setCode = it.set.removePrefix("p")
+            val collectorNumber = it.collector_number.removeSuffix("p")
+            val set = ScryfallCardSet.find { ScryfallCardSets.code eq setCode }.single()
+            Card.findSingleByAndUpdate(
+              Op.build { Cards.set eq set.id and (Cards.collectorNumber eq collectorNumber) },
+              it::updatePromopackStampedVersion,
+            )
+          }
         }
 
         when (val sourceX = source) {

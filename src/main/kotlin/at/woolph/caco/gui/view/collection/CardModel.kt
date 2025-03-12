@@ -13,7 +13,7 @@ import java.io.ByteArrayOutputStream
 import java.text.NumberFormat
 import javax.imageio.ImageIO
 
-open class CardModel(card: Card): ItemViewModel<Card>(card) {
+open class CardModel(card: Card): ItemViewModel<Card>(card), Comparable<CardModel> {
 	val id = bind(Card::id)
 	val set = bind(Card::set)
 	val collectorNumber = bind(Card::collectorNumber)
@@ -79,6 +79,8 @@ open class CardModel(card: Card): ItemViewModel<Card>(card) {
 				null
 			}
 		}
+
+	override fun compareTo(other: CardModel): Int = item.compareTo(other.item)
 
 	companion object {
 		val LOG = LoggerFactory.getLogger(this::class.java.declaringClass)

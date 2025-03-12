@@ -39,7 +39,7 @@ class PaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
             action(coroutineScope) {
 				set?.let {
 					newSuspendedTransaction {
-						BulkAdditionDialog(collectionSettings, it, this@PaperCollectionView, toggleButtonImageLoading.isSelected, tvCards.selectedItem?.item).showAndAwait()?.let {
+						BulkAdditionDialog(collectionSettings, it.item, this@PaperCollectionView, toggleButtonImageLoading.isSelected, tvCards.selectedItem?.item).showAndAwait()?.let {
 							updateCards()
 						}
 					}
@@ -112,7 +112,7 @@ class PaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
         button("Export Collection") {
             action(coroutineScope) {
 				// TODO progress dialog
-				set?.cards?.flatMap { CardPossession.find(it) }?.asCardCollectionItems()?.let { items ->
+				set?.item?.cards?.flatMap { CardPossession.find(it) }?.asCardCollectionItems()?.let { items ->
 					chooseFile("Choose File to Export to", arrayOf(FileChooser.ExtensionFilter("CSV", "*.csv")), mode = FileChooserMode.Save).singleOrNull()?.let {
 						items.exportDeckbox(it.toPath())
 					}

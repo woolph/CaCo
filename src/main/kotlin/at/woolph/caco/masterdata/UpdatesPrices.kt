@@ -4,7 +4,6 @@ import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.masterdata.import.ScryfallCard
 import at.woolph.caco.masterdata.import.downloadBulkData
 import at.woolph.caco.masterdata.import.jsonSerializer
-import at.woolph.caco.utils.newOrUpdate
 import com.github.ajalt.clikt.core.CliktCommand
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.filter
@@ -18,10 +17,10 @@ class UpdatesPrices: CliktCommand(name = "update-prices") {
       newSuspendedTransaction {
         downloadBulkData("default_cards") {
           jsonSerializer.decodeToSequence<ScryfallCard>(it).asFlow()
-            .filter(ScryfallCard::isNoPromoPackStampedAndNoPrereleasePackStampedVersion)
+            .filter(ScryfallCard::isImportWorthy)
             .collect {
               try {
-                Card.Companion.newOrUpdate(it.id) { card ->
+                Card.findByIdAndUpdate(it.id) { card ->
                   it.update(card)
                   card.cardmarketUri = it.purchase_uris["cardmarket"]
 

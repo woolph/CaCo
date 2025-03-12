@@ -5,6 +5,7 @@ import at.woolph.caco.datamodel.collection.CardLanguage
 import com.opencsv.CSVWriter
 import java.nio.file.Path
 import java.time.LocalDate
+import java.time.ZoneOffset
 import kotlin.io.path.bufferedWriter
 
 fun Iterable<CardCollectionItem>.exportArchidekt(file: Path) {
@@ -34,8 +35,8 @@ internal fun CardCollectionItem.toArchidektCsvRow(): Array<String> = arrayOf(
     CardLanguage.UNKNOWN -> throw IllegalArgumentException("Unknown card language")
     else -> cardCollectionItemId.language.toString()
   },
-  cardCollectionItemId.card.scryfallId.toString(),
+  cardCollectionItemId.actualScryfallId.toString(),
   cardCollectionItemId.card.name,
   cardCollectionItemId.card.set.code,
-  LocalDate.from(dateAdded).toString(),
+  LocalDate.from(dateAdded.atOffset(ZoneOffset.UTC)).toString(),
 )

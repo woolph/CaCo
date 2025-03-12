@@ -226,19 +226,28 @@ data class ScryfallCard(
 ): ScryfallBase {
     override fun isValid() = objectType == "card"
 
-    fun isNoPromoPackStampedAndNoPrereleasePackStampedVersion() =
-        !(promo_types.contains("promopack") && promo_types.contains("stamped") && set !in listOf("ppp1"))
-                && !(promo_types.contains("prerelease") && promo_types.contains("datestamped") && set !in listOf("pmh1", "pbng"))
+    val isTheListVersion: Boolean get() = set == "plst"
+    val isPromopackStampedVersion: Boolean get() = (promo_types.contains("promopack") && promo_types.contains("stamped") && set !in listOf("ppp1"))
+    val isPrereleaseStampedVersion: Boolean get() = (promo_types.contains("prerelease") && promo_types.contains("datestamped") && set !in listOf("pmh1", "pbng"))
 
-    fun isImportWorthy() = isNoPromoPackStampedAndNoPrereleasePackStampedVersion() &&
-        layout != "art_series" && !digital && set != "ced"
+    fun isImportWorthy() = layout != "art_series" && !digital && set != "ced"
 
     class SetNotInDatabaseException(val set: String, val setName: String, val setType: String): Exception("set not found $set $setName")
 
-    fun updateTheListPendant(card: Card) = card.also {
+    fun updateTheListVersion(card: Card) = card.also {
         if (it.theListVersion != null && it.theListVersion != id)
             throw IllegalStateException("the card ${it.name} has already a different scryfall id ${it.theListVersion} for a 'The List' version of that card")
-        it.theListVersion = Card.findById(id)
+        it.theListVersion = id
+    }
+    fun updatePromopackStampedVersion(card: Card) = card.also {
+        if (it.promopackStampedVersion != null && it.promopackStampedVersion != id)
+            throw IllegalStateException("the card ${it.name} has already a different scryfall id ${it.promopackStampedVersion} for a 'PromopackStamped' version of that card")
+        it.promopackStampedVersion = id
+    }
+    fun updatePrereleaseStampedVersion(card: Card) = card.also {
+        if (it.prereleaseStampedVersion != null && it.prereleaseStampedVersion != id)
+            throw IllegalStateException("the card ${it.name} has already a different scryfall id ${it.prereleaseStampedVersion} for a 'PromopackStamped' version of that card")
+        it.prereleaseStampedVersion = id
     }
 
     fun update(card: Card) = card.also {
@@ -316,17 +325,16 @@ internal fun ScryfallCardSet.loadCardsFromScryfall(language: String? = null, opt
     }
 
 suspend fun ScryfallCardSet.importCardsOfSet(additionalLanguages: List<String> = emptyList()) {
-    // FIXME i want to represent every card as it is in reality (double sided token from commander or master sets etc.)
     LOG.trace("import cards of set {}", this.code)
     loadCardsFromScryfall()
-        .filter(ScryfallCard::isNoPromoPackStampedAndNoPrereleasePackStampedVersion)
+        .filter(ScryfallCard::isImportWorthy)
         .collect {
             Card.newOrUpdate(it.id, it::update)
         }
 
     additionalLanguages.forEach { language ->
         loadCardsFromScryfall(language, true)
-            .filter(ScryfallCard::isNoPromoPackStampedAndNoPrereleasePackStampedVersion)
+            .filter(ScryfallCard::isImportWorthy)
             .collect {
                 Card.findById(it.id)?.apply {
                     nameDE = it.determinePrintedName()

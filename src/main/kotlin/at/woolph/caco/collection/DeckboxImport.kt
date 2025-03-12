@@ -9,8 +9,11 @@ import com.opencsv.CSVReader
 import com.opencsv.CSVWriter
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.slf4j.LoggerFactory
 import java.nio.file.Path
 import java.time.Instant
+import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.function.Predicate
 import kotlin.collections.contains
@@ -19,7 +22,9 @@ import kotlin.io.path.bufferedWriter
 import kotlin.text.lowercase
 import kotlin.text.removeSuffix
 
-private val DATE_FORMAT_DECKBOX = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z")
+private val log = LoggerFactory.getLogger("at.woolph.caco.collection.DeckboxImport")
+
+internal val DATE_FORMAT_DECKBOX = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z").withZone(ZoneId.from(ZoneOffset.UTC))
 fun importDeckbox(file: Path, notImportedOutputFile: Path = Path.of("not-imported.csv"), datePredicate: Predicate<Instant> =  Predicate { true }, clearBeforeImport: Boolean = false) {
     println("importing deckbox collection export file $file")
     transaction {
@@ -59,7 +64,7 @@ fun importDeckbox(file: Path, notImportedOutputFile: Path = Path.of("not-importe
                                 nextLine["Printing Note"]!!,
                                 nextLine["Name"]!!,
                                 nextLine["Promo"] == "promo",
-                                nextLine["Artist Proof"] == "proof",
+                                isTheListCardStoredAsRegularVersionWithArtistProofTag = nextLine["Artist Proof"] == "proof",
                                 knownSets,
                             )
                             val printingNote = nextLine["Printing Note"]!!
@@ -180,15 +185,19 @@ fun importDeckbox(file: Path, notImportedOutputFile: Path = Path.of("not-importe
                                         this.language = language
                                         this.condition = condition
                                         this.foil = foil
-                                        this.stampPrereleaseDate = stampPrereleaseDate
-                                        this.stampPlaneswalkerSymbol = stampPlaneswalkerSymbol
+                                        this.cardVersion = when {
+                                            stampPlaneswalkerSymbol && stampPrereleaseDate -> throw IllegalStateException("Card can't be promopack stamped and prerelease stamped at the same time!")
+                                            stampPlaneswalkerSymbol -> CardVersion.PromopackStamped
+                                            stampPrereleaseDate -> CardVersion.PrereleaseStamped
+                                            else -> CardVersion.OG
+                                        }
                                         this.dateOfAddition = dateAdded
                                     }
                                     importedCards ++
                                 }
                             }
                         } else {
-                            println("not imported due to date restriction")
+                            log.warn("not imported due to date restriction")
                             countOfSkipped++
                             writer.writeNext(buildList {
                                 addAll(nextLine)
@@ -196,7 +205,7 @@ fun importDeckbox(file: Path, notImportedOutputFile: Path = Path.of("not-importe
                             }.toTypedArray(), false)
                         }
                     } catch (e: Exception) {
-                        println("unable to import: ${e.message}")
+                        log.error("unable to import: ${e.message}", if (log.isDebugEnabled) e else null)
                         countOfUnparsed++
                         writer.writeNext(buildList {
                             addAll(nextLine)
@@ -246,6 +255,7 @@ fun determineScryfallSetName(edition: String, isPromo: Boolean, isToken: Boolean
     }
 }
 
+// FIXME display commanders are not imported correctly (due to being not
 fun editionToSetName(editionCode: String, edition: String, printingNote: String, deckboxCardName: String, isPromo: Boolean, isTheListCardStoredAsRegularVersionWithArtistProofTag: Boolean, knownSets: Map<String, String>): MetaInfo {
     val isSubstituteCard = deckboxCardName == "Double-Faced Card Placeholder"
     val printingNote = if (isTheListCardStoredAsRegularVersionWithArtistProofTag) editionCode else printingNote

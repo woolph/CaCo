@@ -5,10 +5,12 @@ import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.collection.CardPossession
 import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.datamodel.sets.Card
+import at.woolph.caco.datamodel.sets.CardVersion
 import com.opencsv.CSVReader
 import com.opencsv.CSVWriter
 import org.jetbrains.exposed.sql.deleteAll
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.slf4j.LoggerFactory
 import java.nio.file.Path
 import java.time.Instant
 import java.time.LocalDate
@@ -19,6 +21,7 @@ import kotlin.collections.addAll
 import kotlin.io.path.bufferedReader
 import kotlin.io.path.bufferedWriter
 
+private val log = LoggerFactory.getLogger("at.woolph.caco.collection.ArchidektImport")
 fun importArchidekt(file: Path, notImportedOutputFile: Path = Path.of("not-imported.csv"), datePredicate: Predicate<Instant> =  Predicate { true }, clearBeforeImport: Boolean = false) {
   println("importing archidekt collection export file $file")
   transaction {
@@ -62,19 +65,28 @@ fun importArchidekt(file: Path, notImportedOutputFile: Path = Path.of("not-impor
               // TODO map to card collection item first then add to database
               repeat(quantity) {
                 CardPossession.new {
-                  this.card =
-                    Card.findById(scryfallId) ?: throw NoSuchElementException("card with id $scryfallId not found")
+                  val (card, cardVersion) =
+                    Card.findById(scryfallId)?.let {
+                      Pair(it, CardVersion.OG)
+                    } ?: Card.findByPrereleaseStampedVersionId(scryfallId)?.let {
+                      Pair(it, CardVersion.PrereleaseStamped)
+                    } ?: Card.findByPromopackStampedVersionVersionId(scryfallId)?.let {
+                      Pair(it, CardVersion.PromopackStamped)
+                    }  ?: Card.findByTheListVersionId(scryfallId)?.let {
+                      Pair(it, CardVersion.TheList)
+                    } ?: throw NoSuchElementException("card with id $scryfallId not found")
+
+                  this.card = card
                   this.language = language
                   this.condition = condition
                   this.foil = foil
-                  this.stampPrereleaseDate = stampPrereleaseDate
-                  this.stampPlaneswalkerSymbol = stampPlaneswalkerSymbol
+                  this.cardVersion = cardVersion
                   this.dateOfAddition = dateAdded
                 }
                 importedCards++
               }
             } else {
-              println("not imported due to date restriction")
+              log.warn("not imported due to date restriction")
               countOfSkipped++
               writer.writeNext(buildList {
                 addAll(nextLine)
@@ -82,7 +94,7 @@ fun importArchidekt(file: Path, notImportedOutputFile: Path = Path.of("not-impor
               }.toTypedArray(), false)
             }
           } catch (e: Exception) {
-            println("unable to import: ${e.message}")
+            log.error("unable to import: ${e.message}", if (log.isDebugEnabled) e else null)
             countOfUnparsed++
             writer.writeNext(buildList {
               addAll(nextLine)

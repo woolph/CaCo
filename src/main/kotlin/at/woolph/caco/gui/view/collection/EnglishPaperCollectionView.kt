@@ -97,7 +97,7 @@ class EnglishPaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
         button("Export Collection") {
             action {
 				// TODO progress dialog
-				set?.cards?.flatMap { CardPossession.find(it) }?.asCardCollectionItems()?.let { items ->
+				set?.item?.cards?.flatMap { CardPossession.find(it) }?.asCardCollectionItems()?.let { items ->
 					chooseFile("Choose File to Export to", arrayOf(FileChooser.ExtensionFilter("CSV", "*.csv")), mode = FileChooserMode.Save).singleOrNull()?.let {
 						items.exportDeckbox(it.toPath())
 					}
@@ -109,7 +109,7 @@ class EnglishPaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
 				chooseFile("Choose File to Wants", arrayOf(FileChooser.ExtensionFilter("Text", "*.txt")), mode = FileChooserMode.Save).singleOrNull()?.let {
 					it.printWriter().use { out ->
 						transaction {
-							set?.cards?.sortedBy { it.collectorNumber }?.filter { !it.promo }?.forEach {
+							set?.item?.cards?.sortedBy { it.collectorNumber }?.filter { !it.promo }?.forEach {
 								val neededCount = max(0, collectionSettings.cardPossesionTargtNonPremium - it.possessions.count())
 								//val n = if(set.cards.count { that -> it.name == that.name } > 1) " (#${it.numberInSet})" else ""
 								if (neededCount > 0) {

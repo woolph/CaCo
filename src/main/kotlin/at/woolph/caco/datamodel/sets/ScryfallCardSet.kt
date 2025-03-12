@@ -16,6 +16,8 @@ import org.jetbrains.exposed.dao.UUIDEntity
 import org.jetbrains.exposed.dao.UUIDEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
+import org.jetbrains.exposed.sql.SizedIterable
+import org.jetbrains.exposed.sql.emptySized
 import org.jetbrains.exposed.sql.javatime.date
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -46,13 +48,9 @@ object ScryfallCardSets : IdTable<UUID>() {
 class ScryfallCardSet(id: EntityID<UUID>) : UUIDEntity(id), Comparable<ScryfallCardSet> {
     companion object : UUIDEntityClass<ScryfallCardSet>(ScryfallCardSets) {
         fun findByCode(code: String?) = code?.let { find { ScryfallCardSets.code eq it }.firstOrNull() }
-        fun findByParentSetCode(code: String?) = code?.let { find { ScryfallCardSets.parentSetCode eq it } } ?: emptyList()
+        fun findByParentSetCode(code: String?) = code?.let { find { ScryfallCardSets.parentSetCode eq it } } ?: emptySized()
 
-        fun allRootSets() = all().filterNot(ScryfallCardSet::isRootSet)
-
-        val releaseDateComparator: Comparator<ScryfallCardSet> = Comparator { t1: ScryfallCardSet, t2: ScryfallCardSet ->
-            -t1.releaseDate.compareTo(t2.releaseDate)
-        }
+        fun allRootSets() = all().filter(ScryfallCardSet::isRootSet)
 
         private fun compareSetCodeNullable(setCode: String?, otherSetcode: String?): Int? =
             setCode?.length?.compareToNullable(otherSetcode?.length) ?: setCode.compareToNullable(otherSetcode)
@@ -74,10 +72,10 @@ class ScryfallCardSet(id: EntityID<UUID>) : UUIDEntity(id), Comparable<ScryfallC
 
     val cards by Card referrersOn Cards.set
 
-    val childSets: Sequence<ScryfallCardSet> get() = findByParentSetCode(parentSetCode).asSequence()
-    val selfAndNonRootChildSets = sequence {
+    val childSets: SizedIterable<ScryfallCardSet> get() = findByParentSetCode(code)
+    val selfAndNonRootChildSets: Sequence<ScryfallCardSet> get()  = sequence {
         yield(this@ScryfallCardSet)
-        yieldAll(childSets.filterNot(ScryfallCardSet::isRootSet))
+        yieldAll(childSets.filterNot(ScryfallCardSet::isRootSet).flatMap(ScryfallCardSet::selfAndNonRootChildSets))
     }
 
     val cardsOfSelfAndNonRootChildSets = selfAndNonRootChildSets.flatMap { it.cards.asSequence() }
@@ -88,12 +86,11 @@ class ScryfallCardSet(id: EntityID<UUID>) : UUIDEntity(id), Comparable<ScryfallC
 
     override fun compareTo(other: ScryfallCardSet): Int {
         if (id == other.id) return 0
-        return releaseDate.compareToNullable(other.releaseDate)
+        return releaseDate.compareToNullable(other.releaseDate)?.let { -it }
             ?: compareSetCodeNullable(code, other.code)
             ?: 0
     }
 }
-
 
 suspend fun URI?.renderSvg2(size: Float): ByteArray? = this@renderSvg2?.toURL()?.let { url ->
     val byteArray = withContext(Dispatchers.IO) {

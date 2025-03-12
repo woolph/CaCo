@@ -128,7 +128,7 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : Coro
 
     override val root = BorderPane()
 
-    val setProperty = SimpleObjectProperty<ScryfallCardSet?>()
+    val setProperty = SimpleObjectProperty<CardSetModel?>()
     val set by setProperty
 
     val setFilterTextProperty = SimpleStringProperty("")
@@ -141,15 +141,15 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : Coro
     val filterRarityRare = SimpleBooleanProperty(true)
     val filterRarityMythic = SimpleBooleanProperty(true)
 
-    lateinit var setListview: ListView<ScryfallCardSet>
+    lateinit var setListview: ListView<CardSetModel>
     lateinit var tvCards: TableView<CardPossessionModel>
 	lateinit var toggleButtonImageLoading: ToggleButton
 
-    val sets = FXCollections.observableArrayList<ScryfallCardSet>()
-    val setsSorted = sets.sorted(ScryfallCardSet.releaseDateComparator)
+    val sets = FXCollections.observableArrayList<CardSetModel>()
+    val setsSorted = sets.sorted()
     val setsFiltered = setsSorted.filteredBy(listOf(setFilterTextProperty)) { set ->
-        set.name.contains(setFilterTextProperty.get(), ignoreCase = true) ||
-            set.code.contains(setFilterTextProperty.get(), ignoreCase = true)
+        set.name.value.contains(setFilterTextProperty.get(), ignoreCase = true) ||
+            set.code.value.contains(setFilterTextProperty.get(), ignoreCase = true)
     }
 
     val cards = FXCollections.observableArrayList<CardPossessionModel>()
@@ -185,24 +185,25 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : Coro
         }.filter { collectionSettings.cardSetFilter(it) }
         LOG.trace("updateSets loaded from DB")
 
-        updateSetsView(updatedSets)
+        updateSetsView(updatedSets.map(::CardSetModel))
     }
 
-    suspend fun updateSetsView(updatedSets: List<ScryfallCardSet>) = withContext(Dispatchers.Main.immediate) {
+    suspend fun updateSetsView(updatedSets: List<CardSetModel>) = withContext(Dispatchers.Main.immediate) {
         LOG.trace("updateSets updating view")
-        val oldSetSelected = set?.name
+        val oldSetSelected = set?.name?.value
         sets.setAll(updatedSets)
-        setListview.selectionModel.select(sets.find { it.name == oldSetSelected })
+        setListview.selectionModel.select(sets.find { it.item.name == oldSetSelected })
         LOG.trace("updateSets view updated")
     }
 
     suspend fun updateCards() {
-        val updatedCards = newSuspendedTransaction(Dispatchers.IO) {
+        newSuspendedTransaction(Dispatchers.IO) {
             LOG.trace("updateCards loading from DB")
-            set?.cardsOfSelfAndNonRootChildSets?.toList()?.sorted()?.map { CardPossessionModel(it, collectionSettings) } ?: emptyList()
+            val updatedCards = set?.item?.cardsOfSelfAndNonRootChildSets?.toList()?.sorted()?.map { CardPossessionModel(it, collectionSettings) } ?: emptyList()
+
+            LOG.trace("updateCards loaded from DB")
+            updateCardsView(updatedCards)
         }
-        LOG.trace("updateCards loaded from DB")
-        updateCardsView(updatedCards)
     }
 
     suspend fun updateCardsView(updatedCards: List<CardPossessionModel>) = withContext(Dispatchers.Main.immediate) {
@@ -265,12 +266,15 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : Coro
                             vGrow = Priority.ALWAYS
                         }
                         cellFormat {
-                            item.icon?.let {
-                                graphic = imageViewDelayed(coroutineScope, 24, 24) {
-                                    it.loadSetLogo(48f)
+                            graphicProperty().bind(
+                                item.icon.map {
+                                    imageViewDelayed(coroutineScope, 24, 24) {
+                                        it.loadSetLogo(48f)
+                                    }
                                 }
-                            }
-                            text = item.name
+                            )
+
+                            textProperty().bind(item.name)
                         }
                         setProperty.bind(selectionModel.selectedItemProperty())
 //                        selectionModel.selectedItemProperty().addListener { _, _, newSet ->
@@ -301,7 +305,7 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : Coro
                     button("\u21BB") {
                         action(coroutineScope) {
                             newSuspendedTransaction {
-                                set?.reimportSet()
+                                set?.item?.reimportSet()
                             }
                         }
                     }
@@ -312,7 +316,7 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : Coro
                                     // TODO progress dialog
                                     setListview.selectionModel.select(setCodes.split(',').map {
                                         addSet(it.trim().lowercase(Locale.getDefault()))
-                                    }.last())
+                                    }.last().let(::CardSetModel))
                                 }
                             }
                         }
