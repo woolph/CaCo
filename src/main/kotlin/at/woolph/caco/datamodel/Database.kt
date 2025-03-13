@@ -5,6 +5,7 @@ import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.datamodel.decks.Builds
 import at.woolph.caco.datamodel.decks.DeckArchetypes
 import at.woolph.caco.datamodel.decks.DeckCards
+import at.woolph.caco.datamodel.sets.CardVariants
 import at.woolph.caco.datamodel.sets.Cards
 import at.woolph.caco.datamodel.sets.ScryfallCardSets
 import org.jetbrains.exposed.sql.Database
@@ -21,7 +22,7 @@ object Databases {
 
     fun init() {
         transaction(cacoDatabase) {
-            SchemaUtils.createMissingTablesAndColumns(ScryfallCardSets, Cards, CardPossessions, DeckArchetypes, Builds, DeckCards, ArenaCardPossessions)
+            SchemaUtils.createMissingTablesAndColumns(ScryfallCardSets, Cards, CardVariants, CardPossessions, DeckArchetypes, Builds, DeckCards, ArenaCardPossessions)
         }
     }
 }

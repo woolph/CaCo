@@ -6,7 +6,7 @@ import at.woolph.caco.collection.exportArchidekt
 import at.woolph.caco.datamodel.collection.CardCondition
 import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.sets.Card
-import at.woolph.caco.datamodel.sets.CardVersion
+import at.woolph.caco.datamodel.sets.CardVariant
 import at.woolph.caco.datamodel.sets.Foil
 import at.woolph.caco.datamodel.sets.Rarity
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
@@ -302,7 +302,7 @@ class BulkAdditionDialog(val collectionSettings: CollectionSettings, val set: Sc
                         foil = true,
                         language = languageProperty.value,
                         condition = conditionProperty.value,
-                        cardVersion = CardVersion.PrereleaseStamped,
+                        variantType = CardVariant.Type.PrereleaseStamped,
                       )
                     ),
                   ) }.filter(CardCollectionItem::isNotEmpty)

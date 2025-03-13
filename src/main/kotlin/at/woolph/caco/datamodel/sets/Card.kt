@@ -20,10 +20,6 @@ object Cards : IdTable<UUID>() {
     override val id = uuid("scryfallId").entityId()
     override val primaryKey = PrimaryKey(id)
 
-    val theListVersion = uuid("theListVersion").nullable()
-    val prereleaseStampedVersion = uuid("prereleaseStampedVersion").nullable()
-    val promopackStampedVersion = uuid("promopackStampedVersion").nullable()
-
     val set = reference("set", ScryfallCardSets).index()
     val collectorNumber = varchar("number", length = 10).index()
     val name = varchar("name", length = 256).index()
@@ -62,19 +58,7 @@ enum class Legality {
     Banned,
 }
 
-enum class CardVersion {
-    OG,
-    /** a version of the card with the planeswalker symbol in the bottom right corner usually being from "The List" */
-    TheList,
-    /** a version of the card with a date stamp usually contained in prerelease packs */
-    PrereleaseStamped,
-    /** a version of the card with a planeswalker stamp usually contained in promo packs */
-    PromopackStamped,
-}
-
-class Card(id: EntityID<UUID>) : UUIDEntity(id), Comparable<Card> {
-    override fun toString(): String = "[${set.code}-$collectorNumber] $name"
-
+class Card(id: EntityID<UUID>) : UUIDEntity(id), Comparable<Card>, CardRepresentation {
     companion object : UUIDEntityClass<Card>(Cards) {
         val CARD_DRAW_PATTERN = Regex("draws? (|a |two |three )cards?", RegexOption.IGNORE_CASE)
 
@@ -85,6 +69,7 @@ class Card(id: EntityID<UUID>) : UUIDEntity(id), Comparable<Card> {
                 ?: number.compareToNullable(otherNumber)
                 ?: suffix.compareToNullable(otherSuffix)
         }
+
         private fun splitCollectorNumber(collectorNumber: String): Triple<String?, Int, String?> {
             val match = COLLECTION_NUMBER_PATTERN.find(collectorNumber) ?: return Triple(null, 0, null)
             val prefix = match.groups["prefix"]?.value
@@ -93,26 +78,10 @@ class Card(id: EntityID<UUID>) : UUIDEntity(id), Comparable<Card> {
             return Triple(prefix, number, suffix)
         }
         internal val COLLECTION_NUMBER_PATTERN = Regex("^(?<prefix>\\w+-)?(?<number>\\d+)(?<suffix>.+)?$")
-
-        fun findByTheListVersionId(id: UUID) = find { Cards.theListVersion eq id }.singleOrNull()
-        fun findByPrereleaseStampedVersionId(id: UUID) = find { Cards.prereleaseStampedVersion eq id }.singleOrNull()
-        fun findByPromopackStampedVersionVersionId(id: UUID) = find { Cards.promopackStampedVersion eq id }.singleOrNull()
     }
+
     val scryfallId: UUID get() = id.value
-
-//    var theListVersion by Card optionalReferencedOn  Cards.theListVersion
-    var theListVersion by Cards.theListVersion
-    var prereleaseStampedVersion by Cards.prereleaseStampedVersion
-    var promopackStampedVersion by Cards.promopackStampedVersion
-
-    fun getActualScryfallId(cardVersion: CardVersion) = when (cardVersion) {
-        CardVersion.OG -> scryfallId
-        CardVersion.TheList -> theListVersion
-        CardVersion.PrereleaseStamped -> prereleaseStampedVersion
-        CardVersion.PromopackStamped -> promopackStampedVersion
-
-    }
-    fun isVersionAvailable(cardVersion: CardVersion) = getActualScryfallId(cardVersion) != null
+    val variants by CardVariant referrersOn CardVariants
 
     var set by ScryfallCardSet referencedOn Cards.set
     var collectorNumber by Cards.collectorNumber
@@ -213,4 +182,9 @@ class Card(id: EntityID<UUID>) : UUIDEntity(id), Comparable<Card> {
         set.compareToNullable(other.set)
             ?: compareCollectorNumberNullable(collectorNumber, other.collectorNumber)
             ?: 0
+
+    override fun toString(): String = "[${set.code}-$collectorNumber] $name"
+
+    override val card: Card get() = this
+    override val variantType: CardVariant.Type? get() = null
 }

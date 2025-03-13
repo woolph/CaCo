@@ -57,5 +57,5 @@ data class ScryfallSet(
             "p30a",
         )
     }
-    val isImportWorthy: Boolean get() = !digital && card_count > 0 && (set_type != SetType.MEMORABILIA || code.startsWith("f")  || code.startsWith("o") || code in memorabiliaWhiteList)
+    val isImportWorthy: Boolean get() = !digital && card_count > 0 && code != "plst" && (set_type != SetType.MEMORABILIA || code.startsWith("f")  || code.startsWith("o") || code in memorabiliaWhiteList)
 }

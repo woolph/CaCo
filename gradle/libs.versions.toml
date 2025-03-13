@@ -2,8 +2,11 @@
 jvmTarget = "21"
 javafx = "21"
 kotlin = "2.1.10"
+arrow = "2.0.1"
 
 [libraries]
+arrow-core = { module = "io.arrow-kt:arrow-core", version.ref = "arrow" }
+arrow-fx-coroutines = { module = "io.arrow-kt:arrow-fx-coroutines", version.ref = "arrow" }
 
 [bundles]
 

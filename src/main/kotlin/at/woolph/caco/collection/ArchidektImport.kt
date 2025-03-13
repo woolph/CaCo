@@ -1,10 +1,9 @@
 package at.woolph.caco.collection
 
+import arrow.core.Either
 import at.woolph.caco.datamodel.collection.CardCondition
 import at.woolph.caco.datamodel.collection.CardLanguage
-import at.woolph.caco.datamodel.sets.Card
-import at.woolph.caco.datamodel.sets.CardVersion
-import at.woolph.caco.utils.Either
+import at.woolph.caco.datamodel.sets.CardRepresentation
 import java.nio.file.Path
 import java.time.Instant
 import java.time.LocalDate
@@ -21,10 +20,7 @@ fun importArchidekt(
   notImportedOutputFile = notImportedOutputFile,
   datePredicate = datePredicate,
   clearBeforeImport = clearBeforeImport,
-  mapper = ::mapArchidekt,
-)
-
-private fun mapArchidekt(csvRecord: CsvRecord): Either<CardCollectionItem, String> {
+) { csvRecord ->
   val dateAdded = csvRecord["Date Added"]
     ?.let { LocalDate.parse(it).atStartOfDay().toInstant(ZoneOffset.UTC) }
     ?: Instant.now()
@@ -41,28 +37,19 @@ private fun mapArchidekt(csvRecord: CsvRecord): Either<CardCollectionItem, Strin
     else -> CardCondition.UNKNOWN
   }
   val purchasePrice = csvRecord["Purchase Price"]?.toDoubleOrNull()
-  val scryfallId = UUID.fromString(csvRecord["Scryfall ID"]!!)
-  val (card, cardVersion) =
-    Card.findById(scryfallId)?.let {
-      Pair(it, CardVersion.OG)
-    } ?: Card.findByPrereleaseStampedVersionId(scryfallId)?.let {
-      Pair(it, CardVersion.PrereleaseStamped)
-    } ?: Card.findByPromopackStampedVersionVersionId(scryfallId)?.let {
-      Pair(it, CardVersion.PromopackStamped)
-    }  ?: Card.findByTheListVersionId(scryfallId)?.let {
-      Pair(it, CardVersion.TheList)
-    } ?: return Either.Right("card with id $scryfallId not found")
-
-  return Either.Left(CardCollectionItem(
+  val scryfallId = Either.catch { UUID.fromString(csvRecord["Scryfall ID"]!!) }.bind()
+  val (card, cardVariantType) = CardRepresentation.findByScryfallId(scryfallId)
+    ?: raise(Exception("card with id $scryfallId not found"))
+  return@import CardCollectionItem(
     quantity = quantity.toUInt(),
     cardCollectionItemId = CardCollectionItemId(
       card = card,
       foil = foil,
       language = language,
       condition = condition,
-      cardVersion = cardVersion,
+      variantType = cardVariantType,
     ),
     dateAdded = dateAdded,
     purchasePrice = purchasePrice,
-  ))
+  )
 }

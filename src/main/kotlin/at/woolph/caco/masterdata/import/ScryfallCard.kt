@@ -1,6 +1,7 @@
 package at.woolph.caco.masterdata.import
 
 import at.woolph.caco.datamodel.sets.Card
+import at.woolph.caco.datamodel.sets.CardVariant
 import at.woolph.caco.datamodel.sets.Legality
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.parseRarity
@@ -226,6 +227,12 @@ data class ScryfallCard(
 ): ScryfallBase {
     override fun isValid() = objectType == "card"
 
+    val variant: CardVariant.Type? = when {
+        isTheListVersion -> CardVariant.Type.TheList
+        isPrereleaseStampedVersion -> CardVariant.Type.PrereleaseStamped
+        isPromopackStampedVersion -> CardVariant.Type.PromopackStamped
+        else -> null
+    }
     val isTheListVersion: Boolean get() = set == "plst"
     val isPromopackStampedVersion: Boolean get() = (promo_types.contains("promopack") && promo_types.contains("stamped") && set !in listOf("ppp1"))
     val isPrereleaseStampedVersion: Boolean get() = (promo_types.contains("prerelease") && promo_types.contains("datestamped") && set !in listOf("pmh1", "pbng"))
@@ -233,22 +240,6 @@ data class ScryfallCard(
     fun isImportWorthy() = layout != "art_series" && !digital && set != "ced"
 
     class SetNotInDatabaseException(val set: String, val setName: String, val setType: String): Exception("set not found $set $setName")
-
-    fun updateTheListVersion(card: Card) = card.also {
-        if (it.theListVersion != null && it.theListVersion != id)
-            throw IllegalStateException("the card ${it.name} has already a different scryfall id ${it.theListVersion} for a 'The List' version of that card")
-        it.theListVersion = id
-    }
-    fun updatePromopackStampedVersion(card: Card) = card.also {
-        if (it.promopackStampedVersion != null && it.promopackStampedVersion != id)
-            throw IllegalStateException("the card ${it.name} has already a different scryfall id ${it.promopackStampedVersion} for a 'PromopackStamped' version of that card")
-        it.promopackStampedVersion = id
-    }
-    fun updatePrereleaseStampedVersion(card: Card) = card.also {
-        if (it.prereleaseStampedVersion != null && it.prereleaseStampedVersion != id)
-            throw IllegalStateException("the card ${it.name} has already a different scryfall id ${it.prereleaseStampedVersion} for a 'PromopackStamped' version of that card")
-        it.prereleaseStampedVersion = id
-    }
 
     fun update(card: Card) = card.also {
         val isPromo = promo
@@ -264,7 +255,7 @@ data class ScryfallCard(
         it.promo = isPromo
         it.token = isToken
         it.image = image_uris?.get("png") ?: card_faces?.get(0)?.image_uris?.get("png")
-        it.cardmarketUri = purchase_uris.get("cardmarket")
+        it.cardmarketUri = purchase_uris["cardmarket"]
 
         it.extra = !booster
         it.nonfoilAvailable = nonfoil

@@ -5,7 +5,7 @@ import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.collection.CardPossession
 import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.datamodel.sets.Card
-import at.woolph.caco.datamodel.sets.CardVersion
+import at.woolph.caco.datamodel.sets.CardVariant
 import org.jetbrains.exposed.sql.Op
 import org.jetbrains.exposed.sql.count
 import java.time.Instant
@@ -17,15 +17,9 @@ data class CardCollectionItemId(
   val foil: Boolean,
   val language: CardLanguage,
   val condition: CardCondition,
-  val cardVersion: CardVersion = CardVersion.OG,
+  val variantType: CardVariant.Type? = null,
 ) {
-  init {
-    require(card.getActualScryfallId(cardVersion) != null) {
-      "The given card $card has no scryfallId available for the version $cardVersion"
-    }
-  }
-
-  val actualScryfallId: UUID get() = card.getActualScryfallId(cardVersion)!!
+  val actualScryfallId: UUID = card.getActualScryfallId(variantType).getOrNull() ?: throw IllegalArgumentException("$card does not exist in $variantType")
 }
 
 data class CardCollectionItem(
@@ -41,7 +35,7 @@ data class CardCollectionItem(
         this.language = cardCollectionItemId.language
         this.condition = cardCollectionItemId.condition
         this.foil = cardCollectionItemId.foil
-        this.cardVersion = cardCollectionItemId.cardVersion
+        this.variantType = cardCollectionItemId.variantType
         this.purchasePrice = this@CardCollectionItem.purchasePrice
         this.dateOfAddition = this@CardCollectionItem.dateAdded
       }
@@ -59,11 +53,11 @@ data class CardCollectionItem(
       CardPossessions.language,
       CardPossessions.condition,
       CardPossessions.dateOfAddition,
-      CardPossessions.cardVersion,
+      CardPossessions.variantType,
       CardPossessions.purchasePrice,
       )
       .where(whereClause)
-    .groupBy(CardPossessions.card, CardPossessions.foil, CardPossessions.language, CardPossessions.condition, CardPossessions.dateOfAddition, CardPossessions.cardVersion,
+    .groupBy(CardPossessions.card, CardPossessions.foil, CardPossessions.language, CardPossessions.condition, CardPossessions.dateOfAddition, CardPossessions.variantType,
       CardPossessions.purchasePrice)
     .map { record ->
       CardCollectionItem(
@@ -73,7 +67,7 @@ data class CardCollectionItem(
           foil = record[CardPossessions.foil],
           language = record[CardPossessions.language],
           condition = record[CardPossessions.condition],
-          cardVersion = record[CardPossessions.cardVersion],
+          variantType = record[CardPossessions.variantType],
         ),
         purchasePrice = record[CardPossessions.purchasePrice],
         dateAdded = record[CardPossessions.dateOfAddition],
@@ -88,7 +82,7 @@ fun Iterable<CardPossession>.asCardCollectionItems(): Iterable<CardCollectionIte
     foil = it.foil,
     language = it.language,
     condition = it.condition,
-    cardVersion = it.cardVersion,
+    variantType = it.variantType,
   ), it.purchasePrice, it.dateOfAddition) }.mapValues { (_, cardPossessions) -> cardPossessions.count() }
     .map { (cardCollectionItemIdAndPrice, quantity) ->
       val (cardCollectionItemId, purchasePrice, dateOfAddition) = cardCollectionItemIdAndPrice

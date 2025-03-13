@@ -24,6 +24,9 @@ dependencies {
   implementation("io.ktor:ktor-client-content-negotiation")
   implementation("io.ktor:ktor-serialization-kotlinx-json")
 
+  implementation(libs.arrow.core)
+  implementation(libs.arrow.fx.coroutines)
+
   implementation(platform("org.jetbrains.kotlinx:kotlinx-coroutines-bom:1.10.1"))
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-javafx")

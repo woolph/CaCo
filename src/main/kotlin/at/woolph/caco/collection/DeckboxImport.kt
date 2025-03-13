@@ -3,10 +3,8 @@ package at.woolph.caco.collection
 import at.woolph.caco.datamodel.collection.CardCondition
 import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.sets.*
-import at.woolph.caco.utils.Either
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.slf4j.LoggerFactory
 import java.nio.file.Path
 import java.time.Instant
 import java.time.ZoneId
@@ -24,7 +22,6 @@ fun importDeckbox(
     clearBeforeImport: Boolean = false,
 ) {
     transaction {
-        val theListSet = ScryfallCardSet.find { ScryfallCardSets.code eq "plst" }.single()
         val knownSets = ScryfallCardSet.all().associate { it.code to it.name }
 
         import(
@@ -37,146 +34,141 @@ fun importDeckbox(
                 ?.let { DATE_FORMAT_DECKBOX.parse(it, Instant::from) }
                 ?: Instant.now()
 
-                val count = nextLine["Count"]!!.toInt()
-                val (setCode, setName, isPromo, token, isTheListCard) = editionToSetName(
-                    nextLine["Edition Code"]!!,
-                    nextLine["Edition"]!!,
-                    nextLine["Printing Note"]!!,
-                    nextLine["Name"]!!,
-                    nextLine["Promo"] == "promo",
-                    isTheListCardStoredAsRegularVersionWithArtistProofTag = nextLine["Artist Proof"] == "proof",
-                    knownSets,
+            val count = nextLine["Count"]!!.toInt()
+            val (setCode, setName, isPromo, token, isTheListCard) = editionToSetName(
+                nextLine["Edition Code"]!!,
+                nextLine["Edition"]!!,
+                nextLine["Printing Note"]!!,
+                nextLine["Name"]!!,
+                nextLine["Promo"] == "promo",
+                isTheListCardStoredAsRegularVersionWithArtistProofTag = nextLine["Artist Proof"] == "proof",
+                knownSets,
+            )
+            val printingNote = nextLine["Printing Note"]!!
+
+            val language = nextLine["Language"]!!.parseLanguageDeckbox()
+            val condition = when (nextLine["Condition"]) {
+                "Mint", "Near Mint" -> CardCondition.NEAR_MINT
+                "Good (Lightly Played)" -> CardCondition.EXCELLENT
+                "Played" -> CardCondition.GOOD
+                "Heavily Played" -> CardCondition.PLAYED
+                "Poor" -> CardCondition.POOR
+                else -> CardCondition.UNKNOWN
+            }
+
+            val stampPrereleaseDate = nextLine["Edition"]!!.startsWith("Prerelease Events: ")
+            val foil = when {
+                stampPrereleaseDate -> true
+                nextLine["Foil"] == "foil" -> true
+                else -> false
+            }
+            val purchasePrice = nextLine["My Price"]?.removePrefix("$")?.toDoubleOrNull()?.takeIf { it > 0.0 }
+            val stampPlaneswalkerSymbol = nextLine["Promo"] == "promo"
+            val markPlaneswalkerSymbol = isTheListCard || nextLine["Artist Proof"] == "proof"
+
+            val cardName = nextLine["Name"]!!.removePrefix("Token: ").let {
+                when (it) {
+                    in listOf("Plains", "Island", "Swamp", "Mountain", "Forest", "Command Tower") if setCode == "rex" -> "$it // $it"
+                    "Contortionist" if setCode == "tunf" -> "Contortionist // Contortionist"
+                    "Surgeon ~General~ Commander" -> "Surgeon General Commander"
+                    "Double-Faced Card Placeholder" -> "Double-Faced Substitute Card"
+                    "Checklist" -> {
+                        when (setCode) {
+                            "tsoi" -> when(val number = nextLine["Card Number"]!!) {
+                                "19" -> "Shadows Over Innistrad Checklist 1"
+                                "20" -> "Shadows Over Innistrad Checklist 2"
+                                else -> throw NoSuchElementException("unknown checklist card number $number")
+                            }
+                            "temn" -> "Eldritch Moon Checklist"
+                            "txln" -> "Ixalan Checklist"
+                            "trix" -> "Rivals of Ixalan Checklist"
+                            "tm19" -> "Core Set 2019 Checklist"
+                            else -> throw NoSuchElementException("unknown checklist in set $setCode")
+                        }
+                    }
+                    else -> it
+                }
+            }.let {
+                if (it.startsWith("Emblem: "))
+                    "${it.removePrefix("Emblem: ")} Emblem"
+                else {
+                    it
+                }
+            }
+            val cardNumber = mapSetNumber(nextLine["Card Number"]!!, setName).let {
+                when (cardName) {
+                    "Innistrad Checklist",
+                    "Shadows Over Innistrad Checklist 1",
+                    "Eldritch Moon Checklist",
+                    "Ixalan Checklist",
+                    "Rivals of Ixalan Checklist",
+                    "Core Set 2019 Checklist" -> "CH1"
+                    "Shadows Over Innistrad Checklist 2" -> "CH2"
+                    "War Elephant" if it == "68" -> "11" // FIXME check whether this is true
+                    "Thallid" if it == "87" -> "74a" // FIXME find a more elegant solution to this issue (e.g. for sets with this kind of set numbering, generate a deckbox numbering
+                    "Benthic Explorers" if it == "36" -> "24a"
+                    "Gorilla Shaman" if it == "106" -> "72a"
+                    "Gorilla Shaman" if it == "107" -> "72b"
+                    "Lat-Nam's Legacy" if it == "44" -> "30a"
+                    "Lat-Nam's Legacy" if it == "45" -> "30b"
+                    else if printingNote matches Regex("[a-z]") -> "$it$printingNote"
+                    else if setName == "War of the Spark Japanese Alternate Art" -> "$it★ P"
+                    else -> it
+                }
+            }.let {
+                when(setCode) {
+                    "prwk" -> "A%02d".format(it.toInt())
+                    "prw2" -> "B%02d".format(it.toInt())
+                    else -> it
+                }
+            }
+            val manaCost = nextLine["Cost"]
+            val rarity = nextLine["Rarity"]?.let {
+                when (it) {
+                    "MythicRare" -> Rarity.MYTHIC
+                    "Rare" -> Rarity.RARE
+                    "Uncommon" -> Rarity.UNCOMMON
+                    "Common" -> Rarity.COMMON
+                    else -> null
+                }
+            }
+            if (token && cardName.contains(" // ")) {
+                raise(IntentionallySkippedException("skipping $cardName because it is an Double Sided Token which is not supported"))
+            } else if (cardName.startsWith("Art Card:")) {
+                raise(IntentionallySkippedException("skipping $cardName because it is an Art Card"))
+            } else if (cardName == "Ability Punchcard") {
+                raise(IntentionallySkippedException("skipping $cardName cause Ability Punchcard's are not covered by scryfall"))
+            } else {
+                val card = getCard(
+                    setCode,
+                    setName,
+                    cardNumber,
+                    token,
+                    cardName,
+                    rarity,
+                    manaCost,
+                    promo = isPromo,
                 )
-                val printingNote = nextLine["Printing Note"]!!
+                return@import CardCollectionItem(
+                    quantity = count.toUInt(),
+                    cardCollectionItemId = CardCollectionItemId(
+                        card = card,
+                        foil = foil,
+                        language = language,
+                        condition = condition,
+                        variantType = when {
+                            stampPlaneswalkerSymbol && stampPrereleaseDate -> throw IllegalStateException("Card can't be promopack stamped and prerelease stamped at the same time!")
+                            markPlaneswalkerSymbol -> CardVariant.Type.TheList
+                            stampPlaneswalkerSymbol -> CardVariant.Type.PromopackStamped
+                            stampPrereleaseDate -> CardVariant.Type.PrereleaseStamped
+                            else -> null
+                        },
+                    ),
+                    dateAdded = dateAdded,
+                    purchasePrice = purchasePrice,
+                )
+            }
 
-                val language = nextLine["Language"]!!.parseLanguageDeckbox()
-                val condition = when (nextLine["Condition"]) {
-                    "Mint", "Near Mint" -> CardCondition.NEAR_MINT
-                    "Good (Lightly Played)" -> CardCondition.EXCELLENT
-                    "Played" -> CardCondition.GOOD
-                    "Heavily Played" -> CardCondition.PLAYED
-                    "Poor" -> CardCondition.POOR
-                    else -> CardCondition.UNKNOWN
-                }
-
-                val stampPrereleaseDate = nextLine["Edition"]!!.startsWith("Prerelease Events: ")
-                val foil = when {
-                    stampPrereleaseDate -> true
-                    nextLine["Foil"] == "foil" -> true
-                    else -> false
-                }
-                val purchasePrice = nextLine["My Price"]?.removePrefix("$")?.toDoubleOrNull()?.takeIf { it > 0.0 }
-                val stampPlaneswalkerSymbol = nextLine["Promo"] == "promo"
-                val markPlaneswalkerSymbol = isTheListCard || nextLine["Artist Proof"] == "proof"
-
-                val cardName = nextLine["Name"]!!.removePrefix("Token: ").let {
-                    when (it) {
-                        in listOf("Plains", "Island", "Swamp", "Mountain", "Forest", "Command Tower") if setCode == "rex" -> "$it // $it"
-                        "Contortionist" if setCode == "tunf" -> "Contortionist // Contortionist"
-                        "Surgeon ~General~ Commander" -> "Surgeon General Commander"
-                        "Double-Faced Card Placeholder" -> "Double-Faced Substitute Card"
-                        "Checklist" -> {
-                            when (setCode) {
-                                "tsoi" -> when(val number = nextLine["Card Number"]!!) {
-                                    "19" -> "Shadows Over Innistrad Checklist 1"
-                                    "20" -> "Shadows Over Innistrad Checklist 2"
-                                    else -> throw NoSuchElementException("unknown checklist card number $number")
-                                }
-                                "temn" -> "Eldritch Moon Checklist"
-                                "txln" -> "Ixalan Checklist"
-                                "trix" -> "Rivals of Ixalan Checklist"
-                                "tm19" -> "Core Set 2019 Checklist"
-                                else -> throw NoSuchElementException("unknown checklist in set $setCode")
-                            }
-                        }
-                        else -> it
-                    }
-                }.let {
-                    if (it.startsWith("Emblem: "))
-                        "${it.removePrefix("Emblem: ")} Emblem"
-                    else {
-                        it
-                    }
-                }
-                val cardNumber = mapSetNumber(nextLine["Card Number"]!!, setName).let {
-                    when (cardName) {
-                        "Innistrad Checklist",
-                        "Shadows Over Innistrad Checklist 1",
-                        "Eldritch Moon Checklist",
-                        "Ixalan Checklist",
-                        "Rivals of Ixalan Checklist",
-                        "Core Set 2019 Checklist" -> "CH1"
-                        "Shadows Over Innistrad Checklist 2" -> "CH2"
-                        "War Elephant" if it == "68" -> "11" // FIXME check whether this is true
-                        "Thallid" if it == "87" -> "74a" // FIXME find a more elegant solution to this issue (e.g. for sets with this kind of set numbering, generate a deckbox numbering
-                        "Benthic Explorers" if it == "36" -> "24a"
-                        "Gorilla Shaman" if it == "106" -> "72a"
-                        "Gorilla Shaman" if it == "107" -> "72b"
-                        "Lat-Nam's Legacy" if it == "44" -> "30a"
-                        "Lat-Nam's Legacy" if it == "45" -> "30b"
-                        else if printingNote matches Regex("[a-z]") -> "$it$printingNote"
-                        else if setName == "War of the Spark Japanese Alternate Art" -> "$it★ P"
-                        else -> it
-                    }
-                }.let {
-                    when(setCode) {
-                        "plst" -> {
-                            if (nextLine["Artist Proof"] == "proof") {
-                                "${mapEditionCode(nextLine["Edition Code"]!!).uppercase()}-$it"
-                            } else {
-                                Card.find { Cards.set eq theListSet.id and (Cards.name eq cardName and (Cards.collectorNumber like "$printingNote-%")) }.singleOrNull()?.collectorNumber ?: throw Exception("The List Card $cardName not found")
-                            }
-                        }
-                        "prwk" -> "A%02d".format(it.toInt())
-                        "prw2" -> "B%02d".format(it.toInt())
-                        else -> it
-                    }
-                }
-                val manaCost = nextLine["Cost"]
-                val rarity = nextLine["Rarity"]?.let {
-                    when (it) {
-                        "MythicRare" -> Rarity.MYTHIC
-                        "Rare" -> Rarity.RARE
-                        "Uncommon" -> Rarity.UNCOMMON
-                        "Common" -> Rarity.COMMON
-                        else -> null
-                    }
-                }
-                if (token && cardName.contains(" // ")) {
-                    return@import Either.Right("skipping $cardName because it is an Double Sided Token which is not supported")
-                } else if (cardName.startsWith("Art Card:")) {
-                    return@import Either.Right("skipping $cardName because it is an Art Card")
-                } else if (cardName == "Ability Punchcard") {
-                    return@import Either.Right("skipping $cardName cause Ability Punchcard's are not covered by scryfall")
-                } else {
-                    val card = getCard(
-                        setCode,
-                        setName,
-                        cardNumber,
-                        token,
-                        cardName,
-                        rarity,
-                        manaCost,
-                        promo = isPromo,
-                    )
-                    return@import Either.Left(CardCollectionItem(
-                        quantity = count.toUInt(),
-                        cardCollectionItemId = CardCollectionItemId(
-                            card = card,
-                            foil = foil,
-                            language = language,
-                            condition = condition,
-                            cardVersion = when {
-                                stampPlaneswalkerSymbol && stampPrereleaseDate -> throw IllegalStateException("Card can't be promopack stamped and prerelease stamped at the same time!")
-                                stampPlaneswalkerSymbol -> CardVersion.PromopackStamped
-                                stampPrereleaseDate -> CardVersion.PrereleaseStamped
-                                else -> CardVersion.OG
-                            },
-                        ),
-                        dateAdded = dateAdded,
-                        purchasePrice = purchasePrice,
-                    ))
-                }
         }
     }
 }
@@ -219,7 +211,8 @@ fun editionToSetName(editionCode: String, edition: String, printingNote: String,
     return when(val lowercaseEditionCode = editionCode.lowercase()) {
         "plist" -> {
             val isToken = false
-            val setCode = "plst"
+            val setCode = mapEditionCode(printingNote, isSubstituteCard).takeIf { it in knownSets }
+                ?: throw Exception("The List Card set code $printingNote unknown")
             val setName = knownSets[setCode] ?: throw Exception("The List Card set code $setCode unknown")
 
             MetaInfo(setCode, setName, isPromo, isToken, true, isSubstituteCard, isSetNumberReliable = false)
