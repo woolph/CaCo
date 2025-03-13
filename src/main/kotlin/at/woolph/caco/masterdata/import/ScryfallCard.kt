@@ -235,7 +235,7 @@ data class ScryfallCard(
     }
     val isTheListVersion: Boolean get() = set == "plst"
     val isPromopackStampedVersion: Boolean get() = (promo_types.contains("promopack") && promo_types.contains("stamped") && set !in listOf("ppp1"))
-    val isPrereleaseStampedVersion: Boolean get() = (promo_types.contains("prerelease") && promo_types.contains("datestamped") && set !in listOf("pmh1", "pbng"))
+    val isPrereleaseStampedVersion: Boolean get() = (promo_types.contains("prerelease") && promo_types.contains("datestamped") && set !in listOf("pmh1", "pbng") && !collector_number.contains("★"))
 
     fun isImportWorthy() = layout != "art_series" && !digital && set != "ced"
 

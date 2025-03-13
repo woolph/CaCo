@@ -90,6 +90,8 @@ class ScryfallCardSet(id: EntityID<UUID>) : UUIDEntity(id), Comparable<ScryfallC
             ?: compareSetCodeNullable(code, other.code)
             ?: 0
     }
+
+    override fun toString() = "[$code] $name"
 }
 
 suspend fun URI?.renderSvg2(size: Float): ByteArray? = this@renderSvg2?.toURL()?.let { url ->
