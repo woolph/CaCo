@@ -39,13 +39,26 @@ data class ScryfallSet(
         scryfallCardSet.code = this@ScryfallSet.code
         scryfallCardSet.name = this@ScryfallSet.name
 
-        scryfallCardSet.blockCode = block_code
-        scryfallCardSet.blockName = block
+        scryfallCardSet.blockCode = when {// reassigning blockCode
+            code in setOf("gnt", "gn2", "gn3") -> "gnt"
+            else -> block_code
+        }
+        scryfallCardSet.blockName = when { // reassigning blockName
+            code in setOf("gnt", "gn2", "gn3") -> "Game Night"
+            else -> block
+        }
         scryfallCardSet.digitalOnly = digital
         scryfallCardSet.cardCount = card_count
         scryfallCardSet.printedSize = printed_size
         scryfallCardSet.type = set_type
-        scryfallCardSet.parentSetCode = parent_set_code
+        scryfallCardSet.parentSetCode = when { // reassigning parent_set_codes
+            code == "gk1" -> "grn"
+            code == "gk2" -> "rna"
+            code == "pltc" -> "ltc"
+            code == "h1r" -> "mh1"
+            code == "h2r" -> "mh2"
+            else -> parent_set_code
+        }
         scryfallCardSet.releaseDate = this@ScryfallSet.released_at
         scryfallCardSet.icon = this@ScryfallSet.icon_svg_uri
     }

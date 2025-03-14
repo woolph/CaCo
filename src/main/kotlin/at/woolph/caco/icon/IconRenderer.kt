@@ -15,6 +15,7 @@ import org.apache.batik.transcoder.TranscoderInput
 import org.apache.batik.transcoder.TranscoderOutput
 import org.apache.batik.transcoder.image.ImageTranscoder
 import org.apache.batik.transcoder.image.PNGTranscoder
+import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.net.URI
@@ -39,13 +40,18 @@ class IconRenderer(
 
       return@withContext ByteArrayOutputStream().also {
         it.use {
-          transcoder.transcode(TranscoderInput(ByteArrayInputStream(svgMod(byteArray))), TranscoderOutput(it))
+          try {
+            transcoder.transcode(TranscoderInput(ByteArrayInputStream(svgMod(byteArray))), TranscoderOutput(it))
+          } catch (e: Exception) {
+            raise(Exception("couldn't transcode image ${uri}", e))
+          }
         }
       }.toByteArray()
     }
   }
 
   companion object {
+    val log = LoggerFactory.getLogger(this::class.java.declaringClass)
     fun gradientModded(cacheIdSuffix: String, strokeColor: String, color1: String, color2: String) = IconRenderer(cacheIdSuffix = cacheIdSuffix, svgMod = {
       String(it).replace("<path ", "<defs>\n" +
           "    <linearGradient id=\"uncommon-gradient\" x2=\"0.35\" y2=\"1\">\n" +
@@ -66,7 +72,9 @@ val uncommonBinderLabelIconRenderer = IconRenderer.Companion.gradientModded("-un
 val commonBinderLabelIconRenderer = IconRenderer(cacheIdSuffix = "-common")
 
 suspend fun IconRenderer.cachedImage(cacheId: String, uri: URI): ByteArray? =
-  ImageCache.getImageByteArray("$cacheId${cacheIdSuffix}") { renderSvg(uri).getOrNull() }
+  ImageCache.getImageByteArray("$cacheId${cacheIdSuffix}") { renderSvg(uri)
+    .onLeft { IconRenderer.log.error("couldn't get icon for $uri", it) }
+    .getOrNull() }
 
 fun lazyIcon(cacheId: String, nullableUri: URI?, iconRenderer: IconRenderer): Lazy<ByteArray?> =
   nullableUri?.let { uri -> lazy { runBlocking { iconRenderer.cachedImage(cacheId, uri) } } } ?: lazyOf(null)
@@ -75,7 +83,9 @@ fun lazySetIcon(setCode: String, iconRenderer: IconRenderer): Lazy<ByteArray?> =
   lazyIcon("set-code-$setCode", URI("https://svgs.scryfall.io/sets/$setCode.svg"), iconRenderer)
 
 suspend fun IconRenderer.cachedImage(set: ScryfallCardSet): ByteArray? = set.icon?.let {
-  ImageCache.getImageByteArray("set-icon-${set.code}${cacheIdSuffix}") { renderSvg(it).getOrNull() }
+  ImageCache.getImageByteArray("set-icon-${set.code}${cacheIdSuffix}") { renderSvg(it)
+    .onLeft { IconRenderer.log.error("couldn't get icon for $set", it) }
+    .getOrNull() }
 }
 
 fun ScryfallCardSet?.lazySetIcon(iconRenderer: IconRenderer): Lazy<ByteArray?> =

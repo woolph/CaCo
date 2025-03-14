@@ -2,7 +2,9 @@ package at.woolph.caco.cli
 
 import at.woolph.caco.binderlabels.*
 import at.woolph.caco.datamodel.Databases
+import at.woolph.caco.datamodel.sets.MultiSetBlock
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
+import at.woolph.caco.datamodel.sets.SingleSetBlock
 import at.woolph.caco.icon.lazySetIcon
 import at.woolph.caco.icon.mythicBinderLabelIconRenderer
 import at.woolph.libs.pdf.*
@@ -51,8 +53,10 @@ interface MultipleSymbolCollectionDivider: CollectionDivider {
     val icons: List<ByteArray>
 }
 
-open class BlockCollectionDivider(override val title: String, vararg codes: String): MultipleSymbolCollectionDivider {
-    private val sets = fetchCardSets(*codes)
+open class BlockCollectionDivider(override val title: String, codes: Iterable<String>): MultipleSymbolCollectionDivider {
+    constructor(title: String, vararg codes: String): this(title, codes.asIterable())
+
+    private val sets = fetchCardSets(codes)
 //    override val title: String = "Block"
     override val icons: List<ByteArray> by lazy { sets.mapNotNull { it.lazySetIcon(mythicBinderLabelIconRenderer).value } }
 }
@@ -62,150 +66,22 @@ class PileSeparators {
         Databases.init()
 
         transaction {
+            val blockNameBlacklist = listOf(
+                "Commander",
+                "Core Set",
+                "Heroes ofthe Realm",
+                "Judge Gift Cards",
+                "Friday Night Magic",
+                "Magic Player Rewards",
+                "Arena League",
+            )
+            val separators = ScryfallCardSet.allGroupedByBlocks().map {
+                when(it) {
+                    is SingleSetBlock -> SimpleSetCollectionDivider(it.set.code)
+                    is MultiSetBlock -> BlockCollectionDivider(it.blockName, it.sets.map { it.code })
+                }
+            }
             createPdfDocument {
-                val separators: List<CollectionDivider> = listOf(
-//                    PromosCollectionDivider,
-//                    SimpleSetCollectionDivider("neo"),
-//                    SimpleSetCollectionDivider("mkm"),
-//                    SimpleSetCollectionDivider("m21"),
-//                    SimpleSetCollectionDivider("dom"),
-//                    SimpleSetCollectionDivider("m20"),
-//                    SimpleSetCollectionDivider("m19"),
-//                    SimpleSetCollectionDivider("rna"),
-//                    SimpleSetCollectionDivider("grn"),
-//                    SimpleSetCollectionDivider("war"),
-//                    SimpleSetCollectionDivider("arn"),
-//                    SimpleSetCollectionDivider("atq"),
-//                    SimpleSetCollectionDivider("leg"),
-//                    SimpleSetCollectionDivider("drk"),
-//                    SimpleSetCollectionDivider("fem"),
-//                    BlockCollectionDivider("Ice Age Block", "ice", "all", "hml", "csp"),
-//                    BlockCollectionDivider("Mirage Block", "mir", "vis", "wth"),
-//                    BlockCollectionDivider("Tempest Block", "tmp", "sth", "exo"),
-//                    BlockCollectionDivider("Odyssey Block", "ody", "tor", "jud"),
-//                    BlockCollectionDivider("Onslaught Block", "ons", "lgn", "scg"),
-//                    BlockCollectionDivider("Mirrodin Block", "mrd", "dst", "5dn"),
-//                    BlockCollectionDivider("Kamigawa Block", "chk", "bok", "sok"),
-//                    BlockCollectionDivider("Ravnica Block", "rav", "gpt", "dis"),
-//                    BlockCollectionDivider("Time Spiral Block", "tsp", "plc", "fut"),
-//                    BlockCollectionDivider("Lorwyn Block", "lrw", "mor"),
-//                    BlockCollectionDivider("Shadowmoor Block", "shm", "eve"),
-//                    BlockCollectionDivider("Alara Block", "ala", "con", "arb"),
-//                    BlockCollectionDivider("Zendikar Block", "zen", "wwk", "roe"),
-//                    BlockCollectionDivider("Scars of Mirrodin Block", "som", "mbs", "nph"),
-//                    BlockCollectionDivider("Innistrad Block", "isd", "dka", "avr"),
-//                    BlockCollectionDivider("Return to Ravnica Block", "rtr", "gtc", "dgm"),
-//                    BlockCollectionDivider("Theros Block", "ths", "bng", "jou"),
-//                    BlockCollectionDivider("Khans of Tarkir Block", "ktk", "frf", "dtk"),
-//                    BlockCollectionDivider("Battle for Zendikar Tarkir Block", "bfz", "ogw"),
-//
-//                    // Commander sets
-//                    SimpleSetCollectionDivider("cmd"),
-//                    SimpleSetCollectionDivider("cm1"),
-//                    SimpleSetCollectionDivider("c13"),
-//                    SimpleSetCollectionDivider("c14"),
-//                    SimpleSetCollectionDivider("c15"),
-//                    SimpleSetCollectionDivider("c16"),
-//                    SimpleSetCollectionDivider("cma"),
-//                    SimpleSetCollectionDivider("c17"),
-//
-//                    // Core sets
-//                    SimpleSetCollectionDivider("lea"),
-//                    SimpleSetCollectionDivider("leb"),
-//                    SimpleSetCollectionDivider("2ed"),
-//                    SimpleSetCollectionDivider("3ed"),
-//                    SimpleSetCollectionDivider("4ed"),
-//                    SimpleSetCollectionDivider("5ed"),
-//                    SimpleSetCollectionDivider("6ed"),
-//                    SimpleSetCollectionDivider("8ed"),
-//                    SimpleSetCollectionDivider("9ed"),
-//                    SimpleSetCollectionDivider("10e"),
-//                    SimpleSetCollectionDivider("m10"),
-//                    SimpleSetCollectionDivider("m11"),
-//                    SimpleSetCollectionDivider("m12"),
-//                    SimpleSetCollectionDivider("m13"),
-//                    SimpleSetCollectionDivider("m14"),
-//                    SimpleSetCollectionDivider("m15"),
-//                    SimpleSetCollectionDivider("ori"),
-//
-//                    // Masters sets
-//                    SimpleSetCollectionDivider("mma"),
-//                    SimpleSetCollectionDivider("mm2"),
-//                    SimpleSetCollectionDivider("ema"),
-//                    SimpleSetCollectionDivider("mm3"),
-//                    SimpleSetCollectionDivider("ima"),
-//                    SimpleSetCollectionDivider("2xm"),
-//                    SimpleSetCollectionDivider("2x2"),
-//
-//
-
-                    // missing
-                    SimpleSetCollectionDivider("c18"),
-                    SimpleSetCollectionDivider("c19"),
-                    SimpleSetCollectionDivider("c20"),
-                    SimpleSetCollectionDivider("c21"),
-                    SimpleSetCollectionDivider("cmm"),
-                    SimpleSetCollectionDivider("scd"),
-
-                    SimpleSetCollectionDivider("uma"),
-
-                    SimpleSetCollectionDivider("7ed"),
-                    SimpleSetCollectionDivider("m19"),
-                    SimpleSetCollectionDivider("m20"),
-                    SimpleSetCollectionDivider("m21"),
-
-                    BlockCollectionDivider("Urza's Block", "usg", "ulg", "uds"),
-                    BlockCollectionDivider("Masques Block", "mmq", "nem", "pcy"),
-                    BlockCollectionDivider("Invasion Block", "inv", "pls", "apc"),
-                    BlockCollectionDivider("Shadows over Innistrad Block", "soi", "emn"),
-                    BlockCollectionDivider("Kaladesh Block", "kld", "aer"),
-                    BlockCollectionDivider("Amonketh Block", "akh", "hou"),
-                    BlockCollectionDivider("Ixalan Block", "xln", "rix"),
-
-                    SimpleSetCollectionDivider("dom"),
-                    SimpleSetCollectionDivider("dft"),
-                    SimpleSetCollectionDivider("drc"),
-                    SimpleSetCollectionDivider("drc"),
-                    SimpleSetCollectionDivider("inr"),
-                    SimpleSetCollectionDivider("dmr"),
-                    SimpleSetCollectionDivider("tsr"),
-                    SimpleSetCollectionDivider("tdm"),
-                    SimpleSetCollectionDivider("fdn"),
-                    SimpleSetCollectionDivider("dsk"),
-                    SimpleSetCollectionDivider("dsc"),
-                    SimpleSetCollectionDivider("blb"),
-                    SimpleSetCollectionDivider("blc"),
-                    SimpleSetCollectionDivider("acr"),
-                    SimpleSetCollectionDivider("pip"),
-                    SimpleSetCollectionDivider("who"),
-                    SimpleSetCollectionDivider("ltr"),
-                    SimpleSetCollectionDivider("ltc"),
-                    SimpleSetCollectionDivider("mh3"),
-                    SimpleSetCollectionDivider("otj"),
-                    SimpleSetCollectionDivider("otc"),
-                    SimpleSetCollectionDivider("mkm"),
-                    SimpleSetCollectionDivider("mkc"),
-                    SimpleSetCollectionDivider("rvr"),
-                    SimpleSetCollectionDivider("lci"),
-                    SimpleSetCollectionDivider("lcc"),
-                    SimpleSetCollectionDivider("woe"),
-                    SimpleSetCollectionDivider("woc"),
-                    SimpleSetCollectionDivider("mom"),
-                    SimpleSetCollectionDivider("moc"),
-                    SimpleSetCollectionDivider("one"),
-                    SimpleSetCollectionDivider("onc"),
-                    SimpleSetCollectionDivider("bro"),
-                    SimpleSetCollectionDivider("brc"),
-                    SimpleSetCollectionDivider("unf"),
-                    SimpleSetCollectionDivider("dmu"),
-                    SimpleSetCollectionDivider("dmc"),
-                    SimpleSetCollectionDivider("clb"),
-                    SimpleSetCollectionDivider("snc"),
-                    SimpleSetCollectionDivider("ncc"),
-                    SimpleSetCollectionDivider("neo"),
-                    SimpleSetCollectionDivider("nec"),
-                )
-
                 val fontColor = Color.BLACK
                 val fontFamilyPlanewalker = loadType0Font(javaClass.getResourceAsStream("/fonts/PlanewalkerBold-xZj5.ttf")!!)
                 val fontFamily72Black = PDType0Font.load(this.document, javaClass.getResourceAsStream("/fonts/72-Black.ttf"))
