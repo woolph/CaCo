@@ -1,17 +1,16 @@
 package at.woolph.caco.command
 
 import at.woolph.caco.decks.DeckboxDeckImporter
-import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.command.SuspendingCliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.prompt
-import kotlinx.coroutines.runBlocking
 
-class ImportDecklists: CliktCommand(name = "deckbox-decks") {
-    val username by option(help="Deckbox username").prompt("Enter the username of the deckbox user")
+class ImportDecklists : SuspendingCliktCommand(name = "deckbox-decks") {
+  val username by option(help = "Deckbox username").prompt("Enter the username of the deckbox user")
 
-    override fun run() = runBlocking<Unit> {
-      DeckboxDeckImporter().importDeckboxDecks(username).collect {
-        // TODO into database
-      }
+  override suspend fun run() {
+    DeckboxDeckImporter().importDeckboxDecks(username).collect {
+      // TODO into database
     }
+  }
 }

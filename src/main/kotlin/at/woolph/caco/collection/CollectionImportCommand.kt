@@ -1,6 +1,8 @@
 package at.woolph.caco.collection
 
-import com.github.ajalt.clikt.core.CliktCommand
+import arrow.core.raise.Raise
+import at.woolph.caco.cli.RaiseCliktCommand
+import com.github.ajalt.clikt.core.UsageError
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.default
 import com.github.ajalt.clikt.parameters.options.convert
@@ -9,6 +11,8 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.boolean
 import com.github.ajalt.clikt.parameters.types.enum
 import com.github.ajalt.clikt.parameters.types.path
+import org.slf4j.LoggerFactory
+import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.nio.file.attribute.BasicFileAttributes
 import java.time.Instant
@@ -20,7 +24,9 @@ import kotlin.io.path.isDirectory
 import kotlin.io.path.readAttributes
 import kotlin.io.path.useDirectoryEntries
 
-class CollectionImportCommand : CliktCommand(name = "import") {
+class NoFileFoundError(val location: Path, message: String? = null, paramName: String? = null): UsageError(message, paramName, 2)
+
+class CollectionImportCommand : RaiseCliktCommand<NoFileFoundError>(name = "import", log = LoggerFactory.getLogger(CollectionImportCommand::class.java)) {
   val format by option(help = "The format of import file")
     .enum<CollectionFileFormat>()
     .default(CollectionFileFormat.ARCHIDEKT)
@@ -35,35 +41,29 @@ class CollectionImportCommand : CliktCommand(name = "import") {
     )
   )
 
-  override fun run() {
+  /** make configurable */
+  val deckboxGlobPattern = "glob:**/Inventory*.csv"
+  val archidektGlobPattern = "glob:**/archidekt-collection-export-*.csv"
+
+  override suspend fun Raise<NoFileFoundError>.run() {
     val afterPredicate = after?.let { Predicate<Instant> { toBeTestedInstant -> toBeTestedInstant.isAfter(it) }}
     val beforePredicate = before?.let { Predicate<Instant> { toBeTestedInstant -> toBeTestedInstant.isBefore(it) }}
     val datePredicate: Predicate<Instant> = sequenceOf(afterPredicate, beforePredicate).filterNotNull().fold(Predicate { true }) { acc, predicate -> acc.and(predicate) }
     when (format) {
-      CollectionFileFormat.DECKBOX -> importDeckbox(getDeckboxImportFile(file), datePredicate = datePredicate, clearBeforeImport = clearBeforeImport)
-      CollectionFileFormat.ARCHIDEKT -> importArchidekt(getArchidektImportFile(file), datePredicate = datePredicate, clearBeforeImport = clearBeforeImport)
+      CollectionFileFormat.DECKBOX -> importDeckbox(getImportFile(file, deckboxGlobPattern), datePredicate = datePredicate, clearBeforeImport = clearBeforeImport)
+      CollectionFileFormat.ARCHIDEKT -> importArchidekt(getImportFile(file, archidektGlobPattern), datePredicate = datePredicate, clearBeforeImport = clearBeforeImport)
     }
   }
 
-  fun getDeckboxImportFile(file: Path): Path =
+  private fun Raise<NoFileFoundError>.getImportFile(file: Path, globPattern: String): Path =
     if (file.isDirectory()) {
+      val pathMatcher = FileSystems.getDefault().getPathMatcher(globPattern)
       file.useDirectoryEntries { entries ->
-        entries.filter { it.fileName.toString().let { it.startsWith("Inventory") && it.endsWith(".csv") } }
+        entries.filter(pathMatcher::matches)
           .maxByOrNull { it.readAttributes<BasicFileAttributes>().lastModifiedTime() }
-          ?: throw IllegalArgumentException("No Deckbox import file found in directory $file")
-      }
-    } else {
-      file
-    }
-
-  fun getArchidektImportFile(file: Path): Path =
-    if (file.isDirectory()) {
-      file.useDirectoryEntries { entries ->
-        entries.filter {
-          it.fileName.toString().let { it.startsWith("archidekt-collection-export-") && it.endsWith(".csv") }
-        }
-          .maxByOrNull { it.readAttributes<BasicFileAttributes>().lastModifiedTime() }
-          ?: throw IllegalArgumentException("No Archidekt import file found in directory $file")
+          ?: raise(NoFileFoundError(file, "The given file \"$file\" is a directory, therefore it should contain a file matching the pattern \"$globPattern\", but no matching file was found (the given file may also be the file to be imported!).", "file").also {
+            it.context = this@CollectionImportCommand.currentContext
+          })
       }
     } else {
       file

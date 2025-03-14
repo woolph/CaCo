@@ -1,9 +1,9 @@
 package at.woolph.caco.datamodel.collection
 
-import at.woolph.caco.datamodel.collection.CardLanguage.*
 
 enum class CardCondition {
     UNKNOWN, NEAR_MINT, EXCELLENT, GOOD, PLAYED, POOR;
+
     override fun toString() = when(this) {
         NEAR_MINT -> "NM"
         EXCELLENT -> "EX"
@@ -22,5 +22,10 @@ enum class CardCondition {
             "PR" -> POOR
             else -> UNKNOWN
         }
+    }
+
+    fun isBetterThanOrEqual(other: CardCondition) = when {
+        this == UNKNOWN && other != UNKNOWN -> false
+        else -> ordinal <= other.ordinal
     }
 }
