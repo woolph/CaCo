@@ -2,7 +2,6 @@ package at.woolph.caco.gui.view.collection
 
 import at.woolph.caco.datamodel.sets.Rarity
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
-import at.woolph.caco.datamodel.sets.loadSetLogo
 import at.woolph.caco.masterdata.import.importCardsOfSet
 import at.woolph.caco.masterdata.import.importSet
 import at.woolph.caco.masterdata.import.importSets
@@ -266,14 +265,7 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : Coro
                             vGrow = Priority.ALWAYS
                         }
                         cellFormat {
-                            graphicProperty().bind(
-                                item.icon.map {
-                                    imageViewDelayed(coroutineScope, 24, 24) {
-                                        it.loadSetLogo(48f)
-                                    }
-                                }
-                            )
-
+                            graphic = imageViewDelayed(coroutineScope, 24, 24) { item?.getSetIconAsImage() }
                             textProperty().bind(item.name)
                         }
                         setProperty.bind(selectionModel.selectedItemProperty())

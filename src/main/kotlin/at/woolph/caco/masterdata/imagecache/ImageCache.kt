@@ -3,7 +3,6 @@ package at.woolph.caco.masterdata.imagecache
 import javafx.scene.image.Image
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import tornadofx.toProperty
 import java.io.ByteArrayInputStream
 import java.util.UUID
 import kotlin.io.path.*
@@ -14,7 +13,7 @@ object ImageCache {
     init {
         folder.createDirectories()
     }
-    suspend fun getImageByteArray(id: String, imageLoader: () -> ByteArray?): ByteArray? =
+    suspend fun getImageByteArray(id: String, imageLoader: suspend () -> ByteArray?): ByteArray? =
         withContext(Dispatchers.IO) {
             val cachedFile = folder.resolve(UUID.nameUUIDFromBytes(id.toByteArray()).toString())
             if (cachedFile.exists()) {
@@ -28,10 +27,10 @@ object ImageCache {
             }
         }
 
-    suspend fun getImage(id: String, imageLoader: () -> ByteArray?): Image? =
+    suspend fun getImage(id: String, imageLoader: suspend () -> ByteArray?): Image? =
         getImageByteArray(id, imageLoader)?.let { Image(ByteArrayInputStream(it)) }
 
-    suspend fun cacheImage(id: String, imageLoader: () -> ByteArray?) {
+    suspend fun cacheImage(id: String, imageLoader: suspend () -> ByteArray?) {
         getImageByteArray(id, imageLoader)
     }
 }

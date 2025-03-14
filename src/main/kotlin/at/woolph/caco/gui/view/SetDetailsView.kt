@@ -1,14 +1,11 @@
 package at.woolph.caco.gui.view
 
-import at.woolph.caco.datamodel.sets.renderSvg
 import at.woolph.caco.gui.Styles
-import at.woolph.caco.masterdata.imagecache.ImageCache
 import at.woolph.caco.gui.view.collection.CardSetModel
 import at.woolph.libs.ktfx.*
 import javafx.beans.property.SimpleObjectProperty
 import javafx.scene.control.Label
 import javafx.scene.control.ProgressIndicator
-import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import javafx.scene.paint.Color
 import javafx.scene.shape.Shape
@@ -88,7 +85,7 @@ class SetDetailsView(val setProperty: SimpleObjectProperty<CardSetModel?> = Simp
 				.collectLatest { set ->
 					imageLoadingProgressIndicatorBackground.isVisible = true
 					imageLoadingProgressIndicator.isVisible = true
-					imageView.image = set?.getCachedImage()
+					imageView.image = set?.getSetIconAsImage()
 					imageLoadingProgressIndicator.isVisible = false
 					imageLoadingProgressIndicatorBackground.isVisible = false
 				}
@@ -96,5 +93,3 @@ class SetDetailsView(val setProperty: SimpleObjectProperty<CardSetModel?> = Simp
 	}
 }
 
-suspend fun CardSetModel.getCachedImage(): Image? =
-	ImageCache.getImage(this.icon.value.toString()) { this.icon.value.renderSvg(48.0f) }

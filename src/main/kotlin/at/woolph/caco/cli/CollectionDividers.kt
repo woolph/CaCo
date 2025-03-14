@@ -3,12 +3,13 @@ package at.woolph.caco.cli
 import at.woolph.caco.binderlabels.*
 import at.woolph.caco.datamodel.Databases
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
+import at.woolph.caco.icon.lazySetIcon
+import at.woolph.caco.icon.mythicBinderLabelIconRenderer
 import at.woolph.libs.pdf.*
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.font.PDType0Font
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.awt.Color
-import java.net.URI
 import java.nio.file.Path
 
 
@@ -25,7 +26,7 @@ interface OneSymbolCollectionDivider: CollectionDivider {
 object PromosCollectionDivider: OneSymbolCollectionDivider {
     override val code: String = "PRM"
     override val title: String = "Promos & Specials"
-    override val icon: ByteArray? by lazy { URI("https://c2.scryfall.com/file/scryfall-symbols/sets/star.svg?1624852800").renderSvgAsMythic() }
+    override val icon by lazySetIcon("star", mythicBinderLabelIconRenderer)
 }
 
 object BlankCollectionDivider: OneSymbolCollectionDivider {
@@ -35,7 +36,7 @@ object BlankCollectionDivider: OneSymbolCollectionDivider {
 }
 
 open class GenericCollectionDivider(override val code: String, override val title: String): OneSymbolCollectionDivider {
-    override val icon: ByteArray? by lazy { URI("https://c2.scryfall.com/file/scryfall-symbols/sets/default.svg?1647835200").renderSvgAsMythic() }
+    override val icon by lazySetIcon("default", mythicBinderLabelIconRenderer)
 }
 
 open class SimpleSetCollectionDivider(override val code: String): OneSymbolCollectionDivider {
@@ -43,7 +44,7 @@ open class SimpleSetCollectionDivider(override val code: String): OneSymbolColle
         ScryfallCardSet.findByCode(code) ?: throw IllegalArgumentException("no set with code $code found")
     }
     override val title: String get() = set.name
-    override val icon: ByteArray? by lazy { set.icon.renderSvgAsMythic() }
+    override val icon by set.lazySetIcon(mythicBinderLabelIconRenderer)
 }
 
 interface MultipleSymbolCollectionDivider: CollectionDivider {
@@ -53,7 +54,7 @@ interface MultipleSymbolCollectionDivider: CollectionDivider {
 open class BlockCollectionDivider(override val title: String, vararg codes: String): MultipleSymbolCollectionDivider {
     private val sets = fetchCardSets(*codes)
 //    override val title: String = "Block"
-    override val icons: List<ByteArray> by lazy { sets.mapNotNull { it.icon.renderSvgAsMythic() } }
+    override val icons: List<ByteArray> by lazy { sets.mapNotNull { it.lazySetIcon(mythicBinderLabelIconRenderer).value } }
 }
 
 class PileSeparators {

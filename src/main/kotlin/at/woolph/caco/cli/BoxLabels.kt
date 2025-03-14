@@ -2,6 +2,10 @@ package at.woolph.caco.cli
 
 import at.woolph.caco.binderlabels.*
 import at.woolph.caco.datamodel.Databases
+import at.woolph.caco.icon.commonBinderLabelIconRenderer
+import at.woolph.caco.icon.lazyIcon
+import at.woolph.caco.icon.lazySetIcon
+import at.woolph.caco.icon.mythicBinderLabelIconRenderer
 import at.woolph.libs.pdf.*
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -20,7 +24,7 @@ interface OneSymbolBoxLabel: BoxLabel {
 
 object PromosBoxLabel: OneSymbolBoxLabel {
     override val title: String = "Promos"
-    override val icon: ByteArray? by lazy { URI("https://c2.scryfall.com/file/scryfall-symbols/sets/star.svg?1624852800").renderSvgAsMythic() }
+    override val icon by lazySetIcon("star", mythicBinderLabelIconRenderer)
 }
 
 object BlankBoxLabel: BoxLabel {
@@ -28,73 +32,56 @@ object BlankBoxLabel: BoxLabel {
 }
 
 open class GenericBoxLabel(override val title: String): OneSymbolBoxLabel {
-    override val icon: ByteArray? by lazy { URI("https://c2.scryfall.com/file/scryfall-symbols/sets/default.svg?1647835200").renderSvgAsMythic() }
+    override val icon by lazySetIcon("default", mythicBinderLabelIconRenderer)
 }
 
 object CommanderStapelsBoxLabel: OneSymbolBoxLabel {
     override val title: String = "CMD Staples"
-    override val icon: ByteArray? by lazy { URI("https://c2.scryfall.com/file/scryfall-symbols/sets/cmd.svg?1647835200").renderSvgAsMythic() }
+    override val icon by lazySetIcon("cmd", mythicBinderLabelIconRenderer)
 }
 
-object PlainsBoxLabel: OneSymbolBoxLabel {
-    override val title = "Plains"
-    override val icon: ByteArray? by lazy { URI("https://svgs.scryfall.io/card-symbols/W.svg").renderSvg() }
+open class CardSymbolBoxLabel(override val title: String, symbolId: String): OneSymbolBoxLabel {
+    override val icon by lazyIcon(
+        "card-symbol-$symbolId",
+        URI("https://svgs.scryfall.io/card-symbols/$symbolId.svg"),
+        commonBinderLabelIconRenderer
+    )
 }
-
-object IslandBoxLabel: OneSymbolBoxLabel {
-    override val title = "Island"
-    override val icon: ByteArray? by lazy { URI("https://svgs.scryfall.io/card-symbols/U.svg").renderSvg() }
+object PlainsBoxLabel: CardSymbolBoxLabel("Plains", "W")
+object IslandBoxLabel: CardSymbolBoxLabel("Island", "U")
+object SwampBoxLabel: CardSymbolBoxLabel("Swamp", "B")
+object MountainBoxLabel: CardSymbolBoxLabel("Mountain", "R")
+object ForestBoxLabel: CardSymbolBoxLabel("Forest", "G")
+object WastesBoxLabel: CardSymbolBoxLabel("Wastes", "C")
+object SnowCoveredBasicsBoxLabel: CardSymbolBoxLabel("Snow Basics", "S")
+object SnowCoveredBasicsAndWastes: CardSymbolBoxLabel("Snow Basics", "S") {
+    override val subtitle = "and Wastes"
 }
-
-object SwampBoxLabel: OneSymbolBoxLabel {
-    override val title = "Swamp"
-    override val icon: ByteArray? by lazy { URI("https://svgs.scryfall.io/card-symbols/B.svg").renderSvg() }
-}
-
-object MountainBoxLabel: OneSymbolBoxLabel {
-    override val title = "Mountain"
-    override val icon: ByteArray? by lazy { URI("https://svgs.scryfall.io/card-symbols/R.svg").renderSvg() }
-}
-
-object ForestBoxLabel: OneSymbolBoxLabel {
-    override val title = "Forest"
-    override val icon: ByteArray? by lazy { URI("https://svgs.scryfall.io/card-symbols/G.svg").renderSvg() }
-}
-
-class PlanechaseBoxLabel(index: Int): OneSymbolBoxLabel {
-    override val title = "Planechase $index"
-    override val icon: ByteArray? by lazy { URI("https://svgs.scryfall.io/card-symbols/CHAOS.svg").renderSvg() }
-}
+class PlanechaseBoxLabel(index: Int): CardSymbolBoxLabel("Planechase $index", "CHAOS")
 
 interface DualSymbolBoxLabel: BoxLabel {
     val icon: ByteArray?
     val icon2: ByteArray?
 }
 
-object SnowCoveredBasicsAndWastes: OneSymbolBoxLabel {
-    override val title = "Snow Basics"
-    override val subtitle = "and Wastes"
-    override val icon: ByteArray? by lazy { URI("https://svgs.scryfall.io/card-symbols/S.svg").renderSvg() }
-}
-
 class AwaitingCatalogizationBoxLabel(index: Int? = null, override val subtitle: String? = null): OneSymbolBoxLabel {
     override val title = "Catalogize ${index ?: ""}"
-    override val icon: ByteArray? by lazy { URI("https://svgs.scryfall.io/sets/wth.svg").renderSvgAsMythic() }
+    override val icon by lazySetIcon("wth", mythicBinderLabelIconRenderer)
 }
 
 class ArtSeriesLabel(index: Int? = null, override val subtitle: String? = null): OneSymbolBoxLabel {
     override val title = "Art Series ${index ?: ""}"
-    override val icon: ByteArray? by lazy { URI("https://svgs.scryfall.io/sets/pbook.svg").renderSvgAsMythic() }
+    override val icon by lazySetIcon("pbook", mythicBinderLabelIconRenderer)
 }
 
 class ReturnToCollectionBoxLabel(override val subtitle: String? = "Returning Destructed Decks"): OneSymbolBoxLabel {
     override val title = "To Be Filed"
-    override val icon: ByteArray? by lazy { URI("https://svgs.scryfall.io/sets/ath.svg").renderSvgAsMythic() }
+    override val icon by lazySetIcon("ath", mythicBinderLabelIconRenderer)
 }
 
 class AwaitingCollectionBoxLabel(index: Int, override val subtitle: String? = null): OneSymbolBoxLabel {
     override val title = "To Be Filed $index"
-    override val icon: ByteArray? by lazy { URI("https://svgs.scryfall.io/sets/ath.svg").renderSvgAsMythic() }
+    override val icon by lazySetIcon("ath", mythicBinderLabelIconRenderer)
 }
 
 interface MultipleSymbolBoxLabel: BoxLabel {
@@ -106,7 +93,7 @@ class CollectionBoxLabel(override val subtitle: String? = null, vararg codes: St
     private val sets = fetchCardSetsNullable(*codes)
     override val rows: Int = 3
     override val title: String = "COL"
-    override val icons: List<ByteArray?> by lazy { sets.map { it?.icon?.renderSvgAsMythic() } }
+    override val icons: List<ByteArray?> by lazy { sets.map { it.lazySetIcon(mythicBinderLabelIconRenderer).value } }
 }
 
 open class SubtitledDuplicateBoxLabel(override val subtitle: String? = null, vararg codes: String?): MultipleSymbolBoxLabel {
@@ -118,17 +105,17 @@ open class SubtitledDuplicateBoxLabel(override val subtitle: String? = null, var
     }
 
     override val title: String = "DUP"
-    override val icons: List<ByteArray> by lazy { sets.mapNotNull { it?.icon.renderSvgAsMythic() } }
+    override val icons: List<ByteArray> by lazy { sets.mapNotNull { it.lazySetIcon(mythicBinderLabelIconRenderer).value } }
 }
+
+fun <T,R> Lazy<T>.map(transform: (T) -> R): Lazy<R> = lazy { transform(value) }
 
 class DuplicateBoxLabel(vararg codes: String?): SubtitledDuplicateBoxLabel(null, *codes)
 
 object PromoBoxLabel: MultipleSymbolBoxLabel {
     override val rows: Int = 1
     override val title: String = "DUP"
-    override val icons: List<ByteArray> by lazy { listOf(
-        URI("https://c2.scryfall.com/file/scryfall-symbols/sets/star.svg?1624852800").renderSvgAsMythic()!!
-    ) }
+    override val icons: List<ByteArray> by lazySetIcon("star", mythicBinderLabelIconRenderer).map { listOfNotNull(it) }
 }
 
 class BoxLabels {
@@ -338,7 +325,7 @@ fun main() {
         DuplicateBoxLabel("mh1", "mh2", "mh3"),
         object: GenericBoxLabel("Deck Building") {
             override val subtitle: String = "Commander"
-            override val icon: ByteArray? by lazy { URI("https://c2.scryfall.com/file/scryfall-symbols/sets/cmd.svg?1647835200").renderSvgAsMythic() }
+            override val icon by lazySetIcon("cmd", mythicBinderLabelIconRenderer)
         },
         object: GenericBoxLabel("Deck Building") {
             override val subtitle: String = "Pioneer & Pauper"

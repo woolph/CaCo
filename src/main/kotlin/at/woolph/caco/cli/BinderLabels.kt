@@ -2,20 +2,21 @@ package at.woolph.caco.cli
 
 import at.woolph.caco.binderlabels.*
 import at.woolph.caco.datamodel.Databases
+import at.woolph.caco.icon.lazySetIcon
+import at.woolph.caco.icon.mythicBinderLabelIconRenderer
 import at.woolph.libs.pdf.*
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.awt.Color
-import java.net.URI
 import java.nio.file.Path
 
 class BinderLabels(
 ) {
   fun printLabel(file: Path, labels: List<MapLabelItem>, labelsPerPage: Int) {
     createPdfDocument(file) {
-      val fontColor = if (darkLabels) Color.WHITE else Color.BLACK
-      val fontSubColor = if (darkLabels) Color.LIGHT_GRAY else Color.GRAY
-      val backgroundColor: Color? = if (darkLabels) Color.BLACK else null
+      val fontColor = Color.BLACK
+      val fontSubColor = Color.GRAY
+      val backgroundColor: Color? = null
 
       val mtgLogo = createFromFile(Path.of("./assets/images/mtg.png"))
 
@@ -339,8 +340,8 @@ fun main() {
           override val subCode: String = "SPG"
           override val title: String = "Promos et al"
           override val subTitle: String = "incl. Special Guests"
-          override val mainIcon: ByteArray? by lazy { URI("https://c2.scryfall.com/file/scryfall-symbols/sets/star.svg?1624852800").renderSvgAsMythic() }
-          override val subIconRight: ByteArray? by lazy { URI("https://c2.scryfall.com/file/scryfall-symbols/sets/spg.svg?1624852800").renderSvgAsMythic() }
+          override val mainIcon by lazySetIcon("star", mythicBinderLabelIconRenderer)
+          override val subIconRight by lazySetIcon("spg", mythicBinderLabelIconRenderer)
         },
         Block("Portal Sets", "por", "por", "p02", "ptk", "itp"),
         Block("Game Night", "gnt", "gnt", "gn2", "gn3"),
