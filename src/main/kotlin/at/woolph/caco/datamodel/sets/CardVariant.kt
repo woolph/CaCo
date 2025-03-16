@@ -21,10 +21,10 @@ class CardVariant(id: EntityID<UUID>) : UUIDEntity(id), CardRepresentation {
     companion object : UUIDEntityClass<CardVariant>(CardVariants)
 
     val scryfallId: UUID get() = id.value
-    override var card by Card referencedOn CardVariants.original
+    override var baseVariantCard by Card referencedOn CardVariants.original
     override var variantType by CardVariants.type
 
-    override fun toString(): String = "[${card.set.code}-${card.collectorNumber}] ${card.name} $variantType"
+    override fun toString(): String = "[${baseVariantCard.set.code}-${baseVariantCard.collectorNumber}] ${baseVariantCard.name} $variantType"
 
     enum class Type {
         /** a version of the card with the planeswalker symbol in the bottom right corner usually being from "The List" */

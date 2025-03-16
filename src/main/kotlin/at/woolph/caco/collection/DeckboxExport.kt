@@ -3,6 +3,7 @@ package at.woolph.caco.collection
 import at.woolph.caco.datamodel.collection.CardCondition
 import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.sets.CardVariant
+import at.woolph.caco.datamodel.sets.Finish
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.ScryfallCardSets
 import java.nio.file.Path
@@ -42,7 +43,7 @@ fun Iterable<CardCollectionItem>.exportDeckbox(file: Path) = export(
     } },
     "Condition" to { cardCollectionItemId.condition.toDeckboxCondition() },
     "Language"  to { cardCollectionItemId.language.toLanguageDeckbox() },
-    "Foil" to { if (cardCollectionItemId.foil) "foil" else "" },
+    "Foil" to { if (cardCollectionItemId.finish != Finish.Normal) "foil" else "" },
     "Signed" to { "" },
     "Artist Proof" to { if (cardCollectionItemId.variantType == CardVariant.Type.TheList) "proof" else "" },
     "Altered Art" to { "" },

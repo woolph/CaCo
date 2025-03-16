@@ -1,5 +1,6 @@
 package at.woolph.caco.collection
 
+import arrow.core.Either
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 import at.woolph.caco.datamodel.collection.CardPossessions
@@ -18,6 +19,41 @@ private val log = LoggerFactory.getLogger("at.woolph.caco.collection.ImportCsv")
 
 class IntentionallySkippedException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
+fun importSequence(
+  file: Path,
+  notImportedOutputFile: Path = Path.of("not-imported.csv"),
+  datePredicate: Predicate<Instant> = Predicate { true },
+  mapper: arrow.core.raise.Raise<Throwable>.(CsvRecord) -> CardCollectionItem,
+): Sequence<Either<Throwable, CardCollectionItem>> = sequence {
+  println("importing collection export file $file")
+  CSVWriter(notImportedOutputFile.bufferedWriter()).use { writer ->
+    CSVReader(file.bufferedReader()).use { reader ->
+      val header = reader.readNext().also {
+        writer.writeNext(buildList {
+          addAll(it)
+          add("Error")
+        }.toTypedArray(), false)
+      }.withIndex().associate { it.value to it.index }
+
+      yieldAll(generateSequence { reader.readNext() }
+        .filter { it.size > 1 }
+        .map { CsvRecord(header, it) }
+        .map { record ->
+          either {
+            mapper(record).also {
+              ensure(datePredicate.test(it.dateAdded)) { IntentionallySkippedException("skipped due to date restriction") }
+            }
+          }.onLeft {
+            writer.writeNext(buildList {
+              addAll(record.data)
+              add(it.message)
+            }.toTypedArray(), false)
+          }
+        })
+    }
+  }
+}
+
 fun import(
   file: Path,
   notImportedOutputFile: Path = Path.of("not-imported.csv"),
@@ -31,54 +67,35 @@ fun import(
       println("current collection possessions are cleared!")
       CardPossessions.deleteAll()
     }
-    CSVWriter(notImportedOutputFile.bufferedWriter()).use { writer ->
-      CSVReader(file.bufferedReader()).use { reader ->
-        val header = reader.readNext().also {
-          writer.writeNext(buildList {
-            addAll(it)
-            add("Error")
-          }.toTypedArray(), false)
-        }.withIndex().associate { it.value to it.index }
+    var countOfSkipped = 0
+    var countOfImportError = 0
+    var importedCards = 0
 
-        var countOfSkipped = 0
-        var countOfImportError = 0
-        var importedCards = 0
-        generateSequence { reader.readNext() }.filter { it.size > 1 }.map { CsvRecord(header, it) }
-          .forEach { record ->
-            either {
-              mapper(record).also {
-                ensure(datePredicate.test(it.dateAdded)) { IntentionallySkippedException("skipped due to date restriction") }
-              }
-            }.onRight {
-              it.addToCollection()
-              importedCards++
-            }.onLeft {
-              when(it) {
-                is IntentionallySkippedException -> {
-                  log.warn(it.message, if (log.isDebugEnabled) it else null)
-                  countOfSkipped++
-                }
-                else -> {
-                  log.error(it.message, if (log.isDebugEnabled) it else null)
-                  countOfImportError++
-                }
-              }
-
-              writer.writeNext(buildList {
-                addAll(record.data)
-                add(it.message)
-              }.toTypedArray(), false)
-            }
+    importSequence(file, notImportedOutputFile, datePredicate, mapper).forEach { either ->
+      either.onRight {
+        it.addToCollection()
+        importedCards++
+      }.onLeft {
+        when (it) {
+          is IntentionallySkippedException -> {
+            log.warn(it.message, if (log.isDebugEnabled) it else null)
+            countOfSkipped++
           }
-        if (countOfSkipped > 0) {
-          println("skipped to import $countOfSkipped lines")
-        }
-        if (countOfImportError > 0) {
-          println("unable to import $countOfImportError lines")
-        } else {
-          println("all cards imported successfully ($importedCards in total)!!")
+
+          else -> {
+            log.error(it.message, if (log.isDebugEnabled) it else null)
+            countOfImportError++
+          }
         }
       }
+    }
+    if (countOfSkipped > 0) {
+      println("skipped to import $countOfSkipped lines")
+    }
+    if (countOfImportError > 0) {
+      println("unable to import $countOfImportError lines")
+    } else {
+      println("all cards imported successfully ($importedCards in total)!!")
     }
   }
 }

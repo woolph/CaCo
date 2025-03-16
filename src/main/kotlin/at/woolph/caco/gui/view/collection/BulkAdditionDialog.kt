@@ -7,6 +7,7 @@ import at.woolph.caco.datamodel.collection.CardCondition
 import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.CardVariant
+import at.woolph.caco.datamodel.sets.Finish
 import at.woolph.caco.datamodel.sets.Foil
 import at.woolph.caco.datamodel.sets.Rarity
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
@@ -281,7 +282,7 @@ class BulkAdditionDialog(val collectionSettings: CollectionSettings, val set: Sc
                       cardInfo.bulkAdditionNonPremium.value.toUInt(),
                       CardCollectionItemId(
                         card = cardInfo.item,
-                        foil = false,
+                        finish = Finish.Normal,
                         language = languageProperty.value,
                         condition = conditionProperty.value,
                       )
@@ -290,7 +291,7 @@ class BulkAdditionDialog(val collectionSettings: CollectionSettings, val set: Sc
                       cardInfo.bulkAdditionPremium.value.toUInt(),
                       CardCollectionItemId(
                         card = cardInfo.item,
-                        foil = true,
+                        finish = Finish.Foil,
                         language = languageProperty.value,
                         condition = conditionProperty.value,
                       )
@@ -299,7 +300,7 @@ class BulkAdditionDialog(val collectionSettings: CollectionSettings, val set: Sc
                       cardInfo.bulkAdditionPrereleasePromo.value.toUInt(),
                       CardCollectionItemId(
                         card = cardInfo.item,
-                        foil = true,
+                        finish = Finish.Foil,
                         language = languageProperty.value,
                         condition = conditionProperty.value,
                         variantType = CardVariant.Type.PrereleaseStamped,

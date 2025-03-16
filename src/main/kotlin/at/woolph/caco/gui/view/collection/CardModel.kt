@@ -1,6 +1,7 @@
 package at.woolph.caco.gui.view.collection
 
 import at.woolph.caco.datamodel.sets.Card
+import at.woolph.caco.datamodel.sets.Finish
 import at.woolph.caco.masterdata.imagecache.ImageCache
 import javafx.beans.property.Property
 import javafx.scene.image.Image
@@ -33,8 +34,8 @@ open class CardModel(card: Card): ItemViewModel<Card>(card), Comparable<CardMode
 	val priceString = price.stringBinding { currencyNumberFormat.format(it) }
 
 	val extra = bind(Card::extra)
-	val nonfoilAvailable = bind(Card::nonfoilAvailable)
-	val foilAvailable = bind(Card::foilAvailable)
+	val nonfoilAvailable = itemProperty.map { it.finishes.contains(Finish.Normal) }
+	val foilAvailable = itemProperty.map { it.finishes.contains(Finish.Foil) }
 	val fullArt = bind(Card::fullArt)
 	val extendedArt = bind(Card::extendedArt)
 	val specialDeckRestrictions: Property<Int?> = bind(Card::specialDeckRestrictions, defaultValue = null)

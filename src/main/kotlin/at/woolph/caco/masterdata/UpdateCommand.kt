@@ -65,7 +65,7 @@ class UpdateCommand: SuspendingTransactionCliktCommand(name = "update") {
       variant.forEach { (scryfallCard, variantType) ->
         determineOriginalCardFor(scryfallCard, variantType).onRight { originalCard ->
           CardVariant.newOrUpdate(scryfallCard.id) {
-            it.card = originalCard
+            it.baseVariantCard = originalCard
             it.variantType = variantType
           }
         }.onLeft { t ->

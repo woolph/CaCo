@@ -4,6 +4,18 @@ import at.woolph.caco.cli.manabase.ColorIdentity
 import at.woolph.caco.cli.manabase.ManaColor
 import at.woolph.caco.datamodel.collection.ArenaCardPossession
 import at.woolph.caco.datamodel.collection.ArenaCardPossessions
+import at.woolph.caco.datamodel.collection.CardLanguage.CHINESE
+import at.woolph.caco.datamodel.collection.CardLanguage.CHINESE_TRADITIONAL
+import at.woolph.caco.datamodel.collection.CardLanguage.ENGLISH
+import at.woolph.caco.datamodel.collection.CardLanguage.FRENCH
+import at.woolph.caco.datamodel.collection.CardLanguage.GERMAN
+import at.woolph.caco.datamodel.collection.CardLanguage.ITALIAN
+import at.woolph.caco.datamodel.collection.CardLanguage.JAPANESE
+import at.woolph.caco.datamodel.collection.CardLanguage.KOREAN
+import at.woolph.caco.datamodel.collection.CardLanguage.PORTUGUESE
+import at.woolph.caco.datamodel.collection.CardLanguage.RUSSIAN
+import at.woolph.caco.datamodel.collection.CardLanguage.SPANISH
+import at.woolph.caco.datamodel.collection.CardLanguage.UNKNOWN
 import at.woolph.caco.datamodel.collection.CardPossession
 import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.masterdata.import.toEnumSet
@@ -32,8 +44,7 @@ object Cards : IdTable<UUID>() {
     val cardmarketUri = varchar("cardmarketUri", length = 512).nullable()
 
     val extra = bool("extra").default(false)
-    val nonfoilAvailable = bool("nonfoilAvailable").default(true)
-    val foilAvailable = bool("foilAvailable").default(true)
+    val finishes = integer("finishes").default(1)
     val fullArt = bool("fullArt").default(false)
     val extendedArt = bool("extendedArt").default(false)
     val specialDeckRestrictions = integer("specialDeckRestrictions").nullable()
@@ -48,6 +59,23 @@ object Cards : IdTable<UUID>() {
     val priceFoil = double("priceFoil").nullable()
     val gameChanger = bool("gameChanger").index()
     val edhrecRank = integer("edhrecRank").nullable()
+}
+
+@Serializable
+enum class Finish {
+    @SerialName("nonfoil") Normal,
+    @SerialName("foil") Foil,
+    @SerialName("etched") Etched,
+    ;
+
+    companion object {
+        fun parse(finish: String) = when(finish.lowercase()) {
+            "normal", "nonfoil" -> Normal
+            "foil" -> Foil
+            "etched" -> Etched
+            else -> throw IllegalArgumentException("Unknown finish $finish")
+        }
+    }
 }
 
 @Serializable
@@ -106,8 +134,9 @@ class Card(id: EntityID<UUID>) : UUIDEntity(id), Comparable<Card>, CardRepresent
     var cardmarketUri by Cards.cardmarketUri.transform({ it?.toString() }, { it?.let { URI(it) } })
 
     var extra by Cards.extra
-    var nonfoilAvailable by Cards.nonfoilAvailable
-    var foilAvailable by Cards.foilAvailable
+    var finishes: EnumSet<Finish> by Cards.finishes.transform({
+        it.fold(0) { acc, finish -> acc or (1 shl finish.ordinal) } }, { Finish.entries.asSequence()
+        .filter { finish -> (it and (1 shl finish.ordinal)) != 0 }.toEnumSet() })
     var fullArt by Cards.fullArt
     var extendedArt by Cards.extendedArt
     var specialDeckRestrictions by Cards.specialDeckRestrictions
@@ -185,6 +214,6 @@ class Card(id: EntityID<UUID>) : UUIDEntity(id), Comparable<Card>, CardRepresent
 
     override fun toString(): String = "[${set.code}-$collectorNumber] $name"
 
-    override val card: Card get() = this
+    override val baseVariantCard: Card get() = this
     override val variantType: CardVariant.Type? get() = null
 }

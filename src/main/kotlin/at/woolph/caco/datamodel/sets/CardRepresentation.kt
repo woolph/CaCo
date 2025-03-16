@@ -5,10 +5,10 @@ import arrow.core.raise.either
 import java.util.UUID
 
 interface CardRepresentation {
-    val card: Card
+    val baseVariantCard: Card
     val variantType: CardVariant.Type?
 
-    operator fun component1(): Card = card
+    operator fun component1(): Card = baseVariantCard
     operator fun component2(): CardVariant.Type? = variantType
 
     companion object {
@@ -17,8 +17,8 @@ interface CardRepresentation {
     }
 
     fun getActualScryfallId(variantType: CardVariant.Type?): Either<Throwable, UUID> = either {
-        if (variantType == null) return@either card.scryfallId
-        return@either card.variants.singleOrNull { it.variantType == variantType }?.scryfallId
-            ?: raise(Exception("variant $variantType not found for card ${card.scryfallId}"))
+        if (variantType == null) return@either baseVariantCard.scryfallId
+        return@either baseVariantCard.variants.singleOrNull { it.variantType == variantType }?.scryfallId
+            ?: raise(Exception("variant $variantType not found for card ${baseVariantCard.scryfallId}"))
     }
 }
