@@ -59,6 +59,7 @@ suspend fun main(args: Array<String>) =
     suspendNoOpCliktCommand(name = "decklists").subcommands(
       PrintDecklist(),
       PrintDeckboxDecks(),
+      PrintArchidektDeck(),
       PrintArchidektDecks(),
       ImportDecklists(),
       PrintManaBase(),
