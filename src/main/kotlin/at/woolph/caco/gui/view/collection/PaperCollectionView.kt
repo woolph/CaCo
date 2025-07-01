@@ -5,6 +5,7 @@ import at.woolph.caco.collection.exportDeckbox
 import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.collection.importDeckbox
 import at.woolph.caco.datamodel.collection.CardPossession
+import at.woolph.caco.datamodel.sets.Finish
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.libs.pdf.*
 import javafx.scene.control.ToolBar
@@ -27,8 +28,8 @@ class PaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
 			0,
 			33,
 			{ !it.digitalOnly },
-			{ it.possessions.count { !it.foil } },
-			{ it.possessions.count { it.foil } },
+			{ it.possessions.count { it.finish == Finish.Normal } },
+			{ it.possessions.count { it.finish != Finish.Normal  } },
 		)
 	}
 

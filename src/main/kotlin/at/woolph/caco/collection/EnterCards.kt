@@ -6,6 +6,7 @@ import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.collection.CardPossession
 import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.datamodel.sets.Card
+import at.woolph.caco.datamodel.sets.Finish
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import com.github.ajalt.clikt.core.terminal
 import com.github.ajalt.clikt.parameters.arguments.argument
@@ -68,14 +69,14 @@ class EnterCards : SuspendingTransactionCliktCommand() {
         fun isNeeded() = (count + alreadyCollected) == 0
       }
 
-      fun newPossessionUpdate2(card: Card, foil: Boolean) =
+      fun newPossessionUpdate2(card: Card, finish: Finish) =
         PossessionUpdate2(
           0,
-          CardPossession.Companion.find { CardPossessions.card.eq(card.id) and CardPossessions.foil.eq(foil) }
+          CardPossession.Companion.find { CardPossessions.card.eq(card.id) and CardPossessions.finish.eq(finish) }
             .count { it.language in languagesToBeChecked && it.condition.isBetterThanOrEqual(condition) }.toInt()
         )
 
-      val cardPossessionUpdates = mutableMapOf<Pair<Card, Boolean>, PossessionUpdate2>()
+      val cardPossessionUpdates = mutableMapOf<Pair<Card, Finish>, PossessionUpdate2>()
 
       lateinit var prevSetNumber: String
       var setNumber = terminal.prompt("collector number")!!.also {
@@ -84,16 +85,20 @@ class EnterCards : SuspendingTransactionCliktCommand() {
 
       while (setNumber.isNotBlank()) {
         fun add(setNumber: String) {
-          val foil = setNumber.endsWith("*")
-          val setNumber2 = setNumber.removeSuffix("*")
+          val finish = when {
+            setNumber.endsWith("#") -> Finish.Etched
+            setNumber.endsWith("*") -> Finish.Foil
+            else -> Finish.Normal
+          }
+          val setNumber2 = setNumber.removeSuffix("*").removeSuffix("#")
           val card = set.cards.firstOrNull { it.collectorNumber == setNumber2 }
           if (card != null) {
             echo(
-              "add #${card.collectorNumber} \"${card.name}\" ${if (foil) " in \u001B[38:5:0m\u001B[48:5:214mf\u001B[48:5:215mo\u001B[48:5:216mi\u001B[48:5:217ml\u001B[0m" else ""}",
+              "add #${card.collectorNumber} \"${card.name}\" ${if (finish != Finish.Normal) " in \u001B[38:5:0m\u001B[48:5:214mf\u001B[48:5:215mo\u001B[48:5:216mi\u001B[48:5:217ml\u001B[0m" else ""}",
               trailingNewline = false
             )
-            cardPossessionUpdates.compute(card to foil) { _, possessionUpdate ->
-              ((possessionUpdate ?: newPossessionUpdate2(card, foil)).also {
+            cardPossessionUpdates.compute(card to finish) { _, possessionUpdate ->
+              ((possessionUpdate ?: newPossessionUpdate2(card, finish)).also {
                 if (it.isNeeded()) {
                   terminal.danger(" \u001b[31mNeeded for collection!\u001b[0m")
                 }
@@ -106,14 +111,18 @@ class EnterCards : SuspendingTransactionCliktCommand() {
         }
 
         fun remove(setNumber: String) {
-          val foil = setNumber.endsWith("*")
-          val setNumber2 = setNumber.removeSuffix("*").toInt().toString()
+          val finish = when {
+            setNumber.endsWith("#") -> Finish.Etched
+            setNumber.endsWith("*") -> Finish.Foil
+            else -> Finish.Normal
+          }
+          val setNumber2 = setNumber.removeSuffix("*").removeSuffix("#")
           val card = set.cards.first { it.collectorNumber == setNumber2 }
           echo(
-            "removed #${card.collectorNumber} \"${card.name}\" ${if (foil) " in \u001B[38:5:0m\u001B[48:5:214mf\u001B[48:5:215mo\u001B[48:5:216mi\u001B[48:5:217ml\u001B[0m" else ""}",
+            "removed #${card.collectorNumber} \"${card.name}\" ${if (finish != Finish.Normal) " in \u001B[38:5:0m\u001B[48:5:214mf\u001B[48:5:215mo\u001B[48:5:216mi\u001B[48:5:217ml\u001B[0m" else ""}",
             trailingNewline = false
           )
-          cardPossessionUpdates.computeIfPresent(card to foil) { _, possessionUpdate ->
+          cardPossessionUpdates.computeIfPresent(card to finish) { _, possessionUpdate ->
             possessionUpdate.decrement()
           }
           echo()
@@ -138,12 +147,12 @@ class EnterCards : SuspendingTransactionCliktCommand() {
 
       // TODO use CardCollectionItem to begin with for entering that stuff
       val cardCollectionItems = cardPossessionUpdates.map { (x, possessionUpdate) ->
-        val (cardInfo, foil) = x
+        val (cardInfo, finish) = x
         CardCollectionItem(
           possessionUpdate.count.toUInt(),
           CardCollectionItemId(
             cardInfo,
-            foil = foil,
+            finish = finish,
             language = language,
             condition = condition,
           ),

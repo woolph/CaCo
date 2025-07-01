@@ -7,6 +7,7 @@ import at.woolph.caco.datamodel.collection.CardCondition
 import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.CardVariant
+import at.woolph.caco.datamodel.sets.Finish
 import at.woolph.caco.datamodel.sets.Foil
 import at.woolph.caco.datamodel.sets.Rarity
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
@@ -256,36 +257,38 @@ class BulkAdditionDialog(val collectionSettings: CollectionSettings, val set: Sc
             defaultAction { false }
             button(ButtonType.APPLY) {
                 action {
-                  val cardCollectionItems = cards.flatMap { cardInfo -> listOf(
-                    CardCollectionItem(
-                      cardInfo.bulkAdditionNonPremium.value.toUInt(),
-                      CardCollectionItemId(
-                        card = cardInfo.item,
-                        foil = false,
-                        language = languageProperty.value,
-                        condition = conditionProperty.value,
-                      )
-                    ),
-                    CardCollectionItem(
-                      cardInfo.bulkAdditionPremium.value.toUInt(),
-                      CardCollectionItemId(
-                        card = cardInfo.item,
-                        foil = true,
-                        language = languageProperty.value,
-                        condition = conditionProperty.value,
-                      )
-                    ),
-                    CardCollectionItem(
-                      cardInfo.bulkAdditionPrereleasePromo.value.toUInt(),
-                      CardCollectionItemId(
-                        card = cardInfo.item,
-                        foil = true,
-                        language = languageProperty.value,
-                        condition = conditionProperty.value,
-                        variantType = CardVariant.Type.PrereleaseStamped,
-                      )
-                    ),
-                  ) }.filter(CardCollectionItem::isNotEmpty)
+                  val cardCollectionItems = cards.flatMap { cardInfo ->
+                    sequenceOf(
+                      CardCollectionItem(
+                        quantity = cardInfo.bulkAdditionNonPremium.value.toUInt(),
+                        CardCollectionItemId(
+                          card = cardInfo.item,
+                          finish = Finish.Normal,
+                          language = languageProperty.value,
+                          condition = conditionProperty.value,
+                        )
+                      ),
+                      CardCollectionItem(
+                        quantity = cardInfo.bulkAdditionPremium.value.toUInt(),
+                        CardCollectionItemId(
+                          card = cardInfo.item,
+                          finish = Finish.Foil,
+                          language = languageProperty.value,
+                          condition = conditionProperty.value,
+                        )
+                      ),
+                      CardCollectionItem(
+                        quantity = cardInfo.bulkAdditionPrereleasePromo.value.toUInt(),
+                        CardCollectionItemId(
+                          card = cardInfo.item,
+                          finish = Finish.Foil,
+                          language = languageProperty.value,
+                          condition = conditionProperty.value,
+                          variantType = CardVariant.Type.PrereleaseStamped,
+                        )
+                      ),
+                    )
+                  }.filter(CardCollectionItem::isNotEmpty)
 
                   transaction {
                     chooseFile("Choose File to Export to", arrayOf(FileChooser.ExtensionFilter("CSV", "*.csv")),  mode = FileChooserMode.Save, initialDirectory = File(System.getProperty("user.home"))).single().let {

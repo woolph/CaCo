@@ -3,6 +3,7 @@ package at.woolph.caco.gui.view.collection
 import at.woolph.caco.datamodel.collection.CardCondition
 import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.sets.Card
+import at.woolph.caco.datamodel.sets.Finish
 import javafx.beans.binding.Bindings
 import javafx.beans.binding.IntegerBinding
 import javafx.beans.property.SimpleIntegerProperty
@@ -79,8 +80,8 @@ open class CardPossessionModel(card: Card, val collectionsSettings: CollectionSe
 
 		return languages.associateWith { language ->
 			conditions.associateWith { condition ->
-				val count = possessions.count { it.language == language && (condition == null || it.condition == condition) && !it.foil }
-				val foilCount = possessions.count { it.language == language && (condition == null || it.condition == condition) && it.foil }
+				val count = possessions.count { it.language == language && (condition == null || it.condition == condition) && it.finish == Finish.Normal }
+				val foilCount = possessions.count { it.language == language && (condition == null || it.condition == condition) && it.finish != Finish.Normal }
 				Possession(count, foilCount)
 			}
 		}

@@ -10,11 +10,7 @@ fun Iterable<CardCollectionItem>.exportArchidekt(file: Path) = export(
   file,
   mapOf(
     "Quantity" to { quantity.toString() },
-    "Finish" to { when {
-      // TODO etched is missing
-      cardCollectionItemId.foil -> "Foil"
-      else -> "Normal"
-    }},
+    "Finish" to { cardCollectionItemId.finish.toString() },
     "Condition" to { when (cardCollectionItemId.condition) {
       CardCondition.UNKNOWN -> throw IllegalArgumentException("Unknown card condition")
       CardCondition.NEAR_MINT -> "NM"

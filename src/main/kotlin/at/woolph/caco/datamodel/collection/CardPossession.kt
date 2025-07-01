@@ -3,6 +3,7 @@ package at.woolph.caco.datamodel.collection
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.CardVariant
 import at.woolph.caco.datamodel.sets.Cards
+import at.woolph.caco.datamodel.sets.Finish
 import org.jetbrains.exposed.dao.IntEntity
 import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
@@ -15,7 +16,7 @@ object CardPossessions : IntIdTable() {
 	val dateOfAddition = timestamp("dateOfAddition").index().defaultExpression(CurrentTimestamp)
     val language = enumeration<CardLanguage>("language").default(CardLanguage.UNKNOWN).index()
     val condition = enumeration<CardCondition>("condition").default(CardCondition.UNKNOWN).index()
-    val foil = bool("foil").default(false).index()
+    val finish = enumeration<Finish>("finish").default(Finish.Normal).index()
     val variantType = enumeration<CardVariant.Type>("variantType").nullable().index()
 
     val purchasePrice = double("purchasePrice").nullable()
@@ -35,7 +36,7 @@ class CardPossession(id: EntityID<Int>) : IntEntity(id) {
 	var dateOfAddition by CardPossessions.dateOfAddition
     var language by CardPossessions.language
     var condition by CardPossessions.condition
-    var foil by CardPossessions.foil
+    var finish by CardPossessions.finish
     var variantType by CardPossessions.variantType
     var tradeLock by CardPossessions.tradeLock
     var location by CardPossessions.location

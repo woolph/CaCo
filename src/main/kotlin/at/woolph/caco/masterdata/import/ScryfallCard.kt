@@ -2,6 +2,7 @@ package at.woolph.caco.masterdata.import
 
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.CardVariant
+import at.woolph.caco.datamodel.sets.Finish
 import at.woolph.caco.datamodel.sets.Legality
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.parseRarity
@@ -181,7 +182,7 @@ data class ScryfallCard(
     val reserved: Boolean,
     val foil: Boolean,
     val nonfoil: Boolean,
-    val finishes: Set<String>,
+    val finishes: Set<Finish>,
     val oversized: Boolean,
     val promo: Boolean,
     val promo_types: Set<String> = emptySet(),
@@ -258,8 +259,7 @@ data class ScryfallCard(
         it.cardmarketUri = purchase_uris["cardmarket"]
 
         it.extra = !booster
-        it.nonfoilAvailable = nonfoil
-        it.foilAvailable = foil
+        it.finishes = finishes.asSequence().toEnumSet()
         it.fullArt = full_art
         it.extendedArt = frame_effects.contains("extendedart")
 

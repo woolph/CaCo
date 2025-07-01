@@ -26,7 +26,7 @@ fun importArchidekt(
     ?: Instant.now()
 
   val quantity = csvRecord["Quantity"]!!.toInt()
-  val foil = csvRecord["Finish"] == "Foil"
+  val finish = Finish.parse(csvRecord["Finish"]!!)
   val language = CardLanguage.parse(csvRecord["Language"]!!)
   val condition = when (csvRecord["Condition"]) {
     "NM" -> CardCondition.NEAR_MINT
@@ -44,7 +44,7 @@ fun importArchidekt(
     quantity = quantity.toUInt(),
     cardCollectionItemId = CardCollectionItemId(
       card = card,
-      foil = foil,
+      finish = finish,
       language = language,
       condition = condition,
       variantType = cardVariantType,

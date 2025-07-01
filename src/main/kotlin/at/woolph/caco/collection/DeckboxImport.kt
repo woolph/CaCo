@@ -170,6 +170,15 @@ fun importDeckbox(
             }
 
         }
+        val finish = when {
+            stampPrereleaseDate || nextLine["Foil"] == "foil" ->
+                when {
+                    !card.finishes.contains(Finish.Foil) && card.finishes.contains(Finish.Etched) -> Finish.Etched
+                    else -> Finish.Foil
+                }
+            else -> Finish.Normal
+        }
+                finish = finish,
     }
 }
 
