@@ -62,5 +62,6 @@ suspend fun main(args: Array<String>) =
       PrintArchidektDecks(), // TODO rename command?!
       ImportDecklists(), // TODO rename command?!
       PrintManaBase(), // TODO rename command?!
+      PrintManaBaseArchidektDeck(),
     ),
   ).main(args)

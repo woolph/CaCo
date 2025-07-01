@@ -1,42 +1,63 @@
 package at.woolph.caco.cli.manabase
 
+import at.woolph.caco.cli.manabase.ManaColor
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.Cards
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.util.*
+import kotlin.collections.filterNot
+import kotlin.compareTo
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.round
+import kotlin.text.Regex
 
 data class DecklistEntry(
     val cardName: String,
     val count: Int = 1,
 ) {
-    override fun toString() = "$count $cardName"
+    override fun toString() = "$count ${cardName}"
+}
+
+data class DecklistEntryCard(
+    val card: Card,
+    val count: Int = 1,
+) {
+    override fun toString() = "$count ${card.name}"
+}
+
+fun Map<String, Int>.toDecklistEntries(): Collection<DecklistEntry> =
+    map { (cardName, count) ->
+        DecklistEntry(cardName, count)
+    }
+
+fun Collection<DecklistEntry>.toDecklistEntryCards(): Collection<DecklistEntryCard> = transaction {
+    map { (cardName, count) ->
+        DecklistEntryCard(
+            try {
+                Card.find { Cards.name match cardName }.limit(1).first()
+            } catch(t: Throwable) {
+                throw IllegalArgumentException("card $cardName not found", t)
+            },
+            count,
+        )
+    }
 }
 
 // https://www.channelfireball.com/article/How-Many-Lands-Do-You-Need-in-Your-Deck-An-Updated-Analysis/cd1c1a24-d439-4a8e-b369-b936edb0b38a/
-fun Collection<DecklistEntry>.suggestedLandCount() = transaction {
-    val cards = this@suggestedLandCount.map { (cardName, _) ->
-        try {
-            Card.find { Cards.name match cardName }.limit(1).first()
-        } catch(t: Throwable) {
-            throw IllegalArgumentException("card $cardName not found", t)
-        }
-    }
-
+fun Collection<DecklistEntryCard>.suggestedLandCount(): Int {
     val baseLine = 31.42
     val averageManaValueFactor = 3.13
     val cheapDrawRampFactor = 0.28
     val untappedMdfcFactor = 1.0 // 0.74 according to Frank Karsten
     val tappedMdfcFactor = 1.0 // 0.38 according to Frank Karsten
 
-    val averageManaValue = cards.sumOf { it.manaValue.toDouble() } / cards.size
-    val untappedMdfcCount = cards.count { it.isMDFCLandUntapped }
-    val tappedMdfcCount = cards.count { it.isMDFCLandTapped }
-    val cheapDrawCount = cards.count { it.isCheapCardDraw }
-    val cheapRampCount = cards.count { it.isCheapRamp }
+    val averageManaValue = sumOf { it.card.manaValue.toDouble() } / size
+    val untappedMdfcCount = count { it.card.isMDFCLandUntapped }
+    val tappedMdfcCount = count { it.card.isMDFCLandTapped }
+    val cheapDrawCount = count { it.card.isCheapCardDraw }
+    val cheapRampCount = count { it.card.isCheapRamp }
     val cheapDrawRampCount = cheapDrawCount + cheapRampCount
 
     println("averageManaValue = $averageManaValue")
@@ -45,7 +66,7 @@ fun Collection<DecklistEntry>.suggestedLandCount() = transaction {
     println("cheapDrawCount = $cheapDrawCount")
     println("cheapRampCount = $cheapRampCount")
 
-    return@transaction round(baseLine + averageManaValueFactor * averageManaValue - cheapDrawRampFactor * cheapDrawRampCount.toDouble() - tappedMdfcFactor * tappedMdfcCount - untappedMdfcFactor * untappedMdfcCount).toInt()
+    return round(baseLine + averageManaValueFactor * averageManaValue - cheapDrawRampFactor * cheapDrawRampCount.toDouble() - tappedMdfcFactor * tappedMdfcCount - untappedMdfcFactor * untappedMdfcCount).toInt()
 }
 
 enum class ManaColor(val shortName: String, val symbol: String = "{$shortName}") {
@@ -56,62 +77,77 @@ enum class ManaColor(val shortName: String, val symbol: String = "{$shortName}")
     Green("G", "{G}"),
     Colorless("C", "{C}"),
 }
-fun Collection<DecklistEntry>.pipDistribution() = transaction {
-    val cards = this@pipDistribution.map { (cardName, _) ->
-        Card.find { Cards.name match cardName }.limit(1).first()
-    }
-    return@transaction PipDistribution(ManaColor.entries.map { manaColor ->
-        manaColor to cards.mapNotNull { it.manaCost }.sumOf { manaCost ->
+fun Collection<DecklistEntryCard>.pipDistribution(): PipDistribution {
+    val pipCount = ManaColor.entries.map { manaColor ->
+        manaColor to mapNotNull { it.card.manaCost }.sumOf { manaCost ->
             Math.pow(Regex(Regex.escape(manaColor.symbol)).findAll(manaCost).count().toDouble(), 2.0).toInt()
         }
-    }.filter { it.second > 0 }.associate { it })
+    }.filter { it.second > 0 }.associate { it }
+
+    return PipDistribution(pipCount.values.sum().let { totalPipCount ->
+        pipCount.mapValues { it.value.toDouble() / totalPipCount.toDouble() }
+    })
 }
 
-fun generateManabase(selectionCriterion: SelectionCriterion, decklist: Collection<DecklistEntry>): List<DecklistEntry> =
+fun Collection<DecklistEntryCard>.meanPipRequirement() = PipDistribution(ManaColor.entries.associateWith { manaColor ->
+    this@meanPipRequirement.filterNot { it.card.isLand }.mapNotNull { it.card.manaCost }.map { Regex(Regex.escape(manaColor.symbol)).findAll(it).count() }.average()
+}.filterValues { it > 0.0 })
+
+fun Collection<Land>.meanProduction(totalCount: Int = this@meanProduction.size) = ManaColor.entries.associateWith { color -> this@meanProduction.count { color in it.manaProduction }
+  .toDouble() / totalCount }
+
+fun generateManabase(selectionCriterion: SelectionCriterion, decklist: Collection<DecklistEntryCard>): List<DecklistEntry> =
     transaction {
-        val suggestedLandCount = decklist.suggestedLandCount()
-        val pipDistribution = decklist.pipDistribution()
+        val decklistWithoutLands =  decklist.filterNot{ it.card.isLand }
+        val suggestedLandCount = decklistWithoutLands.suggestedLandCount()
+        val pipDistribution = decklistWithoutLands.meanPipRequirement()
         println("suggested land count = $suggestedLandCount")
         println("pipDistribution = $pipDistribution")
 
-        val selectedLands = preferredLands
-            .filter { selectionCriterion.commanderColorIdentity.contains(it) }
-            .map { it to (Cards.select(Cards.price).where { (Cards.name match it.name) }.mapNotNull { it[Cards.price]?.toDouble() }.minOrNull() ?: 0.0) }
-            .map { (land, price) -> land to land.desirability(selectionCriterion, pipDistribution, price)  }
-            .filter { (_, desirability) -> desirability > 0.1 }
-            .sortedByDescending { (_, desirability) -> desirability }
-            .onEach { (land, desirability) ->
-                println("${land.name} $desirability")
-            }.map { (land, _) -> land }
-
         val neededColors = pipDistribution.pipDistribution.keys
+        val filteredBasicLands = basicLands.filterKeys { it in neededColors }.values
+        val filteredLands = preferredLands
+            .filter { selectionCriterion.commanderColorIdentity.contains(it) }
+            .filter { (Cards.select(Cards.price).where { (Cards.name match it.name) }.mapNotNull { it[Cards.price]?.toDouble() }.minOrNull() ?: 0.0) <= selectionCriterion.maxPricePerCard }
+            .toMutableList()
 
-        val colorProductionCount = neededColors.associateWith { color -> selectedLands.count { it.canProduce(color) } }
-        val colorProductionDistribution = colorProductionCount.values.sum().let { totalPipCount ->
-            colorProductionCount.mapValues { it.value.toDouble() / totalPipCount }
+        val selectedLands = mutableListOf<Land>()
+
+        while (selectedLands.size < suggestedLandCount-selectionCriterion.minBasicLandCount && filteredLands.isNotEmpty()) {
+            val pickedLand = filteredLands.maxBy { it.desirability(selectionCriterion, pipDistribution, selectedLands.meanProduction(suggestedLandCount)) }
+            selectedLands.add(pickedLand)
+            filteredLands.remove(pickedLand)
+
+            println("picked ${pickedLand.name}")
         }
-        val remainingLandSlots = suggestedLandCount - selectedLands.size - neededColors.size // each basic should be contained once!
 
-        return@transaction sequence {
-            yieldAll(selectedLands.map { DecklistEntry(it.name, 1) }.sortedBy { (name, _) -> name })
-            yieldAll(neededColors.map { color ->
-                DecklistEntry(
-                    basicLands[color]!!.name, 1 + max(
-                    0,
-                    ceil(
-                        remainingLandSlots * (pipDistribution.pipDistribution[color]
-                            ?: 0.0) - colorProductionDistribution[color]!!
-                    ).toInt()
-                ))
-            })
-        }.toList()
+        // each basic once
+        filteredBasicLands.filter { neededColors.contains(it.manaProduction.single()) }.forEach { pickedLand ->
+            selectedLands.add(pickedLand)
+            println("picked ${pickedLand.name}")
+        }
+306
+        while (selectedLands.size < suggestedLandCount) {
+            val pickedLand = filteredBasicLands.maxBy { it.desirability(selectionCriterion, pipDistribution, selectedLands.meanProduction(suggestedLandCount)) }
+            selectedLands.add(pickedLand)
+            println("picked ${pickedLand.name}")
+        }
+
+        val lands = selectedLands.groupBy { it }.mapValues { (_, list) -> list.size }.entries
+
+        println("productionDistribution = ${ManaColor.entries.associateWith { color -> lands.filter { (land, _) -> color in land.manaProduction }.sumOf { (_, count) -> count }.toDouble() / lands.size }}")
+
+        return@transaction lands.map { (land, count) -> DecklistEntry(land.name, count) }
     }
 
-class ColorIdentity(val colorIdentity: EnumSet<ManaColor>) {
+class ColorIdentity(val colorIdentity: Set<ManaColor>) {
     constructor(vararg color: ManaColor): this(if(color.isEmpty()) EnumSet.noneOf(ManaColor::class.java) else EnumSet.copyOf(color.asList()))
     operator fun contains(color: ColorIdentity) = if(color.colorIdentity.isEmpty()) true else color.colorIdentity.all { it in colorIdentity }
 
     override fun toString(): String = colorIdentity.toString()
+
+    operator fun plus(colorIdentity: ColorIdentity) = this + colorIdentity.colorIdentity
+    operator fun plus(colorIdentity: Set<ManaColor>) = ColorIdentity(this.colorIdentity + colorIdentity)
 
     companion object {
         operator fun invoke(string: String) = when(val colorCode = string.lowercase()) {
@@ -179,7 +215,7 @@ class ColorIdentity(val colorIdentity: EnumSet<ManaColor>) {
 open class Land(
     val name: String,
     val colorIdentity: ColorIdentity,
-    val manaProduction: ColorIdentity = colorIdentity,
+    val manaProduction: Set<ManaColor> = colorIdentity.colorIdentity,
     val basicTypes: ColorIdentity = ColorIdentity.COLORLESS,
     val desirableFactor: Double = 1.0,
     val tapLand: Boolean = false,
@@ -189,32 +225,33 @@ open class Land(
     val enchantment: Boolean = false,
     val snow: Boolean = false,
     val gate: Boolean = false,
+    val pain: Boolean = false,
     val lifegain: Boolean = false,
     val surveil: Boolean = false,
     val scry: Boolean = false,
 ) {
-    fun desirability(selectionCriterion: SelectionCriterion, pipDistribution: PipDistribution, price: Double) =
-        if (price > selectionCriterion.maxPricePerCard)
-            0.0
-        else
-            multiply(
-                desirableFactor,
-                pipDistribution.weighting(this),
-                min(1.0, (manaProduction.colorIdentity.size.toDouble()+1)/(selectionCriterion.commanderColorIdentity.colorIdentity.size.toDouble()+1)),
-                (1.0 + basicTypes.colorIdentity.size * selectionCriterion.basicLandTypeFactors), // increased desirability due to fetchability
-                additionalDesirability(selectionCriterion),
-                if (basic) selectionCriterion.basicLandFactor else 1.0, // basics are more desirable with evolving wilds et al, rampant growth, wayfarer's bauble, etc.
-                if (tapLand) selectionCriterion.tapLandFactor else 1.0,
-                if (enablesFastStart) selectionCriterion.fastStartFactor else 1.0,
-                if (artifact) selectionCriterion.artifactFactor else 1.0,
-                if (enchantment) selectionCriterion.enchantmentFactor else 1.0,
-                if (snow) selectionCriterion.snowFactor else 1.0,
-                if (gate) selectionCriterion.gateFactor else 1.0,
-            )
+    fun desirability(selectionCriterion: SelectionCriterion, pipDistribution: PipDistribution, alreadyProduced: Map<ManaColor, Double>) = multiply(
+        desirableFactor,
+        (pipDistribution - alreadyProduced).weighting(this), // FIXME correct the alreadyProduced weighting
+        min(1.0, (manaProduction.size.toDouble()+1)/(selectionCriterion.commanderColorIdentity.colorIdentity.size.toDouble()+1)),
+        (1.0 + basicTypes.colorIdentity.size * selectionCriterion.basicLandTypeFactors), // increased desirability due to fetchability
+        additionalDesirability(selectionCriterion),
+        if (basic) selectionCriterion.basicLandFactor else 1.0, // basics are more desirable with evolving wilds et al, rampant growth, wayfarer's bauble, etc.
+        if (tapLand) selectionCriterion.tapLandFactor else 1.0,
+        if (enablesFastStart) selectionCriterion.fastStartFactor else 1.0,
+        if (artifact) selectionCriterion.artifactFactor else 1.0,
+        if (enchantment) selectionCriterion.enchantmentFactor else 1.0,
+        if (snow) selectionCriterion.snowFactor else 1.0,
+        if (gate) selectionCriterion.gateFactor else 1.0,
+        if (pain) selectionCriterion.painFactor else 1.0,
+        if (lifegain) selectionCriterion.lifegainFactor else 1.0,
+        if (surveil) selectionCriterion.surveilFactor else 1.0,
+        if (scry) selectionCriterion.scryFactor else 1.0,
+    )
 
     open fun additionalDesirability(selectionCriterion: SelectionCriterion) = 1.0
 
-    fun canProduce(color: ManaColor) = color in manaProduction.colorIdentity
+    fun canProduce(color: ManaColor) = color in manaProduction
 
     fun multiply(vararg factors: Double) =
         factors.reduce { acc, d -> acc*d }
@@ -222,6 +259,7 @@ open class Land(
 
 class SelectionCriterion(
     val commanderColorIdentity: ColorIdentity,
+    val minBasicLandCount: Int = commanderColorIdentity.colorIdentity.size,
     val tapLandFactor: Double = 0.33,
     val basicLandFactor: Double = 1.0,
     val basicLandTypeFactors: Double = 0.2,
@@ -231,7 +269,11 @@ class SelectionCriterion(
     val enchantmentFactor: Double = 0.05, // lower because the can be interacted better (set high if you have enchantment synergies)
     val snowFactor: Double = 0.05,
     val gateFactor: Double = 0.05,
-    )
+    val painFactor: Double = 0.95,
+    val lifegainFactor: Double = 1.05,
+    val surveilFactor: Double = 1.15,
+    val scryFactor: Double = 1.1,
+)
 
 operator fun ColorIdentity.contains(land: Land) = this.contains(land.colorIdentity)
 
@@ -242,7 +284,7 @@ val basicLands = listOf(
     Land("Mountain", ColorIdentity.RED, basicTypes = ColorIdentity.RED, basic = true),
     Land("Forest", ColorIdentity.GREEN, basicTypes = ColorIdentity.GREEN, basic = true),
     Land("Wastes", ColorIdentity.COLORLESS, basic = true),
-).associateBy { it.manaProduction.colorIdentity.single() }
+).associateBy { it.manaProduction.single() }
 
 val snowBasicLands = listOf(
     Land("Snow-Covered Plains", ColorIdentity.WHITE, basicTypes = ColorIdentity.WHITE, basic = true, snow = true),
@@ -251,13 +293,21 @@ val snowBasicLands = listOf(
     Land("Snow-Covered Mountain", ColorIdentity.RED, basicTypes = ColorIdentity.RED, basic = true, snow = true),
     Land("Snow-Covered Forest", ColorIdentity.GREEN, basicTypes = ColorIdentity.GREEN, basic = true, snow = true),
     Land("Snow-Covered Wastes", ColorIdentity.COLORLESS, basic = true, snow = true),
-).associateBy { it.manaProduction.colorIdentity.single() }
+).associateBy { it.manaProduction.single() }
 
 val preferredLands = listOf(
-    Land("Ancient Tomb", ColorIdentity.COLORLESS, desirableFactor = 1.5),
-    object: Land("Command Tower", ColorIdentity.COLORLESS, ColorIdentity.FIVE_COLORED) {
+    Land("Ancient Tomb", ColorIdentity.COLORLESS, desirableFactor = 1.5, pain = true),
+    object: Land("Command Tower", ColorIdentity.COLORLESS, ColorIdentity.FIVE_COLORED.colorIdentity) {
         override fun additionalDesirability(selectionCriterion: SelectionCriterion) =
             if (selectionCriterion.commanderColorIdentity.colorIdentity.size >= 2) 1.0 else 0.0
+    },
+    object: Land("Exotic Orchard", ColorIdentity.COLORLESS, ColorIdentity.FIVE_COLORED.colorIdentity) {
+        override fun additionalDesirability(selectionCriterion: SelectionCriterion) =
+            when (selectionCriterion.commanderColorIdentity.colorIdentity.size) {
+                5 -> 0.95
+                4 -> 0.6
+                else -> 0.0
+            }
     },
 
     // Artifact lands
@@ -303,16 +353,16 @@ val preferredLands = listOf(
     Land("Frontier Bivouac", ColorIdentity.TEMUR, tapLand = true),
 
     // Shocks
-    Land("Hallowed Fountain", ColorIdentity.AZORIOUS, basicTypes = ColorIdentity.AZORIOUS),
-    Land("Watery Grave", ColorIdentity.DIMIR, basicTypes = ColorIdentity.DIMIR),
-    Land("Blood Crypt", ColorIdentity.RAKDOS, basicTypes = ColorIdentity.RAKDOS),
-    Land("Stomping Ground", ColorIdentity.GRUUL, basicTypes = ColorIdentity.GRUUL),
-    Land("Temple Garden", ColorIdentity.SELESNYA, basicTypes = ColorIdentity.SELESNYA),
-    Land("Godless Shrine", ColorIdentity.ORZHOV, basicTypes = ColorIdentity.ORZHOV),
-    Land("Steam Vents", ColorIdentity.IZZET, basicTypes = ColorIdentity.IZZET),
-    Land("Overgrown Tomb", ColorIdentity.GOLGARI, basicTypes = ColorIdentity.GOLGARI),
-    Land("Sacred Foundry", ColorIdentity.BOROS, basicTypes = ColorIdentity.BOROS),
-    Land("Breeding Pool", ColorIdentity.SIMIC, basicTypes = ColorIdentity.SIMIC),
+    Land("Hallowed Fountain", ColorIdentity.AZORIOUS, basicTypes = ColorIdentity.AZORIOUS, pain = true),
+    Land("Watery Grave", ColorIdentity.DIMIR, basicTypes = ColorIdentity.DIMIR, pain = true),
+    Land("Blood Crypt", ColorIdentity.RAKDOS, basicTypes = ColorIdentity.RAKDOS, pain = true),
+    Land("Stomping Ground", ColorIdentity.GRUUL, basicTypes = ColorIdentity.GRUUL, pain = true),
+    Land("Temple Garden", ColorIdentity.SELESNYA, basicTypes = ColorIdentity.SELESNYA, pain = true),
+    Land("Godless Shrine", ColorIdentity.ORZHOV, basicTypes = ColorIdentity.ORZHOV, pain = true),
+    Land("Steam Vents", ColorIdentity.IZZET, basicTypes = ColorIdentity.IZZET, pain = true),
+    Land("Overgrown Tomb", ColorIdentity.GOLGARI, basicTypes = ColorIdentity.GOLGARI, pain = true),
+    Land("Sacred Foundry", ColorIdentity.BOROS, basicTypes = ColorIdentity.BOROS, pain = true),
+    Land("Breeding Pool", ColorIdentity.SIMIC, basicTypes = ColorIdentity.SIMIC, pain = true),
 
     // Fast Lands
     Land("Seachrome Coast", ColorIdentity.AZORIOUS),
@@ -421,7 +471,7 @@ val preferredLands = listOf(
     Land("Barkchannel Pathway // Tidechannel Pathway", ColorIdentity.SIMIC),
 
     // Pain lands
-    object: Land("City of Brass", ColorIdentity.COLORLESS, ColorIdentity.FIVE_COLORED) {
+    object: Land("City of Brass", ColorIdentity.COLORLESS, ColorIdentity.FIVE_COLORED.colorIdentity, pain = true) {
         override fun additionalDesirability(selectionCriterion: SelectionCriterion) =
             when (selectionCriterion.commanderColorIdentity.colorIdentity.size) {
                 5 -> 1.0
@@ -429,7 +479,7 @@ val preferredLands = listOf(
                 else -> 0.0
             }
     },
-    object: Land("Grand Coliseum", ColorIdentity.COLORLESS, ColorIdentity.FIVE_COLORED, tapLand = true) {
+    object: Land("Grand Coliseum", ColorIdentity.COLORLESS, ColorIdentity.FIVE_COLORED.colorIdentity + ManaColor.Colorless, tapLand = true, pain = true) {
         override fun additionalDesirability(selectionCriterion: SelectionCriterion) =
             when (selectionCriterion.commanderColorIdentity.colorIdentity.size) {
                 5 -> 1.0
@@ -437,16 +487,16 @@ val preferredLands = listOf(
                 else -> 0.0
             }
     },
-    Land("Adarkar Wastes", ColorIdentity.AZORIOUS),
-    Land("Underground River", ColorIdentity.DIMIR),
-    Land("Sulfurous Springs", ColorIdentity.RAKDOS),
-    Land("Karplusan Forest", ColorIdentity.GRUUL),
-    Land("Brushland", ColorIdentity.SELESNYA),
-    Land("Caves of Koilos", ColorIdentity.ORZHOV),
-    Land("Shivan Reef", ColorIdentity.IZZET),
-    Land("Llanowar Wastes", ColorIdentity.GOLGARI),
-    Land("Battlefield Forge", ColorIdentity.BOROS),
-    Land("Yavimaya Coast", ColorIdentity.SIMIC),
+    Land("Adarkar Wastes", ColorIdentity.AZORIOUS, ColorIdentity.AZORIOUS.colorIdentity + ManaColor.Colorless, pain = true),
+    Land("Underground River", ColorIdentity.DIMIR, ColorIdentity.DIMIR.colorIdentity + ManaColor.Colorless, pain = true),
+    Land("Sulfurous Springs", ColorIdentity.RAKDOS, ColorIdentity.RAKDOS.colorIdentity + ManaColor.Colorless, pain = true),
+    Land("Karplusan Forest", ColorIdentity.GRUUL, ColorIdentity.GRUUL.colorIdentity + ManaColor.Colorless, pain = true),
+    Land("Brushland", ColorIdentity.SELESNYA, ColorIdentity.SELESNYA.colorIdentity + ManaColor.Colorless, pain = true),
+    Land("Caves of Koilos", ColorIdentity.ORZHOV, ColorIdentity.ORZHOV.colorIdentity + ManaColor.Colorless, pain = true),
+    Land("Shivan Reef", ColorIdentity.IZZET, ColorIdentity.IZZET.colorIdentity + ManaColor.Colorless, pain = true),
+    Land("Llanowar Wastes", ColorIdentity.GOLGARI, ColorIdentity.GOLGARI.colorIdentity + ManaColor.Colorless, pain = true),
+    Land("Battlefield Forge", ColorIdentity.BOROS, ColorIdentity.BOROS.colorIdentity + ManaColor.Colorless, pain = true),
+    Land("Yavimaya Coast", ColorIdentity.SIMIC, ColorIdentity.SIMIC.colorIdentity + ManaColor.Colorless, pain = true),
     // Utility Colorless
     object: Land("Command Beacon", ColorIdentity.COLORLESS) {
         override fun additionalDesirability(selectionCriterion: SelectionCriterion) =
@@ -478,15 +528,13 @@ val preferredLands = listOf(
     Land("Tropical Island", ColorIdentity.SIMIC, basicTypes= ColorIdentity.SIMIC),
 
     // utility
-    Land("Scene of the Crime", ColorIdentity.COLORLESS, manaProduction = ColorIdentity.FIVE_COLORED, desirableFactor = 0.8, tapLand = true, artifact = true),
-    Land("Power Depot", ColorIdentity.COLORLESS, manaProduction = ColorIdentity.FIVE_COLORED, desirableFactor = 0.67, tapLand = true, artifact = true),
+    Land("Scene of the Crime", ColorIdentity.COLORLESS, manaProduction = ColorIdentity.FIVE_COLORED.colorIdentity + ManaColor.Colorless, desirableFactor = 0.8, tapLand = true, artifact = true),
+    Land("Power Depot", ColorIdentity.COLORLESS, manaProduction = ColorIdentity.FIVE_COLORED.colorIdentity + ManaColor.Colorless, desirableFactor = 0.67, tapLand = true, artifact = true),
     Land("Treasure Vault", ColorIdentity.COLORLESS, tapLand = true, artifact = true),
 
     // TODO Snow duals
     // TODO tapped duals
     // TODO tap lands
-    // TODO scry lands
-    // TODO surveil lands
 
     // Surveil lands
     Land("Meticulous Archive", ColorIdentity.AZORIOUS, basicTypes= ColorIdentity.AZORIOUS, tapLand = true, surveil = true, desirableFactor = 1.2),
@@ -541,15 +589,14 @@ class FetchLand(
         fetchingIdentity.colorIdentity.count { it in selectionCriterion.commanderColorIdentity.colorIdentity } * 0.5
 }
 
-class PipDistribution(pipCount: Map<ManaColor, Int>) {
-    val pipDistribution = pipCount.values.sum().let { totalPipCount ->
-        pipCount.mapValues { it.value.toDouble() / totalPipCount }
-    }
+class PipDistribution(val pipDistribution: Map<ManaColor, Double>) {
 
     override fun toString(): String = pipDistribution.toString()
 
     fun weighting(land: Land) =
         pipDistribution.entries.filter { (color, _) ->
-            land.manaProduction.colorIdentity.contains(color)
+            land.manaProduction.contains(color)
         }.sumOf { (_, pipWeight) -> pipWeight }
+
+    operator fun minus(meanProduction: Map<ManaColor, Double>) = PipDistribution(pipDistribution.mapValues { (key, value) -> value - (meanProduction[key] ?: 0.0) })
 }

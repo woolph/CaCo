@@ -4,6 +4,7 @@ import at.woolph.caco.cli.manabase.ColorIdentity
 import at.woolph.caco.cli.manabase.DecklistEntry
 import at.woolph.caco.cli.manabase.SelectionCriterion
 import at.woolph.caco.cli.manabase.generateManabase
+import at.woolph.caco.cli.manabase.toDecklistEntryCards
 import com.github.ajalt.clikt.command.SuspendingCliktCommand
 import com.github.ajalt.clikt.core.terminal
 import com.github.ajalt.clikt.parameters.options.convert
@@ -33,7 +34,7 @@ class PrintManaBase : SuspendingCliktCommand(name = "generate-manabase") {
     generateManabase(
       selectionCriterion,
       generateSequence { terminal.readLineOrNull(false) }.takeWhile { it.isNotBlank() }
-        .map { DecklistEntry(it.removePrefix("1 ")) }.toList()
+        .map { DecklistEntry(it.removePrefix("1 ")) }.toList().toDecklistEntryCards()
     ).forEach { println(it) }
   }
 }
