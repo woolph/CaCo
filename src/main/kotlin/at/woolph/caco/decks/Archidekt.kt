@@ -94,6 +94,7 @@ data class ArchidektDecklistEntry(
 @Serializable
 data class ArchidektDecklist(
     val name: String,
+    val deckFormat: Int,
     val cards: List<ArchidektDecklistEntry>,
 )
 

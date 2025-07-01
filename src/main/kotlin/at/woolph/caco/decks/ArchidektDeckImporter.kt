@@ -24,11 +24,13 @@ class ArchidektDeckImporter(
             })
     }
 
-    suspend fun importDeck(deck: Deck): DeckList {
-        progress?.update { context = "fetching deck from https://archidekt.com/api/decks/${deck.id}/" }
-        val archidektDecklist = request<ArchidektDecklist>("https://archidekt.com/api/decks/${deck.id}/")
+    suspend fun importDeck(deck: Deck): DeckList = importDeck(deck.id)
 
-        val format = when(deck.deckFormat) {
+    suspend fun importDeck(deckId: Int): DeckList {
+        progress?.update { context = "fetching deck from https://archidekt.com/api/decks/${deckId}/" }
+        val archidektDecklist = request<ArchidektDecklist>("https://archidekt.com/api/decks/${deckId}/")
+
+        val format = when(archidektDecklist.deckFormat) {
             3 -> Format.Commander
             else -> Format.Unknown
         }
@@ -49,7 +51,7 @@ class ArchidektDeckImporter(
         return when(format) {
             Format.Commander, Format.Oathbreaker, Format.Brawl ->
                 DeckList(
-                    deck.name,
+                    archidektDecklist.name,
                     format,
                     mainboard,
                     commandZone = commanders,
@@ -57,7 +59,7 @@ class ArchidektDeckImporter(
                 )
             else ->
                 DeckList(
-                    deck.name,
+                    archidektDecklist.name,
                     format,
                     mainboard,
                     sideboard = sideboard,
