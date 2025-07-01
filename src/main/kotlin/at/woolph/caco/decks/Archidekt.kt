@@ -118,7 +118,6 @@ internal inline fun <reified P: Pageable<T>, reified T> paginatedDataRequest(ini
                             progressIndicator,
                             paginatedData.totalItems
                         )
-//                    .onEach { LOG.trace("emitting $it") }
                 )
             } else {
                 if (!optional)

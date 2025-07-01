@@ -226,7 +226,6 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : Coro
 
     suspend fun ScryfallCardSet.reimportSet(): ScryfallCardSet = apply {
         reimport()
-//        LOG.info("reimport current set $this")
         importCardsOfSet(listOf("german"))
 
         updateSets()
@@ -269,9 +268,6 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : Coro
                             textProperty().bind(item.name)
                         }
                         setProperty.bind(selectionModel.selectedItemProperty())
-//                        selectionModel.selectedItemProperty().addListener { _, _, newSet ->
-//                            setProperty.set(newSet)
-//                        }
                     }
                 }
             }
@@ -279,14 +275,6 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : Coro
                 toolbar {
 					toggleButtonImageLoading = togglebutton("\uD83D\uDDBC")
 
-//                    combobox(setProperty, setsSorted) {
-//                        cellFormat {
-//                            graphic = imageViewDelayed(coroutineScope, 24, 24) {
-//                                item?.icon?.loadSetLogo(48f)
-//                            }
-//                            text = item?.let { "${it.id.value.uppercase(Locale.getDefault())} - ${it.name}" }
-//                        }
-//                    }
                     button("\u21BB All") {
                         action(coroutineScope) {
                             newSuspendedTransaction {
@@ -313,7 +301,6 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : Coro
                             }
                         }
                     }
-					// TODO filter toolbar into fragment
                     label("Filter: ")
                     textfield(filterTextProperty) {
 
@@ -331,21 +318,18 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : Coro
                             filterFoilCompleteProperty.bind(selectedProperty())
                         }
                     }
-                    // TODO segmented button
-                    //segmentedbutton {
-                        togglebutton("C") {
-                            filterRarityCommon.bind(selectedProperty())
-                        }
-                        togglebutton("U") {
-                            filterRarityUncommon.bind(selectedProperty())
-                        }
-                        togglebutton("R") {
-                            filterRarityRare.bind(selectedProperty())
-                        }
-                        togglebutton("M") {
-                            filterRarityMythic.bind(selectedProperty())
-                        }
-                    //}
+                    togglebutton("C") {
+                        filterRarityCommon.bind(selectedProperty())
+                    }
+                    togglebutton("U") {
+                        filterRarityUncommon.bind(selectedProperty())
+                    }
+                    togglebutton("R") {
+                        filterRarityRare.bind(selectedProperty())
+                    }
+                    togglebutton("M") {
+                        filterRarityMythic.bind(selectedProperty())
+                    }
                     region {
                         prefWidth = 40.0
 
@@ -358,15 +342,6 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : Coro
             }
             center {
 				splitpane {
-//                    vbox {
-//                        alignment = Pos.TOP_CENTER
-//                        this += find<SetDetailsView> {
-//                            runLater {
-//                                this.setProperty.bind(this@CollectionView.setProperty.mapBinding { it?.let { CardSetModel(it) } })
-//                            }
-//                        }
-//                    }
-
 					tvCards = tableview(cardsFiltered) {
 						hboxConstraints {
 							hGrow = Priority.ALWAYS
@@ -424,21 +399,6 @@ abstract class CollectionView(val collectionSettings: CollectionSettings) : Coro
                                 }
 							}
 						}
-
-//                        coroutineScope.launch(Dispatchers.Default) {
-//                            selectionModel.selectedItemProperty().asFlow()
-//                                .collectLatest {
-//                                    flowOf(+1, -1, +2, +3)
-//                                        .map { tvCards.selectionModel.selectedIndex + it }
-//                                        .filter { it >= 0 && it < tvCards.items.size }
-//                                        .map { tvCards.items[it] }
-//                                        .collect {
-//                                            coroutineScope.launch(Dispatchers.IO) {
-//                                                it.cacheImage()
-//                                            }
-//                                        }
-//                                }
-//                        }
 					}
 
                     vbox {

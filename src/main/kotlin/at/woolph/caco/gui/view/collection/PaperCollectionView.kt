@@ -148,20 +148,6 @@ class PaperCollectionView: CollectionView(COLLECTION_SETTINGS) {
 							}
 						}),
 						null)
-//				// TODO progress dialog
-//				chooseFile("Choose File to Wants", arrayOf(FileChooser.ExtensionFilter("Text", "*.txt")), mode = FileChooserMode.Save).singleOrNull()?.let {
-//					it.printWriter().use { out ->
-//						transaction {
-//							set?.cards?.sortedBy { it.numberInSet }?.filter { !it.promo }?.forEach {
-//								val neededCount = kotlin.math.max(0, collectionSettings.cardPossesionTargtNonPremium - it.possessions.count())
-//								//val n = if(set.cards.count { that -> it.name == that.name } > 1) " (#${it.numberInSet})" else ""
-//								if (neededCount > 0) {
-//									out.println("${neededCount} ${it.name} (${set?.name})")
-//								}
-//							}
-//						}
-//					}
-//				}
             }
         }
     }

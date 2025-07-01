@@ -125,39 +125,6 @@ fun Node.columns(columnGap: Float, lineSpacing: Float, font: PDFont, minFontSize
 	return ColumnManager(this, columns, linesPerColumn, columnGap, lineSpacing, Font(font, fontSize)).apply(block)
 }
 
-/*
-fun PDPageContentStream.write(text: String, font: PDFont, fontSize: Float, x: Float, y:Float, color: Color) {
-	try {
-		beginText()
-		setFont(font, fontSize)
-		// we want to position our text on his baseline
-		newLineAtOffset(x, y - FontUtils.getDescent(font, fontSize) - FontUtils.getHeight(font, fontSize))
-		setNonStrokingColor(color)
-		showText(text)
-		endText()
-	} catch (e: IOException) {
-		throw IllegalStateException("Unable to write text", e)
-	}
-}
-
-fun PDPageContentStream.write(text: String, font: PDFont, fontSize: Float, x: Float, y:Float, color: Color, maxLineWidth: Float) {
-	//val text = "This answer points to something one needs to keep in mind, no matter which PDFBox versi"
-
-	var printedText = text
-	var lineWidth = font.getStringWidth(printedText) / 1000 * fontSize
-	while(lineWidth > maxLineWidth) {
-		val tempPrintedText = printedText.removeSuffix("...").trimEnd().dropLastWhile { !it.isWhitespace() }
-		if(!tempPrintedText.isEmpty())
-			printedText = "$tempPrintedText ..."
-		else
-			printedText = printedText.removeSuffix("...").dropLast(1)+"..."
-		lineWidth = font.getStringWidth(printedText) / 1000 * fontSize
-	}
-
-	write(printedText, font, fontSize, x, y, color)
-}
-*/
-
 fun PDRectangle.relative(horizontalAlignment: HorizontalAlignment, offSetX: Float = 0f, verticalAlignment: VerticalAlignment, offSetY: Float = 0f, width: Float = 0f, height: Float = 0f): PDRectangle {
 	val x = offSetX + when(horizontalAlignment) {
 		HorizontalAlignment.LEFT -> this.lowerLeftX
@@ -381,13 +348,6 @@ fun Node.drawText(text: String, font: Font, horizontalAlignment: HorizontalAlign
 	}
 	drawText(text, font, startX, color)
 }
-//
-//class Columns(val parentNode: Node, val columnCount: UInt): Node(parentNode.contentStream, parentNode.box) {
-//	var currentColumn = 0u
-//}
-//
-//class Column(val parent: Columns, val columnIndex: UInt): Node(parent.contentStream, box = PDRectangle(parent.box.))
-
 class Frame(val parentNode: Node, box: PDRectangle): Node(parentNode.document, parentNode.contentStream, box)
 
 fun Node.frame(box: PDRectangle = this.box, block: Frame.()->Unit)
@@ -405,7 +365,6 @@ fun Node.drawBorder(lineWidth: Float, lineColor: Color) {
 		setLineWidth(lineWidth)
 		setStrokingColor(lineColor)
 
-//		addRect(box.lowerLeftX-lineWidth, box.lowerLeftY-lineWidth, box.width+lineWidth*2, box.height+lineWidth*2)
 		addRect(box.lowerLeftX, box.lowerLeftY, box.width, box.height)
 		stroke()
 	}

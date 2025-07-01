@@ -130,8 +130,6 @@ class Card(id: EntityID<UUID>) : UUIDEntity(id), Comparable<Card>, CardRepresent
 
     val possessions by CardPossession referrersOn CardPossessions
     val arenaPossessions by ArenaCardPossession referrersOn ArenaCardPossessions
-//    val theListPossessions: SizedIterable<CardPossession>
-//        get() = theListVersion?.possessions ?: emptySized()
 
     val isCreature: Boolean get() = type?.contains("Creature") == true
     val isLand: Boolean get() = type?.contains("Land") == true
@@ -159,7 +157,6 @@ class Card(id: EntityID<UUID>) : UUIDEntity(id), Comparable<Card>, CardRepresent
         isCheapNonland && !isCheapCardDraw && (
                 oracleText.contains(Regex("\\badd\\b", RegexOption.IGNORE_CASE)) && oracleTextNone("add its ability", "add a lore counter", "dies") ||
                         oracleTextAll("search", "your library", "put", "onto the battlefield") && oracleTextAny("land", "basic") && name !in blacklistCheapRamp ||
-//                        oracleTextAll("search", "your library") && oracleTextAny("land", "basic") && (oracleTextNone("sacrifice") || "Wayfarer's Bauble".equals(name)) ||
                         oracleTextAll("enchanted land is tapped", "adds an additional") ||
                         oracleTextAll("put a creature card with", "from your hand onto the battlefield")
             )

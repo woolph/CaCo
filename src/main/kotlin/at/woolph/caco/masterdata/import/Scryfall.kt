@@ -104,7 +104,7 @@ fun importSets(): Flow<ScryfallCardSet> = flow {
         }
     }
 
-    // FIXME possessions are lost when importing to archidekt and reimporting the archidekt export!!!!!
+    // FIXME possessions of oversized dungeon cards are lost when importing to archidekt and reimporting the archidekt export!!!!!
     // FIXME add oversized undercity dungeon
     // FIXME prerelease-stamped promo-stamped are lost when importing to archidekt and reimporting the archidekt export!!!!! => add
 

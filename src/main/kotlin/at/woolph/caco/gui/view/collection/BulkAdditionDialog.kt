@@ -117,11 +117,6 @@ class BulkAdditionDialog(val collectionSettings: CollectionSettings, val set: Sc
 							isSelected = imageLoading
 						}
 						label("Filter: ")
-						/*textfield(filterTextProperty) {
-
-						}*/
-						// TODO segmented button
-						//segmentedbutton {
 						togglebutton("C") {
 							filterRarityCommon.bind(selectedProperty())
 						}
@@ -134,7 +129,6 @@ class BulkAdditionDialog(val collectionSettings: CollectionSettings, val set: Sc
 						togglebutton("M") {
 							filterRarityMythic.bind(selectedProperty())
 						}
-						//}
 						region {
 							prefWidth = 40.0
 
@@ -153,7 +147,7 @@ class BulkAdditionDialog(val collectionSettings: CollectionSettings, val set: Sc
 				}
                 left {
                     form {
-						fieldset("Addition Setup") { // TODO move to own dialog
+						fieldset("Addition Setup") {
 							field("Language") {
 								combobox(languageProperty, CardLanguage.entries)
 							}
@@ -243,20 +237,6 @@ class BulkAdditionDialog(val collectionSettings: CollectionSettings, val set: Sc
 
                         selectionModel.selectionMode = SelectionMode.SINGLE
                         selectionModel.selectedItemProperty().addListener { _, _, _ ->
-							if(toggleButtonImageLoading.isSelected) {
-                                // TODO make working again
-//								runAsync {
-//									// precache the next images
-//									listOf(tvCards.selectionModel.selectedIndex + 1,
-//											tvCards.selectionModel.selectedIndex - 1,
-//											tvCards.selectionModel.selectedIndex + 2,
-//											tvCards.selectionModel.selectedIndex + 3).forEach {
-//										if (0 <= it && it < tvCards.items.size) {
-//											tvCards.items[it].getCachedImage()
-//										}
-//									}
-//								}
-							}
                             bulkAddNumberTextField.clear()
                             bulkAddNumberTextField.requestFocus()
                         }

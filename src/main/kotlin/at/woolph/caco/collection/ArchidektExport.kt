@@ -15,7 +15,7 @@ fun Iterable<CardCollectionItem>.exportArchidekt(file: Path) = export(
       cardCollectionItemId.foil -> "Foil"
       else -> "Normal"
     }},
-    "Condition" to {when (cardCollectionItemId.condition) {
+    "Condition" to { when (cardCollectionItemId.condition) {
       CardCondition.UNKNOWN -> throw IllegalArgumentException("Unknown card condition")
       CardCondition.NEAR_MINT -> "NM"
       CardCondition.EXCELLENT -> "LP" // Lightly Played
@@ -23,7 +23,7 @@ fun Iterable<CardCollectionItem>.exportArchidekt(file: Path) = export(
       CardCondition.PLAYED -> "HP" // Heavily Played
       CardCondition.POOR -> "D" // Damaged
     }},
-    "Language" to {when (cardCollectionItemId.language) {
+    "Language" to { when (cardCollectionItemId.language) {
       CardLanguage.UNKNOWN -> throw IllegalArgumentException("Unknown card language")
       else -> cardCollectionItemId.language.toString()
     }},
