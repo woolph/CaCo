@@ -59,12 +59,18 @@ class DeckBuildingListPrinter {
                 "Mind Stone",
                 "Fellwar Stone",
             )
+            data class PossessionInfo(
+                val setCodeNumber: String,
+                val surplus: Int,
+            ) {
+                override fun toString(): String = if (surplus > 0) "$setCodeNumber+" else setCodeNumber
+            }
             page(pageFormat) {
                 frame(12f, 12f, 12f, 12f) {
                     data class DeckListEntry(
                         val amount: Int,
                         val cardName: String,
-                        val cardSets: Map<String, Int>,
+                        val cardSets: List<PossessionInfo>,
                         val cardPrice: Double?,
                     )
                     fun Iterable<DeckListEntry>.totalPrice() = "\$%.2f".format(sumOf { it.cardPrice ?: 0.0 })
@@ -79,13 +85,14 @@ class DeckBuildingListPrinter {
                                         .select(ScryfallCardSets.code, Cards.collectorNumber, CardPossessions.finish).where {
                                             (Cards.name match cardName)
                                         }.mapNotNull {
-                                            "${it[ScryfallCardSets.code].uppercase()} #${it[Cards.collectorNumber].uppercase()}" + when (it[CardPossessions.finish]) {
-                                                Finish.Normal -> ""
-                                                Finish.Foil -> "*"
-                                                Finish.Etched -> "**"
-                                            }
-                                        }.groupingBy { it }
-                                        .eachCount()
+                                            "${it[ScryfallCardSets.code].uppercase()} #${it[Cards.collectorNumber].uppercase()}" to it[CardPossessions.finish]
+                                        }.groupingBy { it.first }
+                                        .aggregate { setCode, acc: Map<Finish, Int>?, element, first ->
+                                            if (first) mapOf(element.second to 1)
+                                            else (acc ?: mapOf()) + (element.second to ((acc?.get(element.second) ?: 0) + 1))
+                                        }.entries.map { (setCodeNumber, amountPerFinish) ->
+                                            PossessionInfo(setCodeNumber, amountPerFinish.entries.sumOf { (_, amount) -> amount - 1 })
+                                        }
                                 DeckListEntry(amount, cardName, cardSets, cardPrice)
                             }
                     }
@@ -109,8 +116,8 @@ class DeckBuildingListPrinter {
                             columnEntries.take(50).forEach { (amount, cardName, cardSets, cardPrice) ->
                                 val cardSetsString = if (cardName in blackListForSetSearch)
                                     "[*]" else "[${
-                                    cardSets.entries.sortedByDescending(Map.Entry<String, Int>::value)
-                                        .joinToString { if (it.value > 1) "${it.key}+" else it.key}
+                                    cardSets.sortedByDescending(PossessionInfo::surplus)
+                                        .joinToString()
                                 }]"
                                 drawText(
                                     "$amount $cardName",
