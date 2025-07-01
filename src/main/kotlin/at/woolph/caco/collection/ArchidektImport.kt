@@ -1,15 +1,20 @@
 package at.woolph.caco.collection
 
 import arrow.core.Either
+import arrow.core.raise.Raise
 import at.woolph.caco.datamodel.collection.CardCondition
 import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.sets.CardRepresentation
+import at.woolph.caco.datamodel.sets.Finish
+import com.github.ajalt.colormath.parse
 import java.nio.file.Path
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.util.*
 import java.util.function.Predicate
+import kotlin.text.toDoubleOrNull
+import kotlin.text.toInt
 
 fun importArchidekt(
   file: Path,
@@ -20,7 +25,21 @@ fun importArchidekt(
   notImportedOutputFile = notImportedOutputFile,
   datePredicate = datePredicate,
   clearBeforeImport = clearBeforeImport,
-) { csvRecord ->
+  mapper = Raise<Throwable>::mapArchitect,
+)
+
+fun importSequenceArchidekt(
+  file: Path,
+  notImportedOutputFile: Path = Path.of("not-imported.csv"),
+): Sequence<Either<Throwable, CardCollectionItem>> =
+  importSequence(
+    file,
+    notImportedOutputFile,
+    mapper = Raise<Throwable>::mapArchitect,
+  )
+
+
+fun Raise<Throwable>.mapArchitect(csvRecord: CsvRecord): CardCollectionItem {
   val dateAdded = csvRecord["Date Added"]
     ?.let { LocalDate.parse(it).atStartOfDay().toInstant(ZoneOffset.UTC) }
     ?: Instant.now()
@@ -40,7 +59,7 @@ fun importArchidekt(
   val scryfallId = Either.catch { UUID.fromString(csvRecord["Scryfall ID"]!!) }.bind()
   val (card, cardVariantType) = CardRepresentation.findByScryfallId(scryfallId)
     ?: raise(Exception("card with id $scryfallId not found"))
-  return@import CardCollectionItem(
+  return CardCollectionItem(
     quantity = quantity.toUInt(),
     cardCollectionItemId = CardCollectionItemId(
       card = card,
