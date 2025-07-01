@@ -5,7 +5,7 @@ import at.woolph.caco.collection.*
 import at.woolph.caco.command.*
 import at.woolph.caco.datamodel.Databases
 import at.woolph.caco.gui.Ui
-import at.woolph.caco.masterdata.UpdateCommand
+import at.woolph.caco.masterdata.UpdateMasterdataCommand
 import at.woolph.caco.masterdata.UpdateSetsCommand
 import at.woolph.caco.masterdata.UpdatesPrices
 import com.github.ajalt.clikt.command.main
@@ -51,7 +51,7 @@ suspend fun main(args: Array<String>) =
       EnterCards(),
     ),
     suspendNoOpCliktCommand(name = "masterdata").subcommands(
-      UpdateCommand(),
+      UpdateMasterdataCommand(),
       UpdatesPrices(),
       UpdateSetsCommand(),
       PrintCollectionBinderPageView(),
