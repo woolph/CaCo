@@ -3,6 +3,7 @@ package at.woolph.caco.masterdata.import
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.CardVariant
 import at.woolph.caco.datamodel.sets.Finish
+import at.woolph.caco.datamodel.sets.LayoutType
 import at.woolph.caco.datamodel.sets.Legality
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.parseRarity
@@ -109,7 +110,7 @@ data class ScryfallCardFace(
     val type_line: String? = null,
     @Contextual val oracle_id: UUID? = null,
     val oracle_text: String,
-    val layout: String? = null,
+    val layout: LayoutType? = null,
     val printed_name: String? = null,
     val printed_text: String? = null,
     val printed_type_line: String? = null,
@@ -155,7 +156,7 @@ data class ScryfallCard(
     @Contextual val released_at: LocalDate,
     @Contextual val uri: URI,
     @Contextual val scryfall_uri: URI,
-    val layout: String,
+    val layout: LayoutType,
     val highres_image: Boolean,
     val image_status: String,
     val image_uris: Map<String, @Contextual URI>? = null,
@@ -238,7 +239,7 @@ data class ScryfallCard(
     val isPromopackStampedVersion: Boolean get() = (promo_types.contains("promopack") && promo_types.contains("stamped") && set !in listOf("ppp1"))
     val isPrereleaseStampedVersion: Boolean get() = (promo_types.contains("prerelease") && promo_types.contains("datestamped") && set !in listOf("pmh1", "pbng") && !collector_number.contains("★"))
 
-    fun isImportWorthy() = layout != "art_series" && !digital && set != "ced"
+    fun isImportWorthy() = !layout.isMemorabilia && !digital && set != "ced"
 
     class SetNotInDatabaseException(val set: String, val setName: String, val setType: String): Exception("set not found $set $setName")
 
@@ -251,6 +252,8 @@ data class ScryfallCard(
         it.set = ScryfallCardSet.findById(set_id) ?: throw SetNotInDatabaseException(set, set_name, set_type)
         it.collectorNumber = collector_number
         it.name = name
+        it.flavorName = flavor_name
+        it.layout = layout
         it.arenaId = arena_id
         it.rarity = rarity.parseRarity()
         it.promo = isPromo
@@ -274,12 +277,13 @@ data class ScryfallCard(
         it.price = prices["eur"]?.toDouble()
         it.priceFoil = prices["eur_foil"]?.toDouble()
         it.type = type_line ?: card_faces?.mapNotNull { it.type_line }?.joinToString(" // ")
+        it.promoType = promo_types
 
         val patternSpecialDeckRestrictions = Regex("A deck can have (any number of cards|only one card|up to (\\w+) cards) named ${this@ScryfallCard.name}\\.")
         it.specialDeckRestrictions = oracle_text?.let { patternSpecialDeckRestrictions.find(it) }?.let {
             when {
-                it.groupValues[1] == "any number of cards" -> Int.MAX_VALUE // TODO
-                it.groupValues[1] == "only one card" -> 1 // TODO
+                it.groupValues[1] == "any number of cards" -> Int.MAX_VALUE
+                it.groupValues[1] == "only one card" -> 1
                 else -> when(it.groupValues[2]) {
                     "one" -> 1
                     "two" -> 2

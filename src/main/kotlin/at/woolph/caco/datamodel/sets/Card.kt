@@ -20,9 +20,11 @@ object Cards : IdTable<UUID>() {
     override val id = uuid("scryfallId").entityId()
     override val primaryKey = PrimaryKey(id)
 
+    val layout = enumeration<LayoutType>("layout")
     val set = reference("set", ScryfallCardSets).index()
     val collectorNumber = varchar("number", length = 10).index()
     val name = varchar("name", length = 256).index()
+    val flavorName = varchar("flavorName", length = 256).nullable()
     val nameDE = varchar("nameDE", length = 256).index().nullable()
     val arenaId = integer("arenaId").nullable().index()
     val rarity = enumeration("rarity", Rarity::class).index()
@@ -47,6 +49,7 @@ object Cards : IdTable<UUID>() {
     val priceFoil = double("priceFoil").nullable()
     val gameChanger = bool("gameChanger").index()
     val edhrecRank = integer("edhrecRank").nullable()
+    val promoType = array<String>("promoType").default(emptyList())
 }
 
 @Serializable
@@ -101,12 +104,15 @@ class Card(id: EntityID<UUID>) : UUIDEntity(id), Comparable<Card>, CardRepresent
 
     var set by ScryfallCardSet referencedOn Cards.set
     var collectorNumber by Cards.collectorNumber
+    val mergedName: String get() = flavorName?.let { "$it ($name)" } ?: name
     var name by Cards.name
+    var flavorName by Cards.flavorName
     var nameDE by Cards.nameDE
     var arenaId by Cards.arenaId
     var rarity by Cards.rarity
     var promo by Cards.promo
     var token by Cards.token
+    var layout by Cards.layout
     var image by Cards.image.transform({ it?.toString() }, { it?.let { URI(it) } })
     var thumbnail by Cards.image.transform(
         {
@@ -138,6 +144,9 @@ class Card(id: EntityID<UUID>) : UUIDEntity(id), Comparable<Card>, CardRepresent
     var priceFoil by Cards.priceFoil
     var gameChanger by Cards.gameChanger
     var edhrecRank by Cards.edhrecRank
+    var promoType: Set<String> by Cards.promoType.transform(
+        { it.toList() },
+        { it.toSet() })
 
     var colorIdentity by Cards.colorIdentity.transform(
         { it.colorIdentity.fold(0) { acc: Int, manaColor: ManaColor -> (acc or (1 shl manaColor.ordinal)) } },
