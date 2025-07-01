@@ -331,11 +331,11 @@ enum class VerticalAlignment {
 }
 
 fun Node.drawText(text: String, font: Font, verticalAlignment: VerticalAlignment, x: Float, color: Color) {
-	val objectHeight = 0f // TODO font height?!
+	val objectHeight = font.height
 	val startY = when(verticalAlignment) {
-		VerticalAlignment.TOP -> box.upperRightY - objectHeight // TODO subtract font height?!
+		VerticalAlignment.TOP -> box.upperRightY - objectHeight
 		VerticalAlignment.MIDDLE -> (box.height - objectHeight) / 2 + box.lowerLeftY
-		VerticalAlignment.BOTTOM -> box.lowerLeftY // TODO subtract font height?!
+		VerticalAlignment.BOTTOM -> box.lowerLeftY
 	}
 	drawText(text, font, x, startY, color)
 }
