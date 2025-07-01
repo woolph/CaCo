@@ -24,7 +24,7 @@ import kotlin.text.toInt
 
 fun importSequenceDeckbox(
     file: Path,
-): Sequence<Either<Throwable, CardCollectionItem>> {
+): kotlin.sequences.Sequence<Either<Throwable, CardCollectionItem>> {
     val knownSets = transaction { ScryfallCardSet.all().associate { it.code to it.name } }
     return importSequence(file) { nextLine ->
         mapDeckbox(nextLine, knownSets)
