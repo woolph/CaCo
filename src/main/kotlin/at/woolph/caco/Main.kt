@@ -43,11 +43,11 @@ suspend fun main(args: Array<String>) =
     suspendNoOpCliktCommand(name = "collection").subcommands(
       CollectionExportCommand(),
       CollectionImportCommand(),
-      HighValueTradables(), // TODO rename command?!
-      PrintInventory(), // TODO rename command?!
-      PrintPagePositions(), // TODO rename command?!
-      PrintMissingStats(), // TODO rename command?!
-      PrintMissingCommander(), // TODO rename command?!
+      HighValueTradables(),
+      PrintInventory(),
+      PrintPagePositions(),
+      PrintMissingStats(),
+      PrintMissingCommander(),
       EnterCards(),
     ),
     suspendNoOpCliktCommand(name = "masterdata").subcommands(
@@ -57,11 +57,11 @@ suspend fun main(args: Array<String>) =
       PrintCollectionBinderPageView(),
     ),
     suspendNoOpCliktCommand(name = "decklists").subcommands(
-      PrintDecklist(), // TODO rename command?!
-      PrintDeckboxDecks(), // TODO rename command?!
-      PrintArchidektDecks(), // TODO rename command?!
-      ImportDecklists(), // TODO rename command?!
-      PrintManaBase(), // TODO rename command?!
+      PrintDecklist(),
+      PrintDeckboxDecks(),
+      PrintArchidektDecks(),
+      ImportDecklists(),
+      PrintManaBase(),
       PrintManaBaseArchidektDeck(),
     ),
   ).main(args)
