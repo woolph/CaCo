@@ -199,6 +199,6 @@ class Card(id: EntityID<UUID>) : UUIDEntity(id), Comparable<Card>, CardRepresent
 
     override fun toString(): String = "[${set.code}-$collectorNumber] $name"
 
-    override val card: Card get() = this
+    override val baseVariantCard: Card get() = this
     override val variantType: CardVariant.Type? get() = null
 }
