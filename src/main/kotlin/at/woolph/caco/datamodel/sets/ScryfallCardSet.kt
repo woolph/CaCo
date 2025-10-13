@@ -99,6 +99,7 @@ class ScryfallCardSet(id: EntityID<UUID>) : UUIDEntity(id), Comparable<ScryfallC
 
     private fun groupedByBlocks(scryfallCardSets: SizedIterable<ScryfallCardSet>): Sequence<Block> = sequence {
       val (nonBlockSets, blockSets) = scryfallCardSets
+        .orderBy(ScryfallCardSets.releaseDate to SortOrder.DESC)
         .filter { !it.digitalOnly && it.cardCount > 12 }
         .partition { it.blockName == null || it.blockName in blockNameBlacklist }
 
@@ -131,6 +132,9 @@ class ScryfallCardSet(id: EntityID<UUID>) : UUIDEntity(id), Comparable<ScryfallC
   val cards by Card referrersOn Cards.set
 
   val totalCardCount: Int get() = cardCount + childSets.sumOf(ScryfallCardSet::cardCount)
+
+  val binderPages: Int get() = (cardCount / 18 + if (cardCount % 18 > 0) 1 else 0)
+  val totalBinderPages: Int get() = binderPages + childSets.sumOf(ScryfallCardSet::binderPages)
 
   val childSets: SizedIterable<ScryfallCardSet> get() = findByParentSetCode(code)
   val selfAndNonRootChildSets: Sequence<ScryfallCardSet>

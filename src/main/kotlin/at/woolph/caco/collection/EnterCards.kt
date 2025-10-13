@@ -9,14 +9,11 @@ import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.Finish
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import com.github.ajalt.clikt.core.terminal
-import com.github.ajalt.clikt.parameters.arguments.argument
-import com.github.ajalt.clikt.parameters.arguments.convert
 import com.github.ajalt.clikt.parameters.options.*
 import com.github.ajalt.clikt.parameters.types.enum
 import com.github.ajalt.mordant.terminal.danger
 import com.github.ajalt.mordant.terminal.prompt
 import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.transactions.transaction
 import java.io.File
 import kotlin.io.path.Path
 
@@ -24,12 +21,6 @@ class EnterCards : SuspendingTransactionCliktCommand() {
   val format by option(help = "The format to export the entered cards to")
     .enum<CollectionFileFormat>()
     .default(CollectionFileFormat.ARCHIDEKT)
-
-  val set by argument(help = "The set code of the cards to be entered").convert {
-    transaction {
-      ScryfallCardSet.findByCode(it.lowercase()) ?: throw IllegalArgumentException("No set found for set code $it")
-    }
-  }
 
   val condition by option(help = "The language of the cards")
     .convert { CardCondition.Companion.parse(it) }
@@ -55,11 +46,10 @@ class EnterCards : SuspendingTransactionCliktCommand() {
     val languagesToBeChecked =
       languageRankList.takeWhile { it != language }.toMutableList().apply { add(language) }
 
-    echo("enter cards for ${set.code} ${set.name}")
     echo("language: $language (languages to be considered when checking whether card is needed for collection: $languagesToBeChecked)")
     echo("condition: $condition")
 
-    File("./import-${set.code}.stdin").printWriter().use { stdinPrint ->
+    File("./import.stdin").printWriter().use { stdinPrint ->
       data class PossessionUpdate2(
         val count: Int = 0,
         val alreadyCollected: Int,
@@ -78,12 +68,13 @@ class EnterCards : SuspendingTransactionCliktCommand() {
 
       val cardPossessionUpdates = mutableMapOf<Pair<Card, Finish>, PossessionUpdate2>()
 
+      lateinit var set: ScryfallCardSet
       lateinit var prevSetNumber: String
-      var setNumber = terminal.prompt("collector number")!!.also {
+      var setCodeNumber = terminal.prompt("collector number (optional with setCode)")!!.also {
         stdinPrint.println(it)
       }
 
-      while (setNumber.isNotBlank()) {
+      while (setCodeNumber.isNotBlank()) {
         fun add(setNumber: String) {
           val finish = when {
             setNumber.endsWith("#") -> Finish.Etched
@@ -94,7 +85,7 @@ class EnterCards : SuspendingTransactionCliktCommand() {
           val card = set.cards.firstOrNull { it.collectorNumber == setNumber2 }
           if (card != null) {
             echo(
-              "add #${card.collectorNumber} \"${card.name}\" ${if (finish != Finish.Normal) " in \u001B[38:5:0m\u001B[48:5:214mf\u001B[48:5:215mo\u001B[48:5:216mi\u001B[48:5:217ml\u001B[0m" else ""}",
+              "add ${set.code.uppercase()} #${card.collectorNumber} \"${card.name}\" ${if (finish != Finish.Normal) " in \u001B[38:5:0m\u001B[48:5:214mf\u001B[48:5:215mo\u001B[48:5:216mi\u001B[48:5:217ml\u001B[0m" else ""}",
               trailingNewline = false
             )
             cardPossessionUpdates.compute(card to finish) { _, possessionUpdate ->
@@ -104,7 +95,6 @@ class EnterCards : SuspendingTransactionCliktCommand() {
                 }
               }).increment()
             }
-            echo()
           } else {
             terminal.danger("\u001b[31madd #${setNumber2} not found!\u001b[0m")
           }
@@ -127,20 +117,33 @@ class EnterCards : SuspendingTransactionCliktCommand() {
           }
           echo()
         }
-        prevSetNumber = when (setNumber) {
-          "+" -> {
-            add(prevSetNumber); prevSetNumber
-          }
 
-          "-" -> {
-            remove(prevSetNumber); prevSetNumber
+        try {
+          val tokens = setCodeNumber.split("#", limit = 2)
+          val (setCode, setNumber) = if (tokens.size == 2) {
+            (ScryfallCardSet.findByCode(tokens[0].lowercase()) ?: throw IllegalArgumentException("unknown set ${tokens[0]}")) to tokens[1]
+          } else {
+            set to setCodeNumber
           }
+          set = setCode
 
-          else -> {
-            add(setNumber); setNumber
+          prevSetNumber = when (setNumber) {
+            "+" -> {
+              add(prevSetNumber); prevSetNumber
+            }
+
+            "-" -> {
+              remove(prevSetNumber); prevSetNumber
+            }
+
+            else -> {
+              add(setNumber); setNumber
+            }
           }
+        } catch (e: Exception) {
+          terminal.danger("\u001b[31m${e.message}!\u001b[0m")
         }
-        setNumber = terminal.prompt("collector number")!!.also {
+        setCodeNumber = terminal.prompt("collector number")!!.also {
           stdinPrint.println(it)
         }
       }

@@ -183,8 +183,10 @@ class BulkAdditionDialog(val collectionSettings: CollectionSettings, val set: Sc
                                         System.console()
                                     }
                                     onAction = EventHandler {
-                                        val regex = Regex("(\\d+)?(\\*(\\d+))?(/(\\d+))?")
-                                        regex.matchEntire(this.text)?.let {
+                                        val bulkAdditionPattern = Regex("(\\d+)?(\\*(\\d+))?(/(\\d+))?")
+                                        val gotoPattern = Regex("goto (.+)")
+
+                                        bulkAdditionPattern.matchEntire(this.text)?.let {
                                             val nonfoils = it.groups[1]?.value?.toInt() ?: 0
                                             val foils = it.groups[3]?.value?.toInt() ?: 0
                                             val prereleaseStampedFoils = it.groups[5]?.value?.toInt() ?: 0
@@ -193,6 +195,16 @@ class BulkAdditionDialog(val collectionSettings: CollectionSettings, val set: Sc
                                             tvCards.selectionModel.selectedItem.bulkAdditionPremium.set(foils)
                                             tvCards.selectionModel.selectedItem.bulkAdditionPrereleasePromo.set(prereleaseStampedFoils)
                                             tvCards.selectionModel.selectNext()
+                                        }
+                                        gotoPattern.matchEntire(this.text)?.let {
+                                            it.groups[1]?.value?.let { collectorNumberToJumpTo ->
+                                              tvCards.items.firstOrNull { cardModel ->
+                                                cardModel.collectorNumber.value == collectorNumberToJumpTo
+                                              }?.let { item ->
+                                                  tvCards.selectionModel.select(item)
+                                                  tvCards.scrollTo(item)
+                                              }
+                                            }
                                         }
                                     }
                                 }
@@ -258,36 +270,42 @@ class BulkAdditionDialog(val collectionSettings: CollectionSettings, val set: Sc
             button(ButtonType.APPLY) {
                 action {
                   val cardCollectionItems = cards.flatMap { cardInfo ->
-                    sequenceOf(
-                      CardCollectionItem(
-                        quantity = cardInfo.bulkAdditionNonPremium.value.toUInt(),
-                        CardCollectionItemId(
-                          card = cardInfo.item,
-                          finish = Finish.Normal,
-                          language = languageProperty.value,
-                          condition = conditionProperty.value,
-                        )
-                      ),
-                      CardCollectionItem(
-                        quantity = cardInfo.bulkAdditionPremium.value.toUInt(),
-                        CardCollectionItemId(
-                          card = cardInfo.item,
-                          finish = Finish.Foil,
-                          language = languageProperty.value,
-                          condition = conditionProperty.value,
-                        )
-                      ),
-                      CardCollectionItem(
-                        quantity = cardInfo.bulkAdditionPrereleasePromo.value.toUInt(),
-                        CardCollectionItemId(
-                          card = cardInfo.item,
-                          finish = Finish.Foil,
-                          language = languageProperty.value,
-                          condition = conditionProperty.value,
-                          variantType = CardVariant.Type.PrereleaseStamped,
-                        )
-                      ),
-                    )
+                    sequence {
+                      cardInfo.bulkAdditionNonPremium.value.toUInt().takeIf { it > 0u }?.let {
+                        yield(CardCollectionItem(
+                          quantity = it,
+                          CardCollectionItemId(
+                            card = cardInfo.item,
+                            finish = Finish.Normal,
+                            language = languageProperty.value,
+                            condition = conditionProperty.value,
+                          )
+                        ))
+                      }
+                      cardInfo.bulkAdditionPremium.value.toUInt().takeIf { it > 0u }?.let {
+                        yield(CardCollectionItem(
+                          quantity = it,
+                          CardCollectionItemId(
+                            card = cardInfo.item,
+                            finish = Finish.Foil,
+                            language = languageProperty.value,
+                            condition = conditionProperty.value,
+                          )
+                        ))
+                      }
+                      cardInfo.bulkAdditionPrereleasePromo.value.toUInt().takeIf { it > 0u }?.let {
+                        yield(CardCollectionItem(
+                          quantity = it,
+                          CardCollectionItemId(
+                            card = cardInfo.item,
+                            finish = Finish.Foil,
+                            language = languageProperty.value,
+                            condition = conditionProperty.value,
+                            variantType = CardVariant.Type.PrereleaseStamped,
+                          )
+                        ))
+                      }
+                    }
                   }.filter(CardCollectionItem::isNotEmpty)
 
                   transaction {

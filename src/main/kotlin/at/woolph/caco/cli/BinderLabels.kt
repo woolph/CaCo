@@ -26,14 +26,14 @@ class BinderLabels(
       val fontFamilyPlanewalker = loadType0Font(javaClass.getResourceAsStream("/fonts/PlanewalkerBold-xZj5.ttf")!!)
       val fontFamily72Black = loadType0Font(javaClass.getResourceAsStream("/fonts/72-Black.ttf")!!)
 
-      val fontTitle = Font(fontFamilyPlanewalker, 48f)
-      val fontSubTitle = Font(fontFamilyPlanewalker, 16f)
-      val fontCode = Font(fontFamily72Black, 28f)
-      val fontCodeCommanderSubset = Font(fontFamily72Black, 14f)
-
       val pageFormat = PDRectangle.A4
-
       val columnWidth = pageFormat.width / labelsPerPage
+
+      val fontTitle = Font(fontFamilyPlanewalker, columnWidth*0.5f)
+      val fontSubTitle = Font(fontFamilyPlanewalker, columnWidth*0.17f)
+      val fontCode = Font(fontFamily72Black, columnWidth*0.28f)
+      val fontCodeCommanderSubset = Font(fontFamily72Black, columnWidth*0.14f)
+
       val margin = 12f
 
       val maximumWidth = columnWidth - 2 * margin
@@ -55,9 +55,7 @@ class BinderLabels(
       val maxTitleWidth =
         pageFormat.height - magicLogoYPosition - mtgLogoHeight - defaultGapSize - setDivHeight - 2 * margin - 2 * defaultGapSize
 
-      val titleXPosition = (maximumWidth + fontTitle.height) * 0.5f
       val titleYPosition = setDivYPos - 3 * defaultGapSize
-      val subTitleXPosition = titleXPosition + fontSubTitle.height + defaultGapSize
       val subTitleYPosition = titleYPosition - 30f
 
 
@@ -74,30 +72,33 @@ class BinderLabels(
             magicLogoYPosition,
           )
 
-          set.subTitle?.let { _subTitle ->
-            adjustTextToFitWidth(
-              _subTitle,
-              fontSubTitle,
-              maxTitleWidth,
-              10f
-            ).let { (title, font) ->
-              drawText(
-                title,
-                font,
-                fontSubColor,
-                subTitleXPosition,
-                subTitleYPosition,
-                90.0
-              )
-            }
-          }
-
           adjustTextToFitWidth(
             set.title,
             fontTitle,
             maxTitleWidth,
-            36f
+            columnWidth*0.5f,
           ).let { (title, font) ->
+            val titleXPosition = (maximumWidth + font.height) * 0.5f
+
+            set.subTitle?.let { _subTitle ->
+              adjustTextToFitWidth(
+                _subTitle,
+                fontSubTitle,
+                maxTitleWidth,
+                columnWidth*0.17f,
+              ).let { (title, font) ->
+                val subTitleXPosition = titleXPosition + font.height + defaultGapSize
+                drawText(
+                  title,
+                  font,
+                  fontSubColor,
+                  subTitleXPosition,
+                  subTitleYPosition,
+                  90.0
+                )
+              }
+            }
+
             drawText(title, font, fontColor, titleXPosition, titleYPosition, 90.0)
           }
 
@@ -188,34 +189,32 @@ fun main() {
   Databases.init()
 
   transaction {
-    val thresholdTooMuch = 800
-    val thresholdTooFew = 120
+    val thresholdTooMuchPages = 45 // TODE fine tune the max card count per page, so that the labels are not too small
+    val thresholdTooFewPages = 7
 
     val labels = sequence<MapLabelItem> {
-      yield(PromosLabel)
-      yield(GenericLabel("misc", "Miscellaneous"))
-
       // TODO I would like to habe some reassignments of parent stuff (pltc is child of ltr, but I'd like it to be a child of ltc, H1R should be MH1 child, H2R of MH2, GK1 of
       ScryfallCardSet.rootSetsGroupedByBlocks { (ScryfallCardSets.digitalOnly eq false).and(ScryfallCardSets.cardCount greater 12) }
-        .filterNot { it is SingleSetBlock && it.set.code in setOf("sld", "30a") }
+        .filterNot { it is SingleSetBlock && it.set.code in setOf("sld", "30a", "unk") }
         .forEach { rootBlock ->
           when (rootBlock) {
             is SingleSetBlock -> {
               suspend fun SequenceScope<MapLabelItem>.yieldSet(currentSet: ScryfallCardSet) {
                 val (childSetsDefinitelyIncludedInRootSetBinder, childSetsWhichNeedToBeChecked) = currentSet.childSets.filterNot {
-                  it.code.endsWith(currentSet.code) && it.code[0] in setOf('p', 't', 'f', 'm', 'w', 'o', 's')
-                }.partition { it.cardCount <= thresholdTooFew }
+                  it.code.endsWith(currentSet.code) && it.code[0] in setOf('p', 't', 'f', 'm', 'w', 'o', 's', 'r')
+                      || it.code.matches(Regex("pss\\d"))
+                }.partition { it.binderPages <= thresholdTooFewPages }
 
                 val setsInBinder = childSetsDefinitelyIncludedInRootSetBinder.toMutableList()
-                childSetsWhichNeedToBeChecked.sortedByDescending(ScryfallCardSet::cardCount).forEach { childSet ->
-                  if (currentSet.cardCount + setsInBinder.sumOf(ScryfallCardSet::totalCardCount) + childSet.cardCount <= thresholdTooMuch) {
+                childSetsWhichNeedToBeChecked.sortedByDescending(ScryfallCardSet::binderPages).forEach { childSet ->
+                  if (currentSet.binderPages + setsInBinder.sumOf(ScryfallCardSet::totalBinderPages) + childSet.binderPages <= thresholdTooMuchPages) {
                     setsInBinder.add(childSet)
                   } else {
                     yieldSet(childSet)
                   }
                 }
                 setsInBinder.addFirst(currentSet)
-                if (setsInBinder.sumOf(ScryfallCardSet::cardCount) > thresholdTooFew) {
+                if (setsInBinder.sumOf(ScryfallCardSet::binderPages) > thresholdTooFewPages) {
                   yield(AbstractLabelItem(setsInBinder)) // TODO omit same icons
                 }
               }
@@ -224,7 +223,7 @@ fun main() {
             }
 
             is MultiSetBlock -> {
-              if (rootBlock.sets.sumOf(ScryfallCardSet::cardCount) <= thresholdTooMuch) {
+              if (rootBlock.sets.sumOf(ScryfallCardSet::binderPages) <= thresholdTooMuchPages) {
                 yield(MultiSetBlockLabel(rootBlock))
               } else {
                 rootBlock.sets.forEach { yield(AbstractLabelItem(listOf(it))) }
@@ -232,12 +231,15 @@ fun main() {
             }
           }
         }
+      yield(PromosLabel)
+      yield(GenericLabel("misc", "Miscellaneous"))
     }
 
     BinderLabels().printLabel(
       Path.of(".\\BinderLabels.pdf"),
       labels = labels.toList(),
-      labelsPerPage = 6,
+//      labels = labels.filterNot { it.code == "j25" }.take(10).toList(),
+      labelsPerPage = 5,
     )
   }
 }

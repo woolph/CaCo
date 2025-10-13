@@ -7,7 +7,7 @@ Content-Type: application/json
     "password": "{{password}}"
 }
 
-> {% client.global.set("access_token", response.body.access_token); %}
+> {% client.global.set("access_token", response.body.token); %}
 
 ### import collection
 POST https://archidekt.com/api/collection/upload/v2/
