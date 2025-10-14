@@ -1,3 +1,4 @@
+/* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.collection
 
 import at.woolph.caco.cli.SuspendingTransactionCliktCommand

@@ -1,3 +1,4 @@
+/* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.cli
 
 import at.woolph.caco.datamodel.decks.Format

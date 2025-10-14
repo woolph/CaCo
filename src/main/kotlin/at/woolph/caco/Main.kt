@@ -1,3 +1,4 @@
+/* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco
 
 import at.woolph.caco.cli.suspendNoOpCliktCommand
@@ -43,8 +44,9 @@ suspend fun main(args: Array<String>) =
     suspendNoOpCliktCommand(name = "collection").subcommands(
       CollectionExportCommand(),
       CollectionImportCommand(),
-      HighValueTradables(),
+//      HighValueTradables(),
       PrintInventory(),
+      PrintExcessPossessions(),
       PrintPagePositions(),
       PrintMissingStats(),
       PrintMissingCommander(),

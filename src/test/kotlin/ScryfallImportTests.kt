@@ -1,3 +1,4 @@
+/* Copyright 2025 Wolfgang Mayer */
 import at.woolph.caco.masterdata.import.ScryfallCard
 import at.woolph.caco.masterdata.import.ScryfallSet
 import at.woolph.caco.masterdata.import.jsonSerializer

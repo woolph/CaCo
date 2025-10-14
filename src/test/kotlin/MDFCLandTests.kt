@@ -1,3 +1,4 @@
+/* Copyright 2025 Wolfgang Mayer */
 import at.woolph.caco.datamodel.Databases
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.Cards
@@ -71,9 +72,10 @@ class MDFCLandTests {
             }
         }
 
-    private fun testCards(vararg cardNames: String) = transaction {
-        cardNames.map {
-            Card.find { Cards.name match it }.limit(1).first()
+    private fun testCards(vararg cardNames: String) =
+        transaction {
+            cardNames.map {
+                Card.find { Cards.name match it }.limit(1).first()
+            }
         }
-    }
 }

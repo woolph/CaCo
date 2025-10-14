@@ -1,3 +1,4 @@
+/* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.cli
 
 import com.github.ajalt.mordant.terminal.ConversionResult
@@ -16,12 +17,14 @@ class PagePositionCalculator(
 
     fun page() {
         do {
-            val result = terminal.prompt<Int?>("Set number") {
-                ConversionResult.Valid(it.toIntOrNull())
-            }?.apply {
-                printPageNumberAndPosition(this)
-            }
-        } while(result != null)
+            val result =
+                terminal
+                    .prompt<Int?>("Set number") {
+                        ConversionResult.Valid(it.toIntOrNull())
+                    }?.apply {
+                        printPageNumberAndPosition(this)
+                    }
+        } while (result != null)
     }
 
     fun printPageNumberAndPosition(setNumber: Int) {
@@ -32,8 +35,8 @@ class PagePositionCalculator(
 
         terminal.println("p${page + 1} $pageSide")
 
-        for (x in 0..< rowsPerPage) {
-            for (y in 0..< columnsPerPage) {
+        for (x in 0..<rowsPerPage) {
+            for (y in 0..<columnsPerPage) {
                 terminal.print(if (x * 3 + y == pocket) "\u25AE" else "\u25AF")
             }
             terminal.println()

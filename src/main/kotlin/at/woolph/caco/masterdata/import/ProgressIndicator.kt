@@ -1,3 +1,4 @@
+/* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.masterdata.import
 
 import javafx.beans.property.Property
@@ -15,7 +16,10 @@ class ProgressIndicator(
 ) {
     var lastProgressUpdate = progress.value.toDouble()
 
-    suspend fun update(current: Number, max: Number) {
+    suspend fun update(
+        current: Number,
+        max: Number,
+    ) {
         val currentProgress = maxValue * (current.toDouble() / max.toDouble())
 
         if (currentProgress - lastProgressUpdate < desiredIncrement) {
@@ -33,7 +37,10 @@ class ProgressIndicator(
     }
 }
 
-fun <T> Flow<T>.updateProgressIndicator(progressIndicator: ProgressIndicator?, totalNumber: Int?): Flow<T> =
+fun <T> Flow<T>.updateProgressIndicator(
+    progressIndicator: ProgressIndicator?,
+    totalNumber: Int?,
+): Flow<T> =
     if (progressIndicator != null && totalNumber != null) {
         var numberOfProcessedItems: Int = 0
         onEach {

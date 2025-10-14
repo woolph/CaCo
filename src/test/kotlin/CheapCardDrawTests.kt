@@ -1,3 +1,4 @@
+/* Copyright 2025 Wolfgang Mayer */
 import at.woolph.caco.datamodel.Databases
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.Cards

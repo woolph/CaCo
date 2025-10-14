@@ -1,3 +1,4 @@
+/* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.gui.view
 
 import at.woolph.caco.gui.Styles
@@ -42,102 +43,107 @@ import tornadofx.whenUndocked
 import kotlin.math.min
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class CardDetailsView(val cardProperty: SimpleObjectProperty<CardModel?> = SimpleObjectProperty(null)) : Fragment() {
-	var card by cardProperty
+class CardDetailsView(
+    val cardProperty: SimpleObjectProperty<CardModel?> = SimpleObjectProperty(null),
+) : Fragment() {
+    var card by cardProperty
 
-	val imageLoadingProperty = SimpleBooleanProperty(true)
-	var imageLoading by imageLoadingProperty
+    val imageLoadingProperty = SimpleBooleanProperty(true)
+    var imageLoading by imageLoadingProperty
 
-	private lateinit var labelNumberInSet: Label
-	private lateinit var labelRarity: Label
-	private lateinit var labelCardName: Label
+    private lateinit var labelNumberInSet: Label
+    private lateinit var labelRarity: Label
+    private lateinit var labelCardName: Label
 
-	private lateinit var imageView: ImageView
-	private lateinit var imageLoadingProgressIndicatorBackground: Shape
-	private lateinit var imageLoadingProgressIndicator: ProgressIndicator
+    private lateinit var imageView: ImageView
+    private lateinit var imageLoadingProgressIndicatorBackground: Shape
+    private lateinit var imageLoadingProgressIndicator: ProgressIndicator
 
-	override val root =  gridpane {
-		addClass(Styles.cardDetailsView)
+    override val root =
+        gridpane {
+            addClass(Styles.cardDetailsView)
 
-		paddingAll = 10.0
-		hgap = 10.0
-		vgap = 10.0
+            paddingAll = 10.0
+            hgap = 10.0
+            vgap = 10.0
 
-		row {
-			labelNumberInSet = label()
-			labelRarity = label()
-			labelCardName = label()
-		}
+            row {
+                labelNumberInSet = label()
+                labelRarity = label()
+                labelCardName = label()
+            }
 
-		row {
-			stackpane {
-				gridpaneConstraints {
-					columnSpan = 3
-				}
+            row {
+                stackpane {
+                    gridpaneConstraints {
+                        columnSpan = 3
+                    }
 
-				imageView = imageview {
-					fitHeight = 312.0
-					fitWidth = 224.0
-				}
+                    imageView =
+                        imageview {
+                            fitHeight = 312.0
+                            fitWidth = 224.0
+                        }
 
-				imageLoadingProgressIndicatorBackground = rectangle {
-					fill = Color.rgb(1, 1, 1, 0.3)
-					height = imageView.fitHeight
-					width = imageView.fitWidth
-				}
+                    imageLoadingProgressIndicatorBackground =
+                        rectangle {
+                            fill = Color.rgb(1, 1, 1, 0.3)
+                            height = imageView.fitHeight
+                            width = imageView.fitWidth
+                        }
 
-				imageLoadingProgressIndicator = progressindicator {
-					val maxSize = min(imageView.fitHeight, imageView.fitWidth) / 2
-					isVisible = false
-					maxWidth = maxSize
-					maxHeight = maxSize
-				}
-			}
-		}
-	}
+                    imageLoadingProgressIndicator =
+                        progressindicator {
+                            val maxSize = min(imageView.fitHeight, imageView.fitWidth) / 2
+                            isVisible = false
+                            maxWidth = maxSize
+                            maxHeight = maxSize
+                        }
+                }
+            }
+        }
 
-	val coroutineScope = CoroutineScope(SupervisorJob() + CoroutineName("CardDetailsView"))
+    val coroutineScope = CoroutineScope(SupervisorJob() + CoroutineName("CardDetailsView"))
 
-	init {
-		labelNumberInSet.textProperty().bind(cardProperty.selectNullable { it?.collectorNumber }.toStringBinding())
-		labelRarity.textProperty().bind(cardProperty.selectNullable { it?.rarity }.toStringBinding())
-		labelCardName.textProperty().bind(cardProperty.selectNullable { it?.name })
+    init {
+        labelNumberInSet.textProperty().bind(cardProperty.selectNullable { it?.collectorNumber }.toStringBinding())
+        labelRarity.textProperty().bind(cardProperty.selectNullable { it?.rarity }.toStringBinding())
+        labelCardName.textProperty().bind(cardProperty.selectNullable { it?.name })
 
-//		cardProperty.addListener { _, _, _ -> loadImage() }
-//		imageLoadingProperty.addListener { _, _, _ -> loadImage() }
+// 		cardProperty.addListener { _, _, _ -> loadImage() }
+// 		imageLoadingProperty.addListener { _, _, _ -> loadImage() }
 
-		whenDocked {
-			coroutineScope.launch(Dispatchers.Default) {
-				combine(
-					cardProperty.asFlow().onEach { LOG.trace("selected card changed to {}", it) },
-					imageLoadingProperty.asFlow(),
-				) { cardModel, imageLoading -> Pair(cardModel, imageLoading) }
-					.collectLatest { (cardModel, imageLoading) ->
-						withContext(Dispatchers.Main.immediate) {
-							if (imageLoading) {
-								LOG.trace("loading image for {}", cardModel)
-								imageLoadingProgressIndicatorBackground.isVisible = true
-								imageLoadingProgressIndicator.isVisible = true
-								imageView.image = cardModel?.getCachedImage()
-								imageLoadingProgressIndicator.isVisible = false
-								imageLoadingProgressIndicatorBackground.isVisible = false
-								LOG.trace("loaded image for {}", cardModel)
-							} else {
-								imageView.image = null
-								imageLoadingProgressIndicatorBackground.isVisible = true
-							}
-						}
-					}
-			}
-		}
+        whenDocked {
+            coroutineScope.launch(Dispatchers.Default) {
+                combine(
+                    cardProperty.asFlow().onEach { LOG.trace("selected card changed to {}", it) },
+                    imageLoadingProperty.asFlow(),
+                ) { cardModel, imageLoading -> Pair(cardModel, imageLoading) }
+                    .collectLatest { (cardModel, imageLoading) ->
+                        withContext(Dispatchers.Main.immediate) {
+                            if (imageLoading) {
+                                LOG.trace("loading image for {}", cardModel)
+                                imageLoadingProgressIndicatorBackground.isVisible = true
+                                imageLoadingProgressIndicator.isVisible = true
+                                imageView.image = cardModel?.getCachedImage()
+                                imageLoadingProgressIndicator.isVisible = false
+                                imageLoadingProgressIndicatorBackground.isVisible = false
+                                LOG.trace("loaded image for {}", cardModel)
+                            } else {
+                                imageView.image = null
+                                imageLoadingProgressIndicatorBackground.isVisible = true
+                            }
+                        }
+                    }
+            }
+        }
 
-		whenUndocked {
-			coroutineScope.coroutineContext.cancelChildren()
-		}
-	}
+        whenUndocked {
+            coroutineScope.coroutineContext.cancelChildren()
+        }
+    }
 
-	companion object {
-	    val LOG = LoggerFactory.getLogger(this::class.java.declaringClass)
-	}
+    companion object {
+        val LOG = LoggerFactory.getLogger(this::class.java.declaringClass)
+    }
 }
-

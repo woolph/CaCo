@@ -1,3 +1,4 @@
+/* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.masterdata.import
 
 import at.woolph.caco.cli.manabase.ColorIdentity

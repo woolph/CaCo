@@ -1,3 +1,4 @@
+/* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.gui.view.collection
 
 import at.woolph.caco.collection.CardCollectionItem
@@ -59,12 +60,19 @@ import tornadofx.top
 import tornadofx.vboxConstraints
 import java.io.File
 
-class BulkAdditionDialog(val collectionSettings: CollectionSettings, val set: ScryfallCardSet, val owner: View, imageLoading: Boolean, selection: Card? = null): Dialog<Boolean>() {
-
-    inner class CardModel(card: Card): CardPossessionModel(card, collectionSettings) {
+class BulkAdditionDialog(
+    val collectionSettings: CollectionSettings,
+    val set: ScryfallCardSet,
+    val owner: View,
+    imageLoading: Boolean,
+    selection: Card? = null,
+) : Dialog<Boolean>() {
+    inner class CardModel(
+        card: Card,
+    ) : CardPossessionModel(card, collectionSettings) {
         val bulkAdditionNonPremium = SimpleIntegerProperty(0)
         val bulkAdditionPremium = SimpleIntegerProperty(0)
-		val bulkAdditionPrereleasePromo = SimpleIntegerProperty(0)
+        val bulkAdditionPrereleasePromo = SimpleIntegerProperty(0)
     }
 
     val languageProperty = SimpleObjectProperty(CardLanguage.ENGLISH)
@@ -79,27 +87,41 @@ class BulkAdditionDialog(val collectionSettings: CollectionSettings, val set: Sc
 
     lateinit var bulkAddNumberTextField: TextField
     lateinit var tvCards: TableView<CardModel>
-	lateinit var toggleButtonImageLoading: ToggleButton
+    lateinit var toggleButtonImageLoading: ToggleButton
 
     val cards = FXCollections.observableArrayList<CardModel>()
     val cardsSorted = cards.sorted()
-    val cardsFiltered = cardsSorted.filteredBy(listOf(
-        filterTextProperty,
-        filterRarityCommon,
-        filterRarityUncommon,
-        filterRarityRare,
-        filterRarityMythic,
-    )) { cardInfo -> (filterTextProperty.get().isBlank() || cardInfo.names.any { it.contains(filterTextProperty.get(), ignoreCase = true) })
-            && (filterRarityCommon.get() || cardInfo.rarity.value != Rarity.COMMON)
-            && (filterRarityUncommon.get() || cardInfo.rarity.value != Rarity.UNCOMMON)
-            && (filterRarityRare.get() || cardInfo.rarity.value != Rarity.RARE)
-            && (filterRarityMythic.get() || cardInfo.rarity.value != Rarity.MYTHIC)
-    }
+    val cardsFiltered =
+        cardsSorted.filteredBy(
+            listOf(
+                filterTextProperty,
+                filterRarityCommon,
+                filterRarityUncommon,
+                filterRarityRare,
+                filterRarityMythic,
+            ),
+        ) { cardInfo ->
+            (
+                filterTextProperty.get().isBlank() ||
+                    cardInfo.names.any {
+                        it.contains(
+                            filterTextProperty.get(),
+                            ignoreCase = true,
+                        )
+                    }
+            ) &&
+                (filterRarityCommon.get() || cardInfo.rarity.value != Rarity.COMMON) &&
+                (filterRarityUncommon.get() || cardInfo.rarity.value != Rarity.UNCOMMON) &&
+                (filterRarityRare.get() || cardInfo.rarity.value != Rarity.RARE) &&
+                (filterRarityMythic.get() || cardInfo.rarity.value != Rarity.MYTHIC)
+        }
 
     fun updateCards() {
-        cards.setAll(transaction {
-            set.cards.toList().map { CardModel(it) }
-        })
+        cards.setAll(
+            transaction {
+                set.cards.toList().map { CardModel(it) }
+            },
+        )
     }
 
     init {
@@ -111,210 +133,234 @@ class BulkAdditionDialog(val collectionSettings: CollectionSettings, val set: Sc
         title = "Bulk Addition: ${set.name}"
 
         dialogPane {
-            content = borderpane {
-				top {
-					toolbar {
-						toggleButtonImageLoading = togglebutton("\uD83D\uDDBC") {
-							isSelected = imageLoading
-						}
-						label("Filter: ")
-						togglebutton("C") {
-							filterRarityCommon.bind(selectedProperty())
-						}
-						togglebutton("U") {
-							filterRarityUncommon.bind(selectedProperty())
-						}
-						togglebutton("R") {
-							filterRarityRare.bind(selectedProperty())
-						}
-						togglebutton("M") {
-							filterRarityMythic.bind(selectedProperty())
-						}
-						region {
-							prefWidth = 40.0
-
-							hboxConstraints {
-								hGrow = Priority.ALWAYS
-							}
-						}
-                        button("+1") {
-                            action {
-                               tvCards.items.forEach {
-                                   it.bulkAdditionNonPremium.set(1)
-                               }
+            content =
+                borderpane {
+                    top {
+                        toolbar {
+                            toggleButtonImageLoading =
+                                togglebutton("\uD83D\uDDBC") {
+                                    isSelected = imageLoading
+                                }
+                            label("Filter: ")
+                            togglebutton("C") {
+                                filterRarityCommon.bind(selectedProperty())
                             }
-                        }
-					}
-				}
-                left {
-                    form {
-						fieldset("Addition Setup") {
-							field("Language") {
-								combobox(languageProperty, CardLanguage.entries)
-							}
-							field("CardCondition") {
-								combobox(conditionProperty, CardCondition.entries)
-							}
-						}
-                        fieldset("Card Info") {
-							this += find<CardDetailsView>().apply {
-								runLater {
-									this.cardProperty.bind(tvCards.selectionModel.selectedItemProperty())
-									this.imageLoadingProperty.bind(toggleButtonImageLoading.selectedProperty())
-								}
-							}
-                        }
-                        fieldset("Current Addition") {
-                            field("Number") {
-                                bulkAddNumberTextField = textfield {
-                                    onKeyPressed = EventHandler {
-                                        when (it.code) {
-                                            KeyCode.UP -> {
-                                                foilProperty.value = Foil.NONFOIL
-                                                tvCards.selectionModel.selectPrevious()
-                                            }
-                                            KeyCode.DOWN -> {
-                                                foilProperty.value = Foil.NONFOIL
-                                                tvCards.selectionModel.selectNext()
-                                            }
-                                            else -> {}
-                                        }
+                            togglebutton("U") {
+                                filterRarityUncommon.bind(selectedProperty())
+                            }
+                            togglebutton("R") {
+                                filterRarityRare.bind(selectedProperty())
+                            }
+                            togglebutton("M") {
+                                filterRarityMythic.bind(selectedProperty())
+                            }
+                            region {
+                                prefWidth = 40.0
 
-                                        System.console()
-                                    }
-                                    onAction = EventHandler {
-                                        val bulkAdditionPattern = Regex("(\\d+)?(\\*(\\d+))?(/(\\d+))?")
-                                        val gotoPattern = Regex("goto (.+)")
-
-                                        bulkAdditionPattern.matchEntire(this.text)?.let {
-                                            val nonfoils = it.groups[1]?.value?.toInt() ?: 0
-                                            val foils = it.groups[3]?.value?.toInt() ?: 0
-                                            val prereleaseStampedFoils = it.groups[5]?.value?.toInt() ?: 0
-
-                                            tvCards.selectionModel.selectedItem.bulkAdditionNonPremium.set(nonfoils)
-                                            tvCards.selectionModel.selectedItem.bulkAdditionPremium.set(foils)
-                                            tvCards.selectionModel.selectedItem.bulkAdditionPrereleasePromo.set(prereleaseStampedFoils)
-                                            tvCards.selectionModel.selectNext()
-                                        }
-                                        gotoPattern.matchEntire(this.text)?.let {
-                                            it.groups[1]?.value?.let { collectorNumberToJumpTo ->
-                                              tvCards.items.firstOrNull { cardModel ->
-                                                cardModel.collectorNumber.value == collectorNumberToJumpTo
-                                              }?.let { item ->
-                                                  tvCards.selectionModel.select(item)
-                                                  tvCards.scrollTo(item)
-                                              }
-                                            }
-                                        }
+                                hboxConstraints {
+                                    hGrow = Priority.ALWAYS
+                                }
+                            }
+                            button("+1") {
+                                action {
+                                    tvCards.items.forEach {
+                                        it.bulkAdditionNonPremium.set(1)
                                     }
                                 }
                             }
                         }
                     }
-                }
-                center {
-                    tvCards = tableview(cardsFiltered) {
-                        hboxConstraints {
-                            hGrow = Priority.ALWAYS
-                        }
-                        vboxConstraints {
-                            vGrow = Priority.ALWAYS
-                        }
+                    left {
+                        form {
+                            fieldset("Addition Setup") {
+                                field("Language") {
+                                    combobox(languageProperty, CardLanguage.entries)
+                                }
+                                field("CardCondition") {
+                                    combobox(conditionProperty, CardCondition.entries)
+                                }
+                            }
+                            fieldset("Card Info") {
+                                this +=
+                                    find<CardDetailsView>().apply {
+                                        runLater {
+                                            this.cardProperty.bind(tvCards.selectionModel.selectedItemProperty())
+                                            this.imageLoadingProperty.bind(toggleButtonImageLoading.selectedProperty())
+                                        }
+                                    }
+                            }
+                            fieldset("Current Addition") {
+                                field("Number") {
+                                    bulkAddNumberTextField =
+                                        textfield {
+                                            onKeyPressed =
+                                                EventHandler {
+                                                    when (it.code) {
+                                                        KeyCode.UP -> {
+                                                            foilProperty.value = Foil.NONFOIL
+                                                            tvCards.selectionModel.selectPrevious()
+                                                        }
+                                                        KeyCode.DOWN -> {
+                                                            foilProperty.value = Foil.NONFOIL
+                                                            tvCards.selectionModel.selectNext()
+                                                        }
+                                                        else -> {}
+                                                    }
 
-                        column("#", CardModel::collectorNumber) {
-							tooltip("Collector Number")
-                            contentWidth(5.0, useAsMin = true, useAsMax = true)
-                        }
-                        column("R", CardModel::rarity) {
-							tooltip("Rarity")
-                            contentWidth(5.0, useAsMin = true, useAsMax = true)
-                        }
+                                                    System.console()
+                                                }
+                                            onAction =
+                                                EventHandler {
+                                                    val bulkAdditionPattern = Regex("(\\d+)?(\\*(\\d+))?(/(\\d+))?")
+                                                    val gotoPattern = Regex("goto (.+)")
 
-                        column("Name", CardModel::name).remainingWidth()
+                                                    bulkAdditionPattern.matchEntire(this.text)?.let {
+                                                        val nonfoils = it.groups[1]?.value?.toInt() ?: 0
+                                                        val foils = it.groups[3]?.value?.toInt() ?: 0
+                                                        val prereleaseStampedFoils = it.groups[5]?.value?.toInt() ?: 0
 
-                        column("Possession", CardModel::possessionTotal) {
-                            contentWidth(5.0, useAsMin = true, useAsMax = true)
+                                                        tvCards.selectionModel.selectedItem.bulkAdditionNonPremium
+                                                            .set(nonfoils)
+                                                        tvCards.selectionModel.selectedItem.bulkAdditionPremium
+                                                            .set(foils)
+                                                        tvCards.selectionModel.selectedItem.bulkAdditionPrereleasePromo
+                                                            .set(prereleaseStampedFoils)
+                                                        tvCards.selectionModel.selectNext()
+                                                    }
+                                                    gotoPattern.matchEntire(this.text)?.let {
+                                                        it.groups[1]?.value?.let { collectorNumberToJumpTo ->
+                                                            tvCards.items
+                                                                .firstOrNull { cardModel ->
+                                                                    cardModel.collectorNumber.value == collectorNumberToJumpTo
+                                                                }?.let { item ->
+                                                                    tvCards.selectionModel.select(item)
+                                                                    tvCards.scrollTo(item)
+                                                                }
+                                                        }
+                                                    }
+                                                }
+                                        }
+                                }
+                            }
                         }
+                    }
+                    center {
+                        tvCards =
+                            tableview(cardsFiltered) {
+                                hboxConstraints {
+                                    hGrow = Priority.ALWAYS
+                                }
+                                vboxConstraints {
+                                    vGrow = Priority.ALWAYS
+                                }
 
-                        column("Add", CardModel::bulkAdditionNonPremium) {
-                            contentWidth(5.0, useAsMin = true, useAsMax = true)
-                        }
+                                column("#", CardModel::collectorNumber) {
+                                    tooltip("Collector Number")
+                                    contentWidth(5.0, useAsMin = true, useAsMax = true)
+                                }
+                                column("R", CardModel::rarity) {
+                                    tooltip("Rarity")
+                                    contentWidth(5.0, useAsMin = true, useAsMax = true)
+                                }
 
-                        column("Add Premium", CardModel::bulkAdditionPremium) {
-                            contentWidth(5.0, useAsMin = true, useAsMax = true)
-                        }
+                                column("Name", CardModel::name).remainingWidth()
 
-						column("Add Prerelease Promo", CardModel::bulkAdditionPrereleasePromo) {
-							contentWidth(5.0, useAsMin = true, useAsMax = true)
-						}
+                                column("Possession", CardModel::possessionTotal) {
+                                    contentWidth(5.0, useAsMin = true, useAsMax = true)
+                                }
 
-                        selectionModel.selectionMode = SelectionMode.SINGLE
-                        selectionModel.selectedItemProperty().addListener { _, _, _ ->
-                            bulkAddNumberTextField.clear()
-                            bulkAddNumberTextField.requestFocus()
-                        }
-                       if(selection != null) {
-                         val item = items.first { it.item.id == selection.id }
-                         selectionModel.select(item)
-                         scrollTo(item)
-                       } else
-                           selectionModel.selectFirst()
+                                column("Add", CardModel::bulkAdditionNonPremium) {
+                                    contentWidth(5.0, useAsMin = true, useAsMax = true)
+                                }
+
+                                column("Add Premium", CardModel::bulkAdditionPremium) {
+                                    contentWidth(5.0, useAsMin = true, useAsMax = true)
+                                }
+
+                                column("Add Prerelease Promo", CardModel::bulkAdditionPrereleasePromo) {
+                                    contentWidth(5.0, useAsMin = true, useAsMax = true)
+                                }
+
+                                selectionModel.selectionMode = SelectionMode.SINGLE
+                                selectionModel.selectedItemProperty().addListener { _, _, _ ->
+                                    bulkAddNumberTextField.clear()
+                                    bulkAddNumberTextField.requestFocus()
+                                }
+                                if (selection != null) {
+                                    val item = items.first { it.item.id == selection.id }
+                                    selectionModel.select(item)
+                                    scrollTo(item)
+                                } else {
+                                    selectionModel.selectFirst()
+                                }
+                            }
                     }
                 }
-            }
         }
-
 
         buttons {
             defaultAction { false }
             button(ButtonType.APPLY) {
                 action {
-                  val cardCollectionItems = cards.flatMap { cardInfo ->
-                    sequence {
-                      cardInfo.bulkAdditionNonPremium.value.toUInt().takeIf { it > 0u }?.let {
-                        yield(CardCollectionItem(
-                          quantity = it,
-                          CardCollectionItemId(
-                            card = cardInfo.item,
-                            finish = Finish.Normal,
-                            language = languageProperty.value,
-                            condition = conditionProperty.value,
-                          )
-                        ))
-                      }
-                      cardInfo.bulkAdditionPremium.value.toUInt().takeIf { it > 0u }?.let {
-                        yield(CardCollectionItem(
-                          quantity = it,
-                          CardCollectionItemId(
-                            card = cardInfo.item,
-                            finish = Finish.Foil,
-                            language = languageProperty.value,
-                            condition = conditionProperty.value,
-                          )
-                        ))
-                      }
-                      cardInfo.bulkAdditionPrereleasePromo.value.toUInt().takeIf { it > 0u }?.let {
-                        yield(CardCollectionItem(
-                          quantity = it,
-                          CardCollectionItemId(
-                            card = cardInfo.item,
-                            finish = Finish.Foil,
-                            language = languageProperty.value,
-                            condition = conditionProperty.value,
-                            variantType = CardVariant.Type.PrereleaseStamped,
-                          )
-                        ))
-                      }
-                    }
-                  }.filter(CardCollectionItem::isNotEmpty)
+                    val cardCollectionItems =
+                        cards
+                            .flatMap { cardInfo ->
+                                sequence {
+                                    cardInfo.bulkAdditionNonPremium.value.toUInt().takeIf { it > 0u }?.let {
+                                        yield(
+                                            CardCollectionItem(
+                                                quantity = it,
+                                                CardCollectionItemId(
+                                                    card = cardInfo.item,
+                                                    finish = Finish.Normal,
+                                                    language = languageProperty.value,
+                                                    condition = conditionProperty.value,
+                                                ),
+                                            ),
+                                        )
+                                    }
+                                    cardInfo.bulkAdditionPremium.value.toUInt().takeIf { it > 0u }?.let {
+                                        yield(
+                                            CardCollectionItem(
+                                                quantity = it,
+                                                CardCollectionItemId(
+                                                    card = cardInfo.item,
+                                                    finish = Finish.Foil,
+                                                    language = languageProperty.value,
+                                                    condition = conditionProperty.value,
+                                                ),
+                                            ),
+                                        )
+                                    }
+                                    cardInfo.bulkAdditionPrereleasePromo.value.toUInt().takeIf { it > 0u }?.let {
+                                        yield(
+                                            CardCollectionItem(
+                                                quantity = it,
+                                                CardCollectionItemId(
+                                                    card = cardInfo.item,
+                                                    finish = Finish.Foil,
+                                                    language = languageProperty.value,
+                                                    condition = conditionProperty.value,
+                                                    variantType = CardVariant.Type.PrereleaseStamped,
+                                                ),
+                                            ),
+                                        )
+                                    }
+                                }
+                            }.filter(CardCollectionItem::isNotEmpty)
 
-                  transaction {
-                    chooseFile("Choose File to Export to", arrayOf(FileChooser.ExtensionFilter("CSV", "*.csv")),  mode = FileChooserMode.Save, initialDirectory = File(System.getProperty("user.home"))).single().let {
-                      cardCollectionItems.exportArchidekt(it.toPath())
+                    transaction {
+                        chooseFile(
+                            "Choose File to Export to",
+                            arrayOf(FileChooser.ExtensionFilter("CSV", "*.csv")),
+                            mode = FileChooserMode.Save,
+                            initialDirectory = File(System.getProperty("user.home")),
+                        ).single().let {
+                            cardCollectionItems.exportArchidekt(it.toPath())
+                        }
+                        cardCollectionItems.forEach(CardCollectionItem::addToCollection)
                     }
-                    cardCollectionItems.forEach(CardCollectionItem::addToCollection)
-                  }
-                  true
+                    true
                 }
             }
             button(ButtonType.CANCEL)

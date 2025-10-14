@@ -1,7 +1,8 @@
+/* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.command
 
-import at.woolph.caco.decks.DecklistPrinter
 import at.woolph.caco.decks.DeckboxDeckImporter
+import at.woolph.caco.decks.DecklistPrinter
 import com.github.ajalt.clikt.command.SuspendingCliktCommand
 import com.github.ajalt.clikt.core.terminal
 import com.github.ajalt.clikt.parameters.options.option
@@ -24,31 +25,34 @@ import kotlin.io.path.createDirectories
 import kotlin.io.path.createParentDirectories
 import kotlin.io.path.isDirectory
 
-class PrintDeckboxDecks: SuspendingCliktCommand(name = "deckbox-decks") {
-    val username by option(help="Deckbox username").prompt("Enter the username of the deckbox user")
+class PrintDeckboxDecks : SuspendingCliktCommand(name = "deckbox-decks") {
+    val username by option(help = "Deckbox username").prompt("Enter the username of the deckbox user")
     val output by option().path(canBeDir = true, canBeFile = true)
 
-    override suspend fun run() = coroutineScope {
-      val progress = progressBarContextLayout<String> {
-        percentage()
-        progressBar()
-        completed(style = terminal.theme.success)
-        timeRemaining(style = TextColors.magenta)
-        text { "$context" }
-      }.animateInCoroutine(terminal, context = "")
+    override suspend fun run() =
+        coroutineScope {
+            val progress =
+                progressBarContextLayout<String> {
+                    percentage()
+                    progressBar()
+                    completed(style = terminal.theme.success)
+                    timeRemaining(style = TextColors.magenta)
+                    text { "$context" }
+                }.animateInCoroutine(terminal, context = "")
 
-      val job = launch { progress.execute() }
+            val job = launch { progress.execute() }
 
-      val decklistPrinter = output?.let {
-        if (it.isDirectory()) {
-          DecklistPrinter.Pdf(it.createDirectories())
-        } else {
-          DecklistPrinter.PdfOneFile(it.createParentDirectories())
+            val decklistPrinter =
+                output?.let {
+                    if (it.isDirectory()) {
+                        DecklistPrinter.Pdf(it.createDirectories())
+                    } else {
+                        DecklistPrinter.PdfOneFile(it.createParentDirectories())
+                    }
+                } ?: DecklistPrinter.Terminal(terminal)
+
+            decklistPrinter.print(DeckboxDeckImporter(progress).importDeckboxDecks(username).take(20).toList())
+
+            job.cancel("everything is done")
         }
-      } ?: DecklistPrinter.Terminal(terminal)
-
-      decklistPrinter.print(DeckboxDeckImporter(progress).importDeckboxDecks(username).take(20).toList())
-
-      job.cancel("everything is done")
-    }
 }

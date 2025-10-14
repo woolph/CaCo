@@ -1,3 +1,4 @@
+/* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.decks
 
 import at.woolph.caco.cli.DeckList
@@ -14,38 +15,47 @@ import kotlinx.coroutines.flow.toList
 class DeckDiff(
     val terminal: Terminal,
 ) {
-    suspend fun diffCommanderDecks() = coroutineScope {
-        val archidektDecks = async {
-            ArchidektDeckImporter().importDecks("woolph").filter { it.format == Format.Commander }.toList()
+    suspend fun diffCommanderDecks() =
+        coroutineScope {
+            val archidektDecks =
+                async {
+                    ArchidektDeckImporter().importDecks("woolph").filter { it.format == Format.Commander }.toList()
+                }
+
+            DeckboxDeckImporter()
+                .importDeckboxDecks("woolph")
+                .take(20)
+                .filter { it.format == Format.Commander }
+                .mapNotNull { deck ->
+                    archidektDecks.await().find { it.commandZone == deck.commandZone }?.let { Pair(deck, it) }
+                }.collect { (deck1, deck2) ->
+                    diffDeck(deck1, deck2)
+                }
         }
 
-        DeckboxDeckImporter().importDeckboxDecks("woolph").take(20).filter { it.format == Format.Commander }.mapNotNull { deck ->
-            archidektDecks.await().find { it.commandZone == deck.commandZone }?.let { Pair(deck, it) }
-        }.collect { (deck1, deck2) ->
-            diffDeck(deck1, deck2)
-        }
-    }
-
-    fun diffDeck(deck1: DeckList, deck2: DeckList) {
-        terminal.println(table {
-            captionTop("Diffing decks \"${deck1.commandZone.keys.joinToString(" & ") { it }}\"")
-            body {
-
-                deck1.mainboard.filter { it.key !in deck2.mainboard.keys }.forEach {
-                    row("${it.value} ${it.key}", "")
-                }
-                deck2.mainboard.filter { it.key !in deck1.mainboard.keys }.forEach {
-                    row("", "${it.value} ${it.key}")
-                }
-                deck1.mainboard
-                    .mapNotNull { deck2.mainboard[it.key]?.let { deck2Value -> Triple(it.key, it.value, deck2Value) } }
-                    .filter{ (_, value1, value2) -> value1 != value2 }
-                    .forEach { (card, value1, value2) ->
-                        row("$value1 $card", "$value2 $card")
+    fun diffDeck(
+        deck1: DeckList,
+        deck2: DeckList,
+    ) {
+        terminal.println(
+            table {
+                captionTop("Diffing decks \"${deck1.commandZone.keys.joinToString(" & ") { it }}\"")
+                body {
+                    deck1.mainboard.filter { it.key !in deck2.mainboard.keys }.forEach {
+                        row("${it.value} ${it.key}", "")
                     }
-            }
-        })
-
+                    deck2.mainboard.filter { it.key !in deck1.mainboard.keys }.forEach {
+                        row("", "${it.value} ${it.key}")
+                    }
+                    deck1.mainboard
+                        .mapNotNull { deck2.mainboard[it.key]?.let { deck2Value -> Triple(it.key, it.value, deck2Value) } }
+                        .filter { (_, value1, value2) -> value1 != value2 }
+                        .forEach { (card, value1, value2) ->
+                            row("$value1 $card", "$value2 $card")
+                        }
+                }
+            },
+        )
     }
 }
 

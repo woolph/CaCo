@@ -1,3 +1,4 @@
+/* Copyright 2025 Wolfgang Mayer */
 package at.woolph.libs.pdf
 
 import org.apache.pdfbox.pdmodel.PDDocument

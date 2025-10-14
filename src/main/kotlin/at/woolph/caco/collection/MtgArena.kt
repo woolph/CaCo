@@ -1,3 +1,4 @@
+/* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.collection
 
 import at.woolph.caco.datamodel.collection.ArenaCardPossession
@@ -24,7 +25,7 @@ fun importArenaCollection() {
             }
         }
 
-        if(line.contains(keyword)) {
+        if (line.contains(keyword)) {
             result.clear()
             copy = true
         }
@@ -33,7 +34,7 @@ fun importArenaCollection() {
         val removeLevel = line.count { it == '}' }
         levels += addLevel - removeLevel
 
-        if(levels == 0 && removeLevel > 0) {
+        if (levels == 0 && removeLevel > 0) {
             copy = false
         }
     }
@@ -41,7 +42,7 @@ fun importArenaCollection() {
     transaction {
         result.forEach { arenaId, importedCount ->
             val importedCard = Card.find { Cards.arenaId.eq(arenaId) }.firstOrNull()
-            if(importedCard != null)  {
+            if (importedCard != null) {
                 ArenaCardPossession.find { ArenaCardPossessions.card.eq(importedCard.id) }.singleOrNull()?.let {
                     it.count = importedCount
                 } ?: ArenaCardPossession.new {
@@ -49,7 +50,7 @@ fun importArenaCollection() {
                     count = importedCount
                 }
             } else {
-                //throw IllegalStateException("database does not know arenaId = $arenaId or there are multiples => import from scryfall? https://api.scryfall.com/cards/arena/$arenaId")
+                // throw IllegalStateException("database does not know arenaId = $arenaId or there are multiples => import from scryfall? https://api.scryfall.com/cards/arena/$arenaId")
                 println("unable to import $arenaId because it's not known https://api.scryfall.com/cards/arena/$arenaId")
             }
         }

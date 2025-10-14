@@ -1,3 +1,4 @@
+/* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.cli
 
 import com.github.ajalt.clikt.command.SuspendingNoOpCliktCommand

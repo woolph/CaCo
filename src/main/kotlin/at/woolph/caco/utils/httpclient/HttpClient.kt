@@ -1,3 +1,4 @@
+/* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.utils.httpclient
 
 import at.woolph.caco.masterdata.import.jsonSerializer

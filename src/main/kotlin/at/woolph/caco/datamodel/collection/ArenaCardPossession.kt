@@ -1,3 +1,4 @@
+/* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.datamodel.collection
 
 import at.woolph.caco.datamodel.sets.Card
@@ -12,7 +13,9 @@ object ArenaCardPossessions : IntIdTable() {
     val count = integer("count").index()
 }
 
-class ArenaCardPossession(id: EntityID<Int>) : IntEntity(id) {
+class ArenaCardPossession(
+    id: EntityID<Int>,
+) : IntEntity(id) {
     companion object : IntEntityClass<ArenaCardPossession>(ArenaCardPossessions)
 
     var card by Card referencedOn ArenaCardPossessions.card

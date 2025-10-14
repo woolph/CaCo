@@ -1,3 +1,4 @@
+/* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.command
 
 import at.woolph.caco.cli.CollectionPagePreview
@@ -14,16 +15,16 @@ import com.github.ajalt.clikt.parameters.types.path
 import kotlinx.coroutines.runBlocking
 import kotlin.io.path.createDirectories
 
-class PrintCollectionBinderPageView: SuspendingCliktCommand(name = "collection-pages") {
+class PrintCollectionBinderPageView : SuspendingCliktCommand(name = "collection-pages") {
     val output by option().path(canBeDir = true, canBeFile = false).required()
-    val sets by argument(help="The set code of the cards to be entered").multiple().prompt("Enter the set codes to be imported/updated")
+    val sets by argument(help = "The set code of the cards to be entered").multiple().prompt("Enter the set codes to be imported/updated")
 
     override suspend fun run() {
-      output.createDirectories()
-      CollectionPagePreview(terminal).apply {
-        sets.forEach { set ->
-          printLabel(set, output.resolve("${set}.pdf"))
+        output.createDirectories()
+        CollectionPagePreview(terminal).apply {
+            sets.forEach { set ->
+                printLabel(set, output.resolve("$set.pdf"))
+            }
         }
-      }
     }
 }

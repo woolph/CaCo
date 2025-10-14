@@ -1,3 +1,4 @@
+/* Copyright 2025 Wolfgang Mayer */
 import at.woolph.caco.cli.manabase.ColorIdentity
 import at.woolph.caco.datamodel.Databases
 import at.woolph.caco.datamodel.sets.Card
@@ -39,7 +40,6 @@ class CheapRampTests {
                 it.isCheapRamp shouldBe true
             }
         }
-
 
     @TestFactory
     fun negativeTests(): Collection<DynamicTest> =

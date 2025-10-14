@@ -1,3 +1,4 @@
+/* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.icon
 
 import arrow.core.Either
@@ -21,48 +22,62 @@ import java.io.ByteArrayOutputStream
 import java.net.URI
 
 class IconRenderer(
-  val iconResolution: Float = 256f,
-  val cacheIdSuffix: String = "",
-  val svgMod: (ByteArray) -> ByteArray = { it },
+    val iconResolution: Float = 256f,
+    val cacheIdSuffix: String = "",
+    val svgMod: (ByteArray) -> ByteArray = { it },
 ) {
-  suspend fun renderSvg(uri: URI): Either<Exception, ByteArray> = either {
-    val byteArray = withContext(Dispatchers.IO) {
-      HttpClient(CIO).use {
-        it.request(uri.toURL()).readRawBytes()
-      }
-    }
+    suspend fun renderSvg(uri: URI): Either<Exception, ByteArray> =
+        either {
+            val byteArray =
+                withContext(Dispatchers.IO) {
+                    HttpClient(CIO).use {
+                        it.request(uri.toURL()).readRawBytes()
+                    }
+                }
 
-    withContext(Dispatchers.Default) {
-      val transcoder = PNGTranscoder().apply {
-        addTranscodingHint(ImageTranscoder.KEY_WIDTH, iconResolution)
-        addTranscodingHint(ImageTranscoder.KEY_HEIGHT, iconResolution)
-      }
+            withContext(Dispatchers.Default) {
+                val transcoder =
+                    PNGTranscoder().apply {
+                        addTranscodingHint(ImageTranscoder.KEY_WIDTH, iconResolution)
+                        addTranscodingHint(ImageTranscoder.KEY_HEIGHT, iconResolution)
+                    }
 
-      return@withContext ByteArrayOutputStream().also {
-        it.use {
-          try {
-            transcoder.transcode(TranscoderInput(ByteArrayInputStream(svgMod(byteArray))), TranscoderOutput(it))
-          } catch (e: Exception) {
-            raise(Exception("couldn't transcode image ${uri}", e))
-          }
+                return@withContext ByteArrayOutputStream()
+                    .also {
+                        it.use {
+                            try {
+                                transcoder.transcode(TranscoderInput(ByteArrayInputStream(svgMod(byteArray))), TranscoderOutput(it))
+                            } catch (e: Exception) {
+                                raise(Exception("couldn't transcode image $uri", e))
+                            }
+                        }
+                    }.toByteArray()
+            }
         }
-      }.toByteArray()
-    }
-  }
 
-  companion object {
-    val log = LoggerFactory.getLogger(this::class.java.declaringClass)
-    fun gradientModded(cacheIdSuffix: String, strokeColor: String, color1: String, color2: String) = IconRenderer(cacheIdSuffix = cacheIdSuffix, svgMod = {
-      String(it).replace("<path ", "<defs>\n" +
-          "    <linearGradient id=\"uncommon-gradient\" x2=\"0.35\" y2=\"1\">\n" +
-          "        <stop offset=\"0%\" stop-color=\"$color1\" />\n" +
-          "        <stop offset=\"50%\" stop-color=\"$color2\" />\n" +
-          "        <stop offset=\"100%\" stop-color=\"$color1\" />\n" +
-          "      </linearGradient>\n" +
-          "  </defs>\n" +
-          "<path stroke=\"$strokeColor\" stroke-width=\"2%\" style=\"fill:url(#uncommon-gradient)\" ").toByteArray()
-    })
-  }
+    companion object {
+        val log = LoggerFactory.getLogger(this::class.java.declaringClass)
+
+        fun gradientModded(
+            cacheIdSuffix: String,
+            strokeColor: String,
+            color1: String,
+            color2: String,
+        ) = IconRenderer(cacheIdSuffix = cacheIdSuffix, svgMod = {
+            String(it)
+                .replace(
+                    "<path ",
+                    "<defs>\n" +
+                        "    <linearGradient id=\"uncommon-gradient\" x2=\"0.35\" y2=\"1\">\n" +
+                        "        <stop offset=\"0%\" stop-color=\"$color1\" />\n" +
+                        "        <stop offset=\"50%\" stop-color=\"$color2\" />\n" +
+                        "        <stop offset=\"100%\" stop-color=\"$color1\" />\n" +
+                        "      </linearGradient>\n" +
+                        "  </defs>\n" +
+                        "<path stroke=\"$strokeColor\" stroke-width=\"2%\" style=\"fill:url(#uncommon-gradient)\" ",
+                ).toByteArray()
+        })
+    }
 }
 
 val uiIconRenderer = IconRenderer(iconResolution = 24f)
@@ -71,25 +86,38 @@ val rareBinderLabelIconRenderer = IconRenderer.Companion.gradientModded("-rare",
 val uncommonBinderLabelIconRenderer = IconRenderer.Companion.gradientModded("-uncommon", "black", "#626e77", "#c8e2f2")
 val commonBinderLabelIconRenderer = IconRenderer(cacheIdSuffix = "-common")
 
-suspend fun IconRenderer.cachedImage(cacheId: String, uri: URI): ByteArray? =
-  ImageCache.getImageByteArray("$cacheId${cacheIdSuffix}") { renderSvg(uri)
-    .onLeft { IconRenderer.log.error("couldn't get icon for $uri", it) }
-    .getOrNull() }
+suspend fun IconRenderer.cachedImage(
+    cacheId: String,
+    uri: URI,
+): ByteArray? =
+    ImageCache.getImageByteArray("$cacheId$cacheIdSuffix") {
+        renderSvg(uri)
+            .onLeft { IconRenderer.log.error("couldn't get icon for $uri", it) }
+            .getOrNull()
+    }
 
-fun lazyIcon(cacheId: String, nullableUri: URI?, iconRenderer: IconRenderer): Lazy<ByteArray?> =
-  nullableUri?.let { uri -> lazy { runBlocking { iconRenderer.cachedImage(cacheId, uri) } } } ?: lazyOf(null)
+fun lazyIcon(
+    cacheId: String,
+    nullableUri: URI?,
+    iconRenderer: IconRenderer,
+): Lazy<ByteArray?> = nullableUri?.let { uri -> lazy { runBlocking { iconRenderer.cachedImage(cacheId, uri) } } } ?: lazyOf(null)
 
-fun lazySetIcon(setCode: String, iconRenderer: IconRenderer): Lazy<ByteArray?> =
-  lazyIcon("set-code-$setCode", URI("https://svgs.scryfall.io/sets/$setCode.svg"), iconRenderer)
+fun lazySetIcon(
+    setCode: String,
+    iconRenderer: IconRenderer,
+): Lazy<ByteArray?> = lazyIcon("set-code-$setCode", URI("https://svgs.scryfall.io/sets/$setCode.svg"), iconRenderer)
 
-suspend fun IconRenderer.cachedImage(set: ScryfallCardSet): ByteArray? = set.icon?.let {
-  ImageCache.getImageByteArray("set-icon-${set.code}${cacheIdSuffix}") { renderSvg(it)
-    .onLeft { IconRenderer.log.error("couldn't get icon for $set", it) }
-    .getOrNull() }
-}
+suspend fun IconRenderer.cachedImage(set: ScryfallCardSet): ByteArray? =
+    set.icon?.let {
+        ImageCache.getImageByteArray("set-icon-${set.code}$cacheIdSuffix") {
+            renderSvg(it)
+                .onLeft { IconRenderer.log.error("couldn't get icon for $set", it) }
+                .getOrNull()
+        }
+    }
 
 fun ScryfallCardSet?.lazySetIcon(iconRenderer: IconRenderer): Lazy<ByteArray?> =
-  this?.let { lazy { runBlocking { iconRenderer.cachedImage(it) } } } ?: lazyOf(null)
+    this?.let { lazy { runBlocking { iconRenderer.cachedImage(it) } } } ?: lazyOf(null)
 
-val ScryfallCardSet?.lazyIconMythic: Lazy<ByteArray?> get() = lazySetIcon( mythicBinderLabelIconRenderer)
+val ScryfallCardSet?.lazyIconMythic: Lazy<ByteArray?> get() = lazySetIcon(mythicBinderLabelIconRenderer)
 val ScryfallCardSet?.lazyIconUncommon: Lazy<ByteArray?> get() = lazySetIcon(uncommonBinderLabelIconRenderer)

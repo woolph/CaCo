@@ -1,3 +1,4 @@
+/* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.masterdata.imagecache
 
 import javafx.scene.image.Image

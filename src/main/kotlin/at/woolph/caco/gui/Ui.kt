@@ -1,15 +1,32 @@
+/* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.gui
 
 import com.github.ajalt.clikt.command.SuspendingCliktCommand
-import com.github.ajalt.clikt.parameters.arguments.argument
-import com.github.ajalt.clikt.parameters.arguments.multiple
-import tornadofx.launch
+import io.nacular.doodle.application.application
+import org.kodein.di.instance
 
-class Ui: SuspendingCliktCommand() {
-    override val treatUnknownOptionsAsArgs: Boolean = true
-    val args by argument().multiple()
-
+class Ui : SuspendingCliktCommand() {
     override suspend fun run() {
-      launch<MyApp>(*args.toTypedArray())
+        application(modules = listOf(
+            PointerModule,
+            PathModule,
+            FontModule,
+            basicLabelBehavior(),
+            nativeTextFieldBehavior(),
+            Module(name = "AppModule") {
+                bindSingleton<Animator> { AnimatorImpl(instance(), instance()) }
+            }
+        ))  {
+            MyApp(
+                display = instance(),
+                fonts = instance(),
+                animator = instance(),
+                textMetrics = instance(),
+                pathMetrics = instance(),
+                theme = instance(),
+                themeManager = instance(),
+                textFieldStyler = instance(),
+            )
+        }
     }
 }
