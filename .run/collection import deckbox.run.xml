@@ -1,7 +1,7 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="collection import deckbox" type="JetRunConfigurationType">
     <option name="ALTERNATIVE_JRE_PATH" value="temurin-17" />
-    <option name="MAIN_CLASS_NAME" value="at.woolph.caco.MainKt" />
+    <option name="MAIN_CLASS_NAME" value="at.woolph.caco.cli.MainKt" />
     <module name="CaCo.main" />
     <option name="PROGRAM_PARAMETERS" value="collection import --format=deckbox &quot;C:\Users\001121673\Downloads&quot;" />
     <shortenClasspath name="NONE" />
