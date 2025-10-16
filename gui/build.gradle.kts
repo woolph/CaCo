@@ -1,7 +1,5 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
-//import org.jetbrains.compose.desktop.application.dsl.TargetFormat
-
 plugins {
   alias(libs.plugins.kotlin.multiplatform)
   alias(libs.plugins.composeMultiplatform)
@@ -11,16 +9,13 @@ plugins {
   alias(libs.plugins.spotless)
 }
 
-
 group = "at.woolph"
-version = "0.3.0"
 
+version = "0.3.0"
 
 kotlin {
   jvm()
-  compilerOptions {
-    freeCompilerArgs.add("-Xwhen-guards")
-  }
+  compilerOptions { freeCompilerArgs.add("-Xwhen-guards") }
 
   sourceSets {
     commonMain.dependencies {
@@ -33,9 +28,7 @@ kotlin {
       implementation(libs.androidx.lifecycle.viewmodelCompose)
       implementation(libs.androidx.lifecycle.runtimeCompose)
     }
-    commonTest.dependencies {
-      implementation(libs.kotlin.test)
-    }
+    commonTest.dependencies { implementation(libs.kotlin.test) }
     jvmMain.dependencies {
       implementation(compose.desktop.currentOs)
       implementation(libs.kotlinx.coroutinesSwing)
@@ -57,10 +50,9 @@ compose.desktop {
 
 spotless {
   kotlin {
-    ktlint()
+    target("src/*/kotlin/**/*.kt")
+    ktfmt()
     licenseHeader("/* Copyright \$YEAR Wolfgang Mayer */")
   }
-  kotlinGradle {
-    ktlint()
-  }
+  kotlinGradle { ktfmt() }
 }

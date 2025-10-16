@@ -1,7 +1,10 @@
+/* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco
 
-interface ProgressTracker<Context, Unit: Number> {
+interface ProgressTracker<Context, Unit : Number> {
   fun updateContext(newContext: Context)
+
   fun advance(units: Unit)
+
   fun setTotal(totalUnits: Unit)
 }

@@ -7,19 +7,18 @@ import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.serialization.kotlinx.json.*
-import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
+import kotlinx.coroutines.withContext
 
-suspend fun <R> useHttpClient(context: CoroutineContext = EmptyCoroutineContext, block: suspend (HttpClient) -> R) = withContext(context) {
-    HttpClient(CIO) {
-        install(ContentNegotiation) {
-            json(jsonSerializer)
-        }
-        install(UserAgent) {
-            agent = "CaCoApp/0.1"
-        }
-    }.use {
-        block(it)
+suspend fun <R> useHttpClient(
+    context: CoroutineContext = EmptyCoroutineContext,
+    block: suspend (HttpClient) -> R,
+) =
+    withContext(context) {
+      HttpClient(CIO) {
+            install(ContentNegotiation) { json(jsonSerializer) }
+            install(UserAgent) { agent = "CaCoApp/0.1" }
+          }
+          .use { block(it) }
     }
-}

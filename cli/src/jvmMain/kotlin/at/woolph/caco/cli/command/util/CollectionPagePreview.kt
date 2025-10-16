@@ -1,3 +1,4 @@
+/* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.cli.command.util
 
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
@@ -10,133 +11,153 @@ import at.woolph.libs.pdf.createPdfDocument
 import at.woolph.libs.pdf.drawImage
 import at.woolph.libs.pdf.drawText
 import at.woolph.libs.pdf.toPosition
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
+import com.github.ajalt.mordant.animation.coroutines.animateInCoroutine
+import com.github.ajalt.mordant.rendering.TextColors
+import com.github.ajalt.mordant.terminal.Terminal
+import com.github.ajalt.mordant.widgets.progress.completed
+import com.github.ajalt.mordant.widgets.progress.percentage
+import com.github.ajalt.mordant.widgets.progress.progressBar
+import com.github.ajalt.mordant.widgets.progress.progressBarContextLayout
+import com.github.ajalt.mordant.widgets.progress.text
+import com.github.ajalt.mordant.widgets.progress.timeRemaining
 import java.awt.Color
 import java.nio.file.Path
 import kotlin.collections.chunked
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import org.apache.pdfbox.pdmodel.common.PDRectangle
+import org.jetbrains.exposed.sql.transactions.transaction
 
 class CollectionPagePreview(
     val terminal: Terminal,
 ) {
-    @OptIn(ExperimentalStdlibApi::class)
-    suspend fun printLabel(setCode: String, file: Path) = coroutineScope {
-      terminal.println("Generating collection page preview for set $setCode")
-      val progress = progressBarContextLayout<String> {
-        percentage()
-        progressBar()
-        completed(style = terminal.theme.success)
-        timeRemaining(style = TextColors.magenta)
-        text { context }
-      }.animateInCoroutine(terminal, context = "fetching cards")
+  @OptIn(ExperimentalStdlibApi::class)
+  suspend fun printLabel(setCode: String, file: Path) = coroutineScope {
+    terminal.println("Generating collection page preview for set $setCode")
+    val progress =
+        progressBarContextLayout<String> {
+              percentage()
+              progressBar()
+              completed(style = terminal.theme.success)
+              timeRemaining(style = TextColors.magenta)
+              text { context }
+            }
+            .animateInCoroutine(terminal, context = "fetching cards")
 
-      launch { progress.execute() }
+    launch { progress.execute() }
 
-      val cardList = transaction {
-        ScryfallCardSet.Companion.findByCode(setCode)?.cards ?: emptyList()
-      }.sortedBy { it.collectorNumber }
+    val cardList =
+        transaction { ScryfallCardSet.Companion.findByCode(setCode)?.cards ?: emptyList() }
+            .sortedBy { it.collectorNumber }
 
-      progress.update { total = cardList.size.toLong() }
+    progress.update { total = cardList.size.toLong() }
 
-      val endsWithLetter = Regex("\\d+")
-      val (ordinaryCardList, specialVersionCardList) = cardList.partition { it.collectorNumber.matches(endsWithLetter) }
-      val collectionPages = ordinaryCardList.chunked(9) + specialVersionCardList.chunked(9)
+    val endsWithLetter = Regex("\\d+")
+    val (ordinaryCardList, specialVersionCardList) =
+        cardList.partition { it.collectorNumber.matches(endsWithLetter) }
+    val collectionPages = ordinaryCardList.chunked(9) + specialVersionCardList.chunked(9)
 
-      createPdfDocument(file, PagePosition.LEFT) {
-        val pageFormat = PDRectangle.A4
+    createPdfDocument(file, PagePosition.LEFT) {
+      val pageFormat = PDRectangle.A4
 
-        val fontColor = Color.BLACK
-        val fontFamily72Black = loadType0Font(javaClass.getResourceAsStream("/fonts/72-Black.ttf")!!)
-        val fontCode = Font(fontFamily72Black, 10f)
+      val fontColor = Color.BLACK
+      val fontFamily72Black = loadType0Font(javaClass.getResourceAsStream("/fonts/72-Black.ttf")!!)
+      val fontCode = Font(fontFamily72Black, 10f)
 
-        val mtgCardBack = createFromFile(Path.of("./assets/images/card-back.jpg"))
+      val mtgCardBack = createFromFile(Path.of("./assets/images/card-back.jpg"))
 
-        val margin = Position(10.0f, 10.0f)
+      val margin = Position(10.0f, 10.0f)
 
-        val pageSize = pageFormat.toPosition()
-        val columns = 3
-        val rows = 3
-        val cardCount = Position(columns.toFloat(), rows.toFloat())
-        val cardGap = Position(5.0f, 5.0f)
-        val cardSize = (pageSize - margin * 2f - cardGap * cardCount + cardGap) / cardCount
-        val cardOffset = cardSize + cardGap
+      val pageSize = pageFormat.toPosition()
+      val columns = 3
+      val rows = 3
+      val cardCount = Position(columns.toFloat(), rows.toFloat())
+      val cardGap = Position(5.0f, 5.0f)
+      val cardSize = (pageSize - margin * 2f - cardGap * cardCount + cardGap) / cardCount
+      val cardOffset = cardSize + cardGap
 
-        fun position(index: Int): Position {
-          val row = when (index) {
-            in 0..<3 -> 0
-            in 3..<6 -> 1
-            in 6..<9 -> 2
-            else -> throw IllegalStateException()
-          }
+      fun position(index: Int): Position {
+        val row =
+            when (index) {
+              in 0..<3 -> 0
+              in 3..<6 -> 1
+              in 6..<9 -> 2
+              else -> throw IllegalStateException()
+            }
 
-          val column = index - 3 * row
-          require(column in 0..<3)
+        val column = index - 3 * row
+        require(column in 0..<3)
 
-          return margin +
-            cardOffset * Position(column.toFloat(), row.toFloat())
-        }
+        return margin + cardOffset * Position(column.toFloat(), row.toFloat())
+      }
 
-        emptyPage(pageFormat)
-        collectionPages.forEachIndexed { pageNumber, pageContent ->
-          page(pageFormat) {
-            pageContent.forEachIndexed { index, card ->
-              val cardPosition = position(index)
-              try {
-                val byteArray = ImageCache.getImageByteArray(card.thumbnail.toString()) {
-                  try {
-//                                        print("card #$${card.numberInSet} ${card.name} image downloading\r")
-                    progress.update {
-                      context = "card #\$${card.collectorNumber} ${card.name} image downloading\r"
+      emptyPage(pageFormat)
+      collectionPages.forEachIndexed { pageNumber, pageContent ->
+        page(pageFormat) {
+          pageContent.forEachIndexed { index, card ->
+            val cardPosition = position(index)
+            try {
+              val byteArray =
+                  ImageCache.getImageByteArray(card.thumbnail.toString()) {
+                    try {
+                      //                                        print("card #$${card.numberInSet}
+                      // ${card.name} image downloading\r")
+                      progress.update {
+                        context = "card #\$${card.collectorNumber} ${card.name} image downloading\r"
+                      }
+                      card.thumbnail?.toURL()?.readBytes()
+                    } catch (_: Throwable) {
+                      //                                        print("card #\$${card.numberInSet}
+                      // ${card.name} image is not loaded\r")
+                      null
                     }
-                    card.thumbnail?.toURL()?.readBytes()
-                  } catch (_: Throwable) {
-//                                        print("card #\$${card.numberInSet} ${card.name} image is not loaded\r")
-                    null
-                  }
-                }!!
-                val cardImage = createFromByteArray(byteArray, card.name)
-//                            print("card #\$${card.numberInSet} ${card.name} image rendering\r")
-                progress.update {
-                  context = "card #\$${card.collectorNumber} ${card.name} image rendering\r"
-                }
-                drawImage(cardImage, cardPosition.x, cardPosition.y, cardSize.x, cardSize.y)
-//                            print("card #\$${card.numberInSet} ${card.name} image rendered\r")
-                progress.update {
-                  context = "card #\$${card.collectorNumber} ${card.name} image rendered\r"
-                  completed += 1
-                }
-              } catch (_: Throwable) {
-                drawImage(mtgCardBack, cardPosition.x, cardPosition.y, cardSize.x, cardSize.y)
-//                            print("card #\$${card.numberInSet} ${card.name} cardback rendered\r")
-                progress.update {
-                  context = "card #\$${card.collectorNumber} ${card.name} image rendered\r"
-                  completed += 1
-                }
+                  }!!
+              val cardImage = createFromByteArray(byteArray, card.name)
+              //                            print("card #\$${card.numberInSet} ${card.name} image
+              // rendering\r")
+              progress.update {
+                context = "card #\$${card.collectorNumber} ${card.name} image rendering\r"
+              }
+              drawImage(cardImage, cardPosition.x, cardPosition.y, cardSize.x, cardSize.y)
+              //                            print("card #\$${card.numberInSet} ${card.name} image
+              // rendered\r")
+              progress.update {
+                context = "card #\$${card.collectorNumber} ${card.name} image rendered\r"
+                completed += 1
+              }
+            } catch (_: Throwable) {
+              drawImage(mtgCardBack, cardPosition.x, cardPosition.y, cardSize.x, cardSize.y)
+              //                            print("card #\$${card.numberInSet} ${card.name} cardback
+              // rendered\r")
+              progress.update {
+                context = "card #\$${card.collectorNumber} ${card.name} image rendered\r"
+                completed += 1
               }
             }
-            when (pagePosition) {
-              PagePosition.RIGHT ->
+          }
+          when (pagePosition) {
+            PagePosition.RIGHT ->
                 drawText(
-                  "Page %02d (Front)".format(pageNumber / 2 + 1),
-                  fontCode,
-                  HorizontalAlignment.RIGHT,
-                  0f,
-                  box.height,
-                  fontColor
+                    "Page %02d (Front)".format(pageNumber / 2 + 1),
+                    fontCode,
+                    HorizontalAlignment.RIGHT,
+                    0f,
+                    box.height,
+                    fontColor,
                 )
 
-              PagePosition.LEFT ->
+            PagePosition.LEFT ->
                 drawText(
-                  "Page %02d (Back)".format(pageNumber / 2 + 1),
-                  fontCode,
-                  HorizontalAlignment.LEFT,
-                  0f,
-                  box.height,
-                  fontColor
+                    "Page %02d (Back)".format(pageNumber / 2 + 1),
+                    fontCode,
+                    HorizontalAlignment.LEFT,
+                    0f,
+                    box.height,
+                    fontColor,
                 )
-            }
           }
         }
       }
     }
+  }
 }

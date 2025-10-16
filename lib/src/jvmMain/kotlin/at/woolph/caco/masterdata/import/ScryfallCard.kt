@@ -1,6 +1,8 @@
 /* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.masterdata.import
 
+import at.woolph.caco.currency.Currencies
+import at.woolph.caco.currency.CurrencyValue
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.CardVariant
 import at.woolph.caco.datamodel.sets.Finish
@@ -8,7 +10,12 @@ import at.woolph.caco.datamodel.sets.LayoutType
 import at.woolph.caco.datamodel.sets.Legality
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.parseRarity
+import at.woolph.caco.exchangeTo
 import at.woolph.libs.exposed.newOrUpdate
+import java.net.URI
+import java.time.LocalDate
+import java.time.ZonedDateTime
+import java.util.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
@@ -25,69 +32,69 @@ import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import org.slf4j.LoggerFactory
-import java.net.URI
-import java.time.LocalDate
-import java.time.ZonedDateTime
-import java.util.*
 
 private val LOG = LoggerFactory.getLogger("at.woolph.caco.masterdata.import.ScryfallCard")
 
 object LocalDateSerializer : KSerializer<LocalDate> {
-    override val descriptor = PrimitiveSerialDescriptor("LocalDate", PrimitiveKind.STRING)
+  override val descriptor = PrimitiveSerialDescriptor("LocalDate", PrimitiveKind.STRING)
 
-    override fun deserialize(decoder: Decoder): LocalDate {
-        return LocalDate.parse(decoder.decodeString())
-    }
+  override fun deserialize(decoder: Decoder): LocalDate {
+    return LocalDate.parse(decoder.decodeString())
+  }
 
-    override fun serialize(encoder: Encoder, value: LocalDate) {
-        encoder.encodeString(value.toString())
-    }
+  override fun serialize(encoder: Encoder, value: LocalDate) {
+    encoder.encodeString(value.toString())
+  }
 }
 
 object URISerializer : KSerializer<URI> {
-    override val descriptor = PrimitiveSerialDescriptor("URI", PrimitiveKind.STRING)
+  override val descriptor = PrimitiveSerialDescriptor("URI", PrimitiveKind.STRING)
 
-    override fun deserialize(decoder: Decoder): URI = try {
+  override fun deserialize(decoder: Decoder): URI =
+      try {
         URI.create(decoder.decodeString())
-    } catch (_: Throwable) {
+      } catch (_: Throwable) {
         URI.create("about://version")
-    }
+      }
 
-    override fun serialize(encoder: Encoder, value: URI) {
-        encoder.encodeString(value.toString())
-    }
+  override fun serialize(encoder: Encoder, value: URI) {
+    encoder.encodeString(value.toString())
+  }
 }
+
 object UUIDSerializer : KSerializer<UUID> {
-    override val descriptor = PrimitiveSerialDescriptor("UUID", PrimitiveKind.STRING)
+  override val descriptor = PrimitiveSerialDescriptor("UUID", PrimitiveKind.STRING)
 
-    override fun deserialize(decoder: Decoder): UUID {
-        return UUID.fromString(decoder.decodeString())
-    }
+  override fun deserialize(decoder: Decoder): UUID {
+    return UUID.fromString(decoder.decodeString())
+  }
 
-    override fun serialize(encoder: Encoder, value: UUID) {
-        encoder.encodeString(value.toString())
-    }
+  override fun serialize(encoder: Encoder, value: UUID) {
+    encoder.encodeString(value.toString())
+  }
 }
+
 object ZonedDateTimeSerializer : KSerializer<ZonedDateTime> {
-    override val descriptor = PrimitiveSerialDescriptor("ZonedDateTime", PrimitiveKind.STRING)
+  override val descriptor = PrimitiveSerialDescriptor("ZonedDateTime", PrimitiveKind.STRING)
 
-    override fun deserialize(decoder: Decoder): ZonedDateTime {
-        return ZonedDateTime.parse(decoder.decodeString())
-    }
+  override fun deserialize(decoder: Decoder): ZonedDateTime {
+    return ZonedDateTime.parse(decoder.decodeString())
+  }
 
-    override fun serialize(encoder: Encoder, value: ZonedDateTime) {
-        encoder.encodeString(value.toString())
-    }
+  override fun serialize(encoder: Encoder, value: ZonedDateTime) {
+    encoder.encodeString(value.toString())
+  }
 }
+
 val jsonSerializer = Json {
-    decodeEnumsCaseInsensitive = true
-    ignoreUnknownKeys = true
-    serializersModule = SerializersModule {
-        contextual(LocalDate::class, LocalDateSerializer)
-        contextual(URI::class, URISerializer)
-        contextual(UUID::class, UUIDSerializer)
-        contextual(ZonedDateTime::class, ZonedDateTimeSerializer)
-    }
+  decodeEnumsCaseInsensitive = true
+  ignoreUnknownKeys = true
+  serializersModule = SerializersModule {
+    contextual(LocalDate::class, LocalDateSerializer)
+    contextual(URI::class, URISerializer)
+    contextual(UUID::class, UUIDSerializer)
+    contextual(ZonedDateTime::class, ZonedDateTimeSerializer)
+  }
 }
 
 @Serializable
@@ -98,8 +105,8 @@ data class ScryfallRelatedCard(
     val name: String,
     val type_line: String,
     @Contextual val uri: URI,
-): ScryfallBase {
-    override fun isValid() = objectType == "related_card"
+) : ScryfallBase {
+  override fun isValid() = objectType == "related_card"
 }
 
 @Serializable
@@ -115,8 +122,8 @@ data class ScryfallCardFace(
     val printed_name: String? = null,
     val printed_text: String? = null,
     val printed_type_line: String? = null,
-    val colors: Set<MtgColor> ? = null,
-    val color_indicator: Set<MtgColor> ? = null,
+    val colors: Set<MtgColor>? = null,
+    val color_indicator: Set<MtgColor>? = null,
     val power: String? = null,
     val toughness: String? = null,
     val loyalty: String? = null,
@@ -128,8 +135,8 @@ data class ScryfallCardFace(
     @Contextual val artist_id: UUID? = null,
     @Contextual val illustration_id: UUID? = null,
     val image_uris: Map<String, @Contextual URI>? = null,
-): ScryfallBase {
-    override fun isValid() = objectType == "card_face"
+) : ScryfallBase {
+  override fun isValid() = objectType == "card_face"
 }
 
 @Serializable
@@ -175,7 +182,7 @@ data class ScryfallCard(
     val loyalty: String? = null,
     val colors: Set<MtgColor>? = null,
     val color_identity: Set<MtgColor>,
-    val color_indicator: Set<MtgColor> ? = null,
+    val color_indicator: Set<MtgColor>? = null,
     val keywords: Set<String>,
     val produced_mana: Set<MtgColor>? = null,
     val all_parts: List<ScryfallRelatedCard> = emptyList(),
@@ -227,30 +234,47 @@ data class ScryfallCard(
     val purchase_uris: Map<String, @Contextual URI> = emptyMap(),
     val content_warning: Boolean = false,
     val attraction_lights: Set<Int>? = null,
-): ScryfallBase {
-    override fun isValid() = objectType == "card"
+) : ScryfallBase {
+  override fun isValid() = objectType == "card"
 
-    val variant: CardVariant.Type? = when {
+  val variant: CardVariant.Type? =
+      when {
         isTheListVersion -> CardVariant.Type.TheList
         isPrereleaseStampedVersion -> CardVariant.Type.PrereleaseStamped
         isPromopackStampedVersion -> CardVariant.Type.PromopackStamped
         else -> null
-    }
-    val isTheListVersion: Boolean get() = set == "plst"
-    val isPromopackStampedVersion: Boolean get() = (promo_types.contains("promopack") && promo_types.contains("stamped") && set !in listOf("ppp1"))
-    val isPrereleaseStampedVersion: Boolean get() = (promo_types.contains("prerelease") && promo_types.contains("datestamped") && set !in listOf("pmh1", "pbng") && !collector_number.contains("★"))
+      }
+  val isTheListVersion: Boolean
+    get() = set == "plst"
 
-    fun isImportWorthy() = !layout.isMemorabilia && !digital && set != "ced"
+  val isPromopackStampedVersion: Boolean
+    get() =
+        (promo_types.contains("promopack") &&
+            promo_types.contains("stamped") &&
+            set !in listOf("ppp1"))
 
-    class SetNotInDatabaseException(val set: String, val setName: String, val setType: String): Exception("set not found $set $setName")
+  val isPrereleaseStampedVersion: Boolean
+    get() =
+        (promo_types.contains("prerelease") &&
+            promo_types.contains("datestamped") &&
+            set !in listOf("pmh1", "pbng") &&
+            !collector_number.contains("★"))
 
-    fun update(card: Card) = card.also {
+  fun isImportWorthy() = !layout.isMemorabilia && !digital && set != "ced"
+
+  class SetNotInDatabaseException(val set: String, val setName: String, val setType: String) :
+      Exception("set not found $set $setName")
+
+  fun update(card: Card) =
+      card.also {
         val isPromo = promo
         val isToken = set_type == "token"
 
         it.gameChanger = game_changer
         it.edhrecRank = edhrec_rank
-        it.set = ScryfallCardSet.findById(set_id) ?: throw SetNotInDatabaseException(set, set_name, set_type)
+        it.set =
+            ScryfallCardSet.findById(set_id)
+                ?: throw SetNotInDatabaseException(set, set_name, set_type)
         it.collectorNumber = collector_number
         it.name = name
         it.flavorName = flavor_name
@@ -271,70 +295,81 @@ data class ScryfallCard(
 
         it.manaCost = mana_cost ?: card_faces?.mapNotNull { it.mana_cost }?.joinToString(" // ")
         it.manaValue = cmc?.toFloat() ?: 0.0f
-        it.oracleText = sequence {
-            oracle_text?.let { yield(it) }
-            yieldAll(card_faces?.asSequence()?.map { it.oracle_text } ?: emptySequence())
-        }.joinToString("\n")
-        it.price = prices["eur"]?.toDouble()
-        it.priceFoil = prices["eur_foil"]?.toDouble()
+        it.oracleText =
+            sequence {
+                  oracle_text?.let { yield(it) }
+                  yieldAll(card_faces?.asSequence()?.map { it.oracle_text } ?: emptySequence())
+                }
+                .joinToString("\n")
+        it.priceNormal = prices["eur"]?.toDouble()?.let { CurrencyValue.eur(it) }
+        it.priceFoil = prices["eur_foil"]?.toDouble()?.let { CurrencyValue.eur(it) }
+//        it.priceEtched = prices["usd_etched"]?.toDouble()?.let { CurrencyValue.usd(it).exchangeTo(Currencies.EUR) }
         it.type = type_line ?: card_faces?.mapNotNull { it.type_line }?.joinToString(" // ")
         it.promoType = promo_types
 
-        val patternSpecialDeckRestrictions = Regex("A deck can have (any number of cards|only one card|up to (\\w+) cards) named ${this@ScryfallCard.name}\\.")
-        it.specialDeckRestrictions = oracle_text?.let { patternSpecialDeckRestrictions.find(it) }?.let {
-            when {
-                it.groupValues[1] == "any number of cards" -> Int.MAX_VALUE
-                it.groupValues[1] == "only one card" -> 1
-                else -> when(it.groupValues[2]) {
-                    "one" -> 1
-                    "two" -> 2
-                    "three" -> 3
-                    "four" -> 4
-                    "five" -> 5
-                    "six" -> 6
-                    "seven" -> 7
-                    "eight" -> 8
-                    "nine" -> 9
-                    "ten" -> 10
-                    "eleven" -> 11
-                    "twelve" -> 12
-                    "thirteen" -> 13
-                    "fourteen" -> 14
-                    "fifteen" -> 15
-                    else -> throw IllegalStateException("the following value is not recognized currently: " + it.groupValues[2])
+        val patternSpecialDeckRestrictions =
+            Regex(
+                "A deck can have (any number of cards|only one card|up to (\\w+) cards) named ${this@ScryfallCard.name}\\."
+            )
+        it.specialDeckRestrictions =
+            oracle_text
+                ?.let { patternSpecialDeckRestrictions.find(it) }
+                ?.let {
+                  when {
+                    it.groupValues[1] == "any number of cards" -> Int.MAX_VALUE
+                    it.groupValues[1] == "only one card" -> 1
+                    else ->
+                        when (it.groupValues[2]) {
+                          "one" -> 1
+                          "two" -> 2
+                          "three" -> 3
+                          "four" -> 4
+                          "five" -> 5
+                          "six" -> 6
+                          "seven" -> 7
+                          "eight" -> 8
+                          "nine" -> 9
+                          "ten" -> 10
+                          "eleven" -> 11
+                          "twelve" -> 12
+                          "thirteen" -> 13
+                          "fourteen" -> 14
+                          "fifteen" -> 15
+                          else ->
+                              throw IllegalStateException(
+                                  "the following value is not recognized currently: " +
+                                      it.groupValues[2]
+                              )
+                        }
+                  }
                 }
-            }
-        }
-    }
+      }
 
-    fun determinePrintedName(): String? = printed_name ?:
-        card_faces?.let {
-            "${it[0]} // ${it[1]}"
-        }
+  fun determinePrintedName(): String? = printed_name ?: card_faces?.let { "${it[0]} // ${it[1]}" }
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
-internal fun ScryfallCardSet.loadCardsFromScryfall(language: String? = null, optional: Boolean = false): Flow<ScryfallCard> =
+internal fun ScryfallCardSet.loadCardsFromScryfall(
+    language: String? = null,
+    optional: Boolean = false,
+): Flow<ScryfallCard> =
     selfAndNonRootChildSets.asFlow().flatMapConcat {
-        LOG.trace("loadCardsFromScryfall for {} for language {}", this, language)
-        paginatedDataRequest("https://api.scryfall.com/cards/search?q=${ language?.let {"lang%3A$it%20"} ?: "" }set%3A${it.code}&unique=prints&order=set", optional)
+      LOG.trace("loadCardsFromScryfall for {} for language {}", this, language)
+      paginatedDataRequest(
+          "https://api.scryfall.com/cards/search?q=${ language?.let {"lang%3A$it%20"} ?: "" }set%3A${it.code}&unique=prints&order=set",
+          optional,
+      )
     }
 
 suspend fun ScryfallCardSet.importCardsOfSet(additionalLanguages: List<String> = emptyList()) {
-    LOG.trace("import cards of set {}", this.code)
-    loadCardsFromScryfall()
-        .filter(ScryfallCard::isImportWorthy)
-        .collect {
-            Card.newOrUpdate(it.id, it::update)
-        }
+  LOG.trace("import cards of set {}", this.code)
+  loadCardsFromScryfall().filter(ScryfallCard::isImportWorthy).collect {
+    Card.newOrUpdate(it.id, it::update)
+  }
 
-    additionalLanguages.forEach { language ->
-        loadCardsFromScryfall(language, true)
-            .filter(ScryfallCard::isImportWorthy)
-            .collect {
-                Card.findById(it.id)?.apply {
-                    nameDE = it.determinePrintedName()
-                }
-            }
+  additionalLanguages.forEach { language ->
+    loadCardsFromScryfall(language, true).filter(ScryfallCard::isImportWorthy).collect {
+      Card.findById(it.id)?.apply { nameDE = it.determinePrintedName() }
     }
+  }
 }

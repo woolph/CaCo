@@ -13,15 +13,14 @@ import com.github.ajalt.clikt.parameters.types.path
 import java.net.URI
 
 class PrintDecklist : SuspendingCliktCommand(name = "deckbox-deck") {
-    val url by option(help = "Deckbox decklist URL").convert { URI.create(it).toURL() }.prompt("Enter URL")
-    val output by option().path(canBeDir = true, canBeFile = true)
+  val url by
+      option(help = "Deckbox decklist URL").convert { URI.create(it).toURL() }.prompt("Enter URL")
+  val output by option().path(canBeDir = true, canBeFile = true)
 
-    override suspend fun run() {
-        val decklistPrinter =
-            output?.let {
-                DecklistPrinter.Pdf(it)
-            } ?: TerminalDecklistPrinter(terminal)
+  override suspend fun run() {
+    val decklistPrinter =
+        output?.let { DecklistPrinter.Pdf(it) } ?: TerminalDecklistPrinter(terminal)
 
-        DeckboxDeckImporter().importDeck(url).let { decklistPrinter.print(listOf(it)) }
-    }
+    DeckboxDeckImporter().importDeck(url).let { decklistPrinter.print(listOf(it)) }
+  }
 }

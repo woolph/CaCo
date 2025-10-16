@@ -3,12 +3,12 @@ package at.woolph.caco.masterdata.import
 
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.SetType
-import kotlinx.serialization.Contextual
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
 import java.net.URI
 import java.time.LocalDate
 import java.util.*
+import kotlinx.serialization.Contextual
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
 @Serializable
 data class ScryfallSet(
@@ -33,43 +33,56 @@ data class ScryfallSet(
     val set_type: SetType,
     val nonfoil_only: Boolean,
     val foil_only: Boolean,
-): ScryfallBase {
-    override fun isValid() = objectType == "set"
+) : ScryfallBase {
+  override fun isValid() = objectType == "set"
 
-    fun update(scryfallCardSet: ScryfallCardSet) {
-        scryfallCardSet.code = this@ScryfallSet.code
-        scryfallCardSet.name = this@ScryfallSet.name
+  fun update(scryfallCardSet: ScryfallCardSet) {
+    scryfallCardSet.code = this@ScryfallSet.code
+    scryfallCardSet.name = this@ScryfallSet.name
 
-        scryfallCardSet.blockCode = when {// reassigning blockCode
-            code in setOf("gnt", "gn2", "gn3") -> "gnt"
-            else -> block_code
+    scryfallCardSet.blockCode =
+        when { // reassigning blockCode
+          code in setOf("gnt", "gn2", "gn3") -> "gnt"
+          else -> block_code
         }
-        scryfallCardSet.blockName = when { // reassigning blockName
-            code in setOf("gnt", "gn2", "gn3") -> "Game Night"
-            else -> block
+    scryfallCardSet.blockName =
+        when { // reassigning blockName
+          code in setOf("gnt", "gn2", "gn3") -> "Game Night"
+          else -> block
         }
-        scryfallCardSet.digitalOnly = digital
-        scryfallCardSet.cardCount = card_count
-        scryfallCardSet.printedSize = printed_size
-        scryfallCardSet.type = set_type
-        scryfallCardSet.parentSetCode = when { // reassigning parent_set_codes
-            code == "gk1" -> "grn"
-            code == "gk2" -> "rna"
-            code == "pltc" -> "ltc"
-            code == "h1r" -> "mh1"
-            code == "h2r" -> "mh2"
-            else -> parent_set_code
+    scryfallCardSet.digitalOnly = digital
+    scryfallCardSet.cardCount = card_count
+    scryfallCardSet.printedSize = printed_size
+    scryfallCardSet.type = set_type
+    scryfallCardSet.parentSetCode =
+        when { // reassigning parent_set_codes
+          code == "gk1" -> "grn"
+          code == "gk2" -> "rna"
+          code == "pltc" -> "ltc"
+          code == "h1r" -> "mh1"
+          code == "h2r" -> "mh2"
+          else -> parent_set_code
         }
-        scryfallCardSet.releaseDate = this@ScryfallSet.released_at
-        scryfallCardSet.icon = this@ScryfallSet.icon_svg_uri
-    }
+    scryfallCardSet.releaseDate = this@ScryfallSet.released_at
+    scryfallCardSet.icon = this@ScryfallSet.icon_svg_uri
+  }
 
-    companion object {
-        val memorabiliaWhiteList = listOf(
+  companion object {
+    val memorabiliaWhiteList =
+        listOf(
             "ptg",
             "30a",
             "p30a",
         )
-    }
-    val isImportWorthy: Boolean get() = !digital && card_count > 0 && code != "plst" && (set_type != SetType.MEMORABILIA || code.startsWith("f")  || code.startsWith("o") || code in memorabiliaWhiteList)
+  }
+
+  val isImportWorthy: Boolean
+    get() =
+        !digital &&
+            card_count > 0 &&
+            code != "plst" &&
+            (set_type != SetType.MEMORABILIA ||
+                code.startsWith("f") ||
+                code.startsWith("o") ||
+                code in memorabiliaWhiteList)
 }

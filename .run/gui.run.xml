@@ -2,7 +2,7 @@
   <configuration default="false" name="gui" type="JetRunConfigurationType">
     <option name="ALTERNATIVE_JRE_PATH" value="temurin-17" />
     <option name="MAIN_CLASS_NAME" value="at.woolph.caco.gui.MainKt" />
-    <module name="CaCo.gui.main" />
+    <module name="CaCo.gui.jvmMain" />
     <shortenClasspath name="NONE" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
     <method v="2">

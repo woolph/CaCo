@@ -17,58 +17,62 @@ import kotlin.text.toDoubleOrNull
 import kotlin.text.toInt
 
 fun importArchidekt(
-  file: Path,
-  notImportedOutputFile: Path = Path.of("not-imported.csv"),
-  datePredicate: Predicate<Instant> =  Predicate { true },
-  clearBeforeImport: Boolean = false) = import(
-  file = file,
-  notImportedOutputFile = notImportedOutputFile,
-  datePredicate = datePredicate,
-  clearBeforeImport = clearBeforeImport,
-  mapper = Raise<Throwable>::mapArchitect,
-)
+    file: Path,
+    notImportedOutputFile: Path = Path.of("not-imported.csv"),
+    datePredicate: Predicate<Instant> = Predicate { true },
+    clearBeforeImport: Boolean = false,
+) =
+    import(
+        file = file,
+        notImportedOutputFile = notImportedOutputFile,
+        datePredicate = datePredicate,
+        clearBeforeImport = clearBeforeImport,
+        mapper = Raise<Throwable>::mapArchitect,
+    )
 
 fun importSequenceArchidekt(
-  file: Path,
-  notImportedOutputFile: Path = Path.of("not-imported.csv"),
+    file: Path,
+    notImportedOutputFile: Path = Path.of("not-imported.csv"),
 ): Sequence<Either<Throwable, CardCollectionItem>> =
-  importSequence(
-    file,
-    notImportedOutputFile,
-    mapper = Raise<Throwable>::mapArchitect,
-  )
-
+    importSequence(
+        file,
+        notImportedOutputFile,
+        mapper = Raise<Throwable>::mapArchitect,
+    )
 
 fun Raise<Throwable>.mapArchitect(csvRecord: CsvRecord): CardCollectionItem {
-  val dateAdded = csvRecord["Date Added"]
-    ?.let { LocalDate.parse(it).atStartOfDay().toInstant(ZoneOffset.UTC) }
-    ?: Instant.now()
+  val dateAdded =
+      csvRecord["Date Added"]?.let { LocalDate.parse(it).atStartOfDay().toInstant(ZoneOffset.UTC) }
+          ?: Instant.now()
 
   val quantity = csvRecord["Quantity"]!!.toInt()
   val finish = Finish.parse(csvRecord["Finish"]!!)
   val language = CardLanguage.parse(csvRecord["Language"]!!)
-  val condition = when (csvRecord["Condition"]) {
-    "NM" -> CardCondition.NEAR_MINT
-    "LP" -> CardCondition.EXCELLENT
-    "MP" -> CardCondition.GOOD
-    "HP" -> CardCondition.PLAYED
-    "D" -> CardCondition.POOR
-    else -> CardCondition.UNKNOWN
-  }
+  val condition =
+      when (csvRecord["Condition"]) {
+        "NM" -> CardCondition.NEAR_MINT
+        "LP" -> CardCondition.EXCELLENT
+        "MP" -> CardCondition.GOOD
+        "HP" -> CardCondition.PLAYED
+        "D" -> CardCondition.POOR
+        else -> CardCondition.UNKNOWN
+      }
   val purchasePrice = csvRecord["Purchase Price"]?.toDoubleOrNull()
   val scryfallId = Either.catch { UUID.fromString(csvRecord["Scryfall ID"]!!) }.bind()
-  val (card, cardVariantType) = CardRepresentation.findByScryfallId(scryfallId)
-    ?: raise(Exception("card with id $scryfallId not found"))
+  val (card, cardVariantType) =
+      CardRepresentation.findByScryfallId(scryfallId)
+          ?: raise(Exception("card with id $scryfallId not found"))
   return CardCollectionItem(
-    quantity = quantity.toUInt(),
-    cardCollectionItemId = CardCollectionItemId(
-      card = card,
-      finish = finish,
-      language = language,
-      condition = condition,
-      variantType = cardVariantType,
-    ),
-    dateAdded = dateAdded,
-    purchasePrice = purchasePrice,
+      quantity = quantity.toUInt(),
+      cardCollectionItemId =
+          CardCollectionItemId(
+              card = card,
+              finish = finish,
+              language = language,
+              condition = condition,
+              variantType = cardVariantType,
+          ),
+      dateAdded = dateAdded,
+      purchasePrice = purchasePrice,
   )
 }

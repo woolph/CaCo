@@ -1,15 +1,17 @@
-package at.woolph.caco/* Copyright 2025 Wolfgang Mayer */
+/* Copyright 2025 Wolfgang Mayer */
+package at.woolph.caco /* Copyright 2025 Wolfgang Mayer */
+
 import at.woolph.caco.cli.manabase.ColorIdentity
 import at.woolph.caco.datamodel.Databases
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.Cards
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
+import kotlin.test.Test
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
-import kotlin.test.Test
 
 class CheapRampTests {
   companion object {
@@ -23,66 +25,63 @@ class CheapRampTests {
   @Test
   fun positiveTests() {
     transaction {
-      listOf(
-        "Llanowar Elves",
-        "Skirk Prospector",
-        "Springleaf Drum",
-        "Lotus Cobra",
-        "Dark Ritual",
-        "Wolfwillow Haven",
-        "Aether Vial",
-        "Wayfarer's Bauble",
-      ).map {
-        Card.find { Cards.name match it }.limit(1).first()
-      }
-    }.map {
-      withClue("${it.name} should be a cheap ramp spell") {
-        it.isCheapRamp shouldBe true
-      }
-    }
-}
+          listOf(
+                  "Llanowar Elves",
+                  "Skirk Prospector",
+                  "Springleaf Drum",
+                  "Lotus Cobra",
+                  "Dark Ritual",
+                  "Wolfwillow Haven",
+                  "Aether Vial",
+                  "Wayfarer's Bauble",
+              )
+              .map { Card.find { Cards.name match it }.limit(1).first() }
+        }
+        .map {
+          withClue("${it.name} should be a cheap ramp spell") { it.isCheapRamp shouldBe true }
+        }
+  }
 
-    @TestFactory
-    fun negativeTests(): Collection<DynamicTest> =
-        transaction {
+  @TestFactory
+  fun negativeTests(): Collection<DynamicTest> =
+      transaction {
             listOf(
-                "Ranger Class",
-                "Tangled Florahedron // Tangled Vale",
-                "Shambling Ghast",
-                "Manamorphose",
-                "Crop Rotation",
-                "Sylvan Scrying",
-                "Armillary Sphere",
-                "Ordeal of Nylea",
-                "Open the Gates",
-                "Mycosynth Wellspring",
-                "Dreamscape Artist",
-            ).map {
-                Card.find { Cards.name match it }.limit(1).first()
-            }
-        }.map {
+                    "Ranger Class",
+                    "Tangled Florahedron // Tangled Vale",
+                    "Shambling Ghast",
+                    "Manamorphose",
+                    "Crop Rotation",
+                    "Sylvan Scrying",
+                    "Armillary Sphere",
+                    "Ordeal of Nylea",
+                    "Open the Gates",
+                    "Mycosynth Wellspring",
+                    "Dreamscape Artist",
+                )
+                .map { Card.find { Cards.name match it }.limit(1).first() }
+          }
+          .map {
             DynamicTest.dynamicTest("${it.name} should not be a cheap ramp spell") {
-                withClue("${it.name} should not be a cheap ramp spell oracleText = ${it.oracleText}") {
-                    it.isCheapRamp shouldBe false
-                }
+              withClue(
+                  "${it.name} should not be a cheap ramp spell oracleText = ${it.oracleText}"
+              ) {
+                it.isCheapRamp shouldBe false
+              }
             }
-        }
+          }
 
-    @Test
-    fun printCheapRamp() {
-        transaction {
-            Card.all().filter { it.isCheapRamp }.forEach {
-                println(it.name)
-            }
-        }
-    }
+  @Test
+  fun printCheapRamp() {
+    transaction { Card.all().filter { it.isCheapRamp }.forEach { println(it.name) } }
+  }
 
-    @Test
-    fun printCheapRampInDimir() {
-        transaction {
-            Card.all().filter { it.colorIdentity in ColorIdentity.DIMIR }.filter { it.isCheapRamp }.forEach {
-                println("${it.name}")
-            }
-        }
+  @Test
+  fun printCheapRampInDimir() {
+    transaction {
+      Card.all()
+          .filter { it.colorIdentity in ColorIdentity.DIMIR }
+          .filter { it.isCheapRamp }
+          .forEach { println("${it.name}") }
     }
+  }
 }

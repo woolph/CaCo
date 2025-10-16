@@ -2,11 +2,11 @@
 package at.woolph.caco.masterdata.import
 
 interface ScryfallBase {
-    fun isValid(): Boolean
+  fun isValid(): Boolean
 
-    fun checkValid() {
-        if (!isValid()) {
-            throw IllegalStateException("object is not valid")
-        }
+  fun checkValid() {
+    if (!isValid()) {
+      throw IllegalStateException("object is not valid")
     }
+  }
 }

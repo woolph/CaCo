@@ -1,13 +1,15 @@
 /* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.decks
 
-import at.woolph.caco.utils.httpclient.useHttpClient
 import at.woolph.caco.masterdata.import.ProgressIndicator
 import at.woolph.caco.masterdata.import.updateProgressIndicator
+import at.woolph.caco.utils.httpclient.useHttpClient
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import java.net.URI
+import java.time.ZonedDateTime
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.isActive
@@ -15,14 +17,15 @@ import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.slf4j.LoggerFactory
-import java.net.URI
-import java.time.ZonedDateTime
 
 interface Pageable<T> {
-    fun hasNext(): Boolean
-    fun next(): String
-    fun contents(): Flow<T>
-    val totalItems: Int?
+  fun hasNext(): Boolean
+
+  fun next(): String
+
+  fun contents(): Flow<T>
+
+  val totalItems: Int?
 }
 
 @Serializable
@@ -31,10 +34,12 @@ data class ArchidektPaginatedData<T>(
     @Contextual val next: String? = null,
     @Contextual val previous: String? = null,
     val results: List<T>,
-): Pageable<T> {
-    override fun hasNext() = next != null
-    override fun next() = next!!
-    override fun contents() = results.asFlow()
+) : Pageable<T> {
+  override fun hasNext() = next != null
+
+  override fun next() = next!!
+
+  override fun contents() = results.asFlow()
 }
 
 @Serializable
@@ -101,43 +106,44 @@ data class ArchidektDecklist(
 
 private val LOG = LoggerFactory.getLogger("at.woolph.caco.importer.deck")
 
-internal inline fun <reified P: Pageable<T>, reified T> paginatedDataRequest(initialQuery: String, optional: Boolean = false, progressIndicator: ProgressIndicator? = null): Flow<T> = flow {
-    var currentQuery: String? = initialQuery
+internal inline fun <reified P : Pageable<T>, reified T> paginatedDataRequest(
+    initialQuery: String,
+    optional: Boolean = false,
+    progressIndicator: ProgressIndicator? = null,
+): Flow<T> = flow {
+  var currentQuery: String? = initialQuery
 
-    useHttpClient { client ->
-        while (currentQuery != null && currentCoroutineContext().isActive) {
-            LOG.debug("importing paginated data from $currentQuery")
-            val response: HttpResponse = client.get(currentQuery!!)
+  useHttpClient { client ->
+    while (currentQuery != null && currentCoroutineContext().isActive) {
+      LOG.debug("importing paginated data from $currentQuery")
+      val response: HttpResponse = client.get(currentQuery!!)
 
-            if (response.status.isSuccess()) {
-                val paginatedData = response.body<P>()
+      if (response.status.isSuccess()) {
+        val paginatedData = response.body<P>()
 
-                currentQuery = if (paginatedData.hasNext()) paginatedData.next() else null
+        currentQuery = if (paginatedData.hasNext()) paginatedData.next() else null
 
-                emitAll(
-                    paginatedData.contents()
-                        .updateProgressIndicator(
-                            progressIndicator,
-                            paginatedData.totalItems
-                        )
-                )
-            } else {
-                if (!optional)
-                    throw Exception("request failed with status code ${response.status.description}")
-                else
-                    currentQuery = null
-            }
-        }
-        progressIndicator?.finished()
+        emitAll(
+            paginatedData
+                .contents()
+                .updateProgressIndicator(progressIndicator, paginatedData.totalItems)
+        )
+      } else {
+        if (!optional)
+            throw Exception("request failed with status code ${response.status.description}")
+        else currentQuery = null
+      }
     }
+    progressIndicator?.finished()
+  }
 }
 
 internal suspend inline fun <reified T> request(query: String): T = useHttpClient { client ->
-    LOG.debug("requesting data from $query")
-    val response: HttpResponse = client.get(query)
-    if (response.status.isSuccess()) {
-        return@useHttpClient response.body<T>()
-    } else {
-        throw Exception("request failed with status code ${response.status.description}")
-    }
+  LOG.debug("requesting data from $query")
+  val response: HttpResponse = client.get(query)
+  if (response.status.isSuccess()) {
+    return@useHttpClient response.body<T>()
+  } else {
+    throw Exception("request failed with status code ${response.status.description}")
+  }
 }

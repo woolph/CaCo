@@ -16,11 +16,21 @@ import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
 
 object Databases {
-    fun init(homeDirectory: HomeDirectory = HomeDirectory()) {
-        val cacoDatabase = Database.connect("jdbc:h2:${homeDirectory}/caco-database", driver = "org.h2.Driver")
-        TransactionManager.defaultDatabase = cacoDatabase
-        transaction(cacoDatabase) {
-            SchemaUtils.createMissingTablesAndColumns(ScryfallCardSets, Cards, CardVariants, CardPossessions, DeckArchetypes, Builds, DeckCards, ArenaCardPossessions)
-        }
+  fun init(homeDirectory: HomeDirectory = HomeDirectory()) {
+    val cacoDatabase =
+        Database.connect("jdbc:h2:${homeDirectory}/caco-database", driver = "org.h2.Driver")
+    TransactionManager.defaultDatabase = cacoDatabase
+    transaction(cacoDatabase) {
+      SchemaUtils.createMissingTablesAndColumns(
+          ScryfallCardSets,
+          Cards,
+          CardVariants,
+          CardPossessions,
+          DeckArchetypes,
+          Builds,
+          DeckCards,
+          ArenaCardPossessions,
+      )
     }
+  }
 }

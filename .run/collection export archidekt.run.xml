@@ -1,8 +1,8 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="cli collection export archidekt" type="JetRunConfigurationType">
+  <configuration default="false" name="collection export archidekt" type="JetRunConfigurationType" folderName="cli">
     <option name="ALTERNATIVE_JRE_PATH" value="temurin-17" />
     <option name="MAIN_CLASS_NAME" value="at.woolph.caco.cli.MainKt" />
-    <module name="CaCo.cli.main" />
+    <module name="CaCo.cli.jvmMain" />
     <option name="PROGRAM_PARAMETERS" value="collection export --format=archidekt &quot;C:\Users\001121673\Downloads\archidekt.csv&quot;" />
     <shortenClasspath name="NONE" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />

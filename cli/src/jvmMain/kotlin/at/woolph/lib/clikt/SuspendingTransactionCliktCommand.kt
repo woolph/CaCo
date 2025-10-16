@@ -7,11 +7,9 @@ import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransacti
 abstract class SuspendingTransactionCliktCommand(
     name: String? = null,
 ) : SuspendingCliktCommand(name) {
-    override suspend fun run() {
-        newSuspendedTransaction {
-            runTransaction()
-        }
-    }
+  override suspend fun run() {
+    newSuspendedTransaction { runTransaction() }
+  }
 
-    open suspend fun runTransaction() {}
+  open suspend fun runTransaction() {}
 }

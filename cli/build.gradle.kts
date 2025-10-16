@@ -1,30 +1,26 @@
 plugins {
   alias(libs.plugins.kotlin.multiplatform)
   alias(libs.plugins.spotless)
-//  application
-//  distribution
 }
 
 group = "at.woolph"
+
 version = "0.3.0"
 
 kotlin {
-  jvm()
+  jvm { mainRun { mainClass = "at.woolph.caco.cli.MainKt" } }
 
-  compilerOptions {
-    freeCompilerArgs.add("-Xwhen-guards")
-  }
+  compilerOptions { freeCompilerArgs.add("-Xwhen-guards") }
 
   sourceSets {
     commonMain.dependencies {
+      implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
     }
-    commonTest.dependencies {
-      implementation(libs.kotlin.test)
-    }
+    commonTest.dependencies { implementation(libs.kotlin.test) }
     jvmMain.dependencies {
       implementation(projects.lib)
-      implementation(kotlin("reflect"))
 
+      implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
       implementation("com.github.ajalt.clikt:clikt:5.0.2")
       implementation("com.github.ajalt.mordant:mordant:3.0.1")
       implementation("com.github.ajalt.mordant:mordant-coroutines:3.0.1")
@@ -37,17 +33,12 @@ kotlin {
     }
   }
 }
-//
-//application {
-//  mainClass.set("at.woolph.caco.cli.MainKt")
-//}
-//
-//spotless {
-//  kotlin {
-//    ktlint()
-//    licenseHeader("/* Copyright \$YEAR Wolfgang Mayer */")
-//  }
-//  kotlinGradle {
-//    ktlint()
-//  }
-//}
+
+spotless {
+  kotlin {
+    target("src/*/kotlin/**/*.kt")
+    ktfmt()
+    licenseHeader("/* Copyright \$YEAR Wolfgang Mayer */")
+  }
+  kotlinGradle { ktfmt() }
+}
