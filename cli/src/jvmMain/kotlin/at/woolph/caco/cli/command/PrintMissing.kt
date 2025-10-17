@@ -10,7 +10,7 @@ import at.woolph.lib.clikt.SuspendingTransactionCliktCommand
 class PrintMissing : SuspendingTransactionCliktCommand(name = "missing-cmd") {
   override suspend fun runTransaction() {
     val blacklist = listOf("fic", "cmd", "c13", "c14", "c15", "c16", "c17", "cma", "scd")
-    ScryfallCardSet.Companion.find { ScryfallCardSets.type eq SetType.COMMANDER }
+    ScryfallCardSet.find { ScryfallCardSets.type eq SetType.COMMANDER }
         .filter { it.code !in blacklist }
         .flatMap {
           it.cards.filter { card ->

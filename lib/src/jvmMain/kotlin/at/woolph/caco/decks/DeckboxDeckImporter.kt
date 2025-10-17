@@ -3,6 +3,7 @@ package at.woolph.caco.decks
 
 import at.woolph.caco.ProgressTracker
 import at.woolph.caco.cli.DeckList
+import at.woolph.caco.cli.DeckZone
 import at.woolph.caco.datamodel.decks.Format
 import java.net.URI
 import java.net.URL
@@ -100,16 +101,20 @@ class DeckboxDeckImporter(
           DeckList(
               deckName,
               format,
-              mainboard,
-              commandZone = commanders,
-              maybeboard = sideboard,
+              deckZones = mapOf(
+                DeckZone.COMMAND_ZONE to commanders,
+                DeckZone.MAIN_BOARD to mainboard,
+                DeckZone.MAYBE_BOARD to sideboard,
+              ),
           )
       else ->
           DeckList(
               deckName,
               format,
-              mainboard,
-              sideboard = sideboard,
+              deckZones = mapOf(
+                DeckZone.COMMAND_ZONE to commanders,
+                DeckZone.SIDE_BOARD to sideboard,
+              ),
           )
     }
   }

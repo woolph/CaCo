@@ -3,6 +3,7 @@ package at.woolph.caco.decks
 
 import at.woolph.caco.ProgressTracker
 import at.woolph.caco.cli.DeckList
+import at.woolph.caco.cli.DeckZone
 import at.woolph.caco.datamodel.decks.Format
 import kotlinx.coroutines.flow.*
 
@@ -60,17 +61,21 @@ class ArchidektDeckImporter(
           DeckList(
               archidektDecklist.name,
               format,
-              mainboard,
-              commandZone = commanders,
-              maybeboard = maybeboard,
+              deckZones = mapOf(
+                DeckZone.COMMAND_ZONE to commanders,
+                DeckZone.MAIN_BOARD to mainboard,
+                DeckZone.MAYBE_BOARD to maybeboard,
+              ),
           )
       else ->
           DeckList(
               archidektDecklist.name,
               format,
-              mainboard,
-              sideboard = sideboard,
-              maybeboard = maybeboard,
+              deckZones = mapOf(
+                DeckZone.COMMAND_ZONE to commanders,
+                DeckZone.SIDE_BOARD to sideboard,
+                DeckZone.MAYBE_BOARD to maybeboard,
+              ),
           )
     }
   }

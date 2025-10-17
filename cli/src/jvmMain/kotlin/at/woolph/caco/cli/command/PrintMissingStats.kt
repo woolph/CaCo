@@ -19,7 +19,7 @@ class PrintMissingStats : SuspendingTransactionCliktCommand(name = "missing-stat
     }
 
     val missingStatsPerSet =
-        ScryfallCardSet.Companion.all()
+        ScryfallCardSet.all()
             .filter { !it.digitalOnly && it.cardCount > 50 }
             .map {
               val overallCardCount = it.cards.count { !it.token }

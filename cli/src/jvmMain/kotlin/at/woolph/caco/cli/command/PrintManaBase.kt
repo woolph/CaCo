@@ -2,7 +2,7 @@
 package at.woolph.caco.cli.command
 
 import at.woolph.caco.cli.manabase.ColorIdentity
-import at.woolph.caco.cli.manabase.DecklistEntry
+import at.woolph.caco.cli.DecklistEntry
 import at.woolph.caco.cli.manabase.SelectionCriterion
 import at.woolph.caco.cli.manabase.generateManabase
 import at.woolph.caco.cli.manabase.toDecklistEntryCards

@@ -12,12 +12,11 @@ import at.woolph.caco.masterdata.import.toEnumSet
 import at.woolph.caco.utils.compareToNullable
 import java.net.URI
 import java.util.*
-import kotlin.enums.EnumEntries
 import org.jetbrains.exposed.dao.*
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
 
-object Cards : IdTable<UUID>() {
+object Cards : IdTable<UUID>() { // TODO maybe split into card & cardprint (card only contains basic information, and cardprint is an actual representation)
   override val id = uuid("scryfallId").entityId()
   override val primaryKey = PrimaryKey(id)
 
@@ -189,7 +188,7 @@ class Card(id: EntityID<UUID>) : UUIDEntity(id), Comparable<Card>, CardRepresent
             oracleTextAll("look", "library", "put", "your hand"))) ||
         !isLand &&
             oracleText.contains(
-                Regex("cycling( \\{([012])\\}|—pay \\d+ life)", RegexOption.IGNORE_CASE)
+                Regex("cycling( \\{([012])}|—pay \\d+ life)", RegexOption.IGNORE_CASE)
             )
   }
 

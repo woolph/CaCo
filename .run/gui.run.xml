@@ -1,6 +1,7 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="gui" type="JetRunConfigurationType">
-    <option name="ALTERNATIVE_JRE_PATH" value="temurin-17" />
+    <option name="ALTERNATIVE_JRE_PATH" value="21" />
+    <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
     <option name="MAIN_CLASS_NAME" value="at.woolph.caco.gui.MainKt" />
     <module name="CaCo.gui.jvmMain" />
     <shortenClasspath name="NONE" />

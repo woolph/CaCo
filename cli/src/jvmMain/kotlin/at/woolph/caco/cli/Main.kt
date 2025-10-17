@@ -64,6 +64,7 @@ suspend fun main(args: Array<String>) =
                     ImportDecklists(),
                     PrintManaBase(),
                     PrintManaBaseArchidektDeck(),
+                    CheckDecklistMissingCards(),
                 ),
         )
         .main(args)

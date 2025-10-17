@@ -32,23 +32,6 @@ import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.slf4j.LoggerFactory
 
-sealed interface BulkDataSource {
-  suspend fun processBulkData(block: suspend (InputStream) -> Unit)
-}
-
-class BulkDataFile(
-    val file: Path,
-) : BulkDataSource {
-  override suspend fun processBulkData(block: suspend (InputStream) -> Unit) =
-      block(file.inputStream())
-}
-
-class BulkDataApiRequest(
-    val bulkDataName: String,
-) : BulkDataSource {
-  override suspend fun processBulkData(block: suspend (InputStream) -> Unit) =
-      downloadBulkData(bulkDataName, block)
-}
 
 /** updates the masterdata from scryfall into the database */
 class UpdateMasterdata : SuspendingCliktCommand(name = "update") {
@@ -63,6 +46,24 @@ class UpdateMasterdata : SuspendingCliktCommand(name = "update") {
           )
           .single()
           .default(BulkDataApiRequest("default_cards"))
+
+  sealed interface BulkDataSource {
+    suspend fun processBulkData(block: suspend (InputStream) -> Unit)
+  }
+
+  class BulkDataFile(
+    val file: Path,
+  ) : BulkDataSource {
+    override suspend fun processBulkData(block: suspend (InputStream) -> Unit) =
+      block(file.inputStream())
+  }
+
+  class BulkDataApiRequest(
+    val bulkDataName: String,
+  ) : BulkDataSource {
+    override suspend fun processBulkData(block: suspend (InputStream) -> Unit) =
+      downloadBulkData(bulkDataName, block)
+  }
 
   override suspend fun run() {
     newSuspendedTransaction { importSets().collect {} }
@@ -158,7 +159,7 @@ class UpdateMasterdata : SuspendingCliktCommand(name = "update") {
     ) =
         getSetByCode(setCode).flatMap { set ->
           Either.catch {
-                Card.Companion.find {
+                Card.find {
                       Cards.set eq set.id and (Cards.collectorNumber eq collectorNumber)
                     }
                     .single()
@@ -173,7 +174,7 @@ class UpdateMasterdata : SuspendingCliktCommand(name = "update") {
 
     internal fun getSetByCode(setCode: String) =
         Either.catch {
-              ScryfallCardSet.Companion.find { ScryfallCardSets.code eq setCode }.single()
+              ScryfallCardSet.find { ScryfallCardSets.code eq setCode }.single()
             }
             .mapLeft { Exception("no unique set with code $setCode found", it) }
 

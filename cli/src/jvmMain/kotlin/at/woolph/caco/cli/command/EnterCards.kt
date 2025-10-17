@@ -34,13 +34,13 @@ class EnterCards : SuspendingTransactionCliktCommand() {
 
   val condition by
       option(help = "The language of the cards")
-          .convert { CardCondition.Companion.parse(it) }
+          .convert { CardCondition.parse(it) }
           .default(CardCondition.NEAR_MINT)
           .validate { it != CardCondition.UNKNOWN }
 
   val language by
       option(help = "The language of the cards")
-          .convert { CardLanguage.Companion.parse(it) }
+          .convert { CardLanguage.parse(it) }
           .prompt("Select the language of the cards")
           .validate { it != CardLanguage.UNKNOWN }
 
@@ -50,7 +50,7 @@ class EnterCards : SuspendingTransactionCliktCommand() {
                   "The language rank list defines which language print you prefer for your collection.",
               valueSourceKey = "languageRankList",
           )
-          .convert { it.split(",").map(CardLanguage.Companion::parse) }
+          .convert { it.split(",").map(CardLanguage::parse) }
           .default(listOf(CardLanguage.ENGLISH))
 
   override suspend fun runTransaction() {
@@ -85,14 +85,13 @@ class EnterCards : SuspendingTransactionCliktCommand() {
       fun newPossessionUpdate2(card: Card, finish: Finish) =
           PossessionUpdate2(
               0,
-              CardPossession.Companion.find {
+              CardPossession.find {
                     CardPossessions.card.eq(card.id) and CardPossessions.finish.eq(finish)
                   }
                   .count {
                     it.language in languagesToBeChecked &&
                         it.condition.isBetterThanOrEqual(condition)
-                  }
-                  .toInt(),
+                  },
           )
 
       val cardPossessionUpdates = mutableMapOf<Pair<Card, Finish>, PossessionUpdate2>()
@@ -123,6 +122,9 @@ class EnterCards : SuspendingTransactionCliktCommand() {
               ((possessionUpdate ?: newPossessionUpdate2(card, finish)).also {
                     if (it.isNeeded()) {
                       terminal.danger(" \u001b[31mNeeded for collection!\u001b[0m")
+                    }
+                    else {
+                      echo()
                     }
                   })
                   .increment()
@@ -199,7 +201,7 @@ class EnterCards : SuspendingTransactionCliktCommand() {
                 ),
             )
           }
-      val file = Path("./src/test/http-requests/import.csv")
+      val file = Path("./http-requests/import.csv")
       when (format) {
         CollectionFileFormat.DECKBOX -> cardCollectionItems.exportDeckbox(file)
         CollectionFileFormat.ARCHIDEKT -> cardCollectionItems.exportArchidekt(file)

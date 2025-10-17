@@ -8,7 +8,11 @@ group = "at.woolph"
 version = "0.3.0"
 
 kotlin {
-  jvm { mainRun { mainClass = "at.woolph.caco.cli.MainKt" } }
+  jvm {
+    mainRun {
+      mainClass = "at.woolph.caco.cli.MainKt"
+    }
+  }
 
   compilerOptions { freeCompilerArgs.add("-Xwhen-guards") }
 

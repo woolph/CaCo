@@ -1,22 +1,15 @@
 /* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.cli.manabase
 
+import at.woolph.caco.cli.DecklistEntry
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.Cards
 import java.util.*
 import kotlin.collections.filterNot
-import kotlin.compareTo
 import kotlin.math.min
 import kotlin.math.round
 import kotlin.text.Regex
 import org.jetbrains.exposed.sql.transactions.transaction
-
-data class DecklistEntry(
-    val cardName: String,
-    val count: Int = 1,
-) {
-  override fun toString() = "$count ${cardName}"
-}
 
 data class DecklistEntryCard(
     val card: Card,
@@ -143,8 +136,8 @@ fun generateManabase(
           .filter {
             (Cards.select(Cards.price)
                 .where { (Cards.name match it.name) }
-                .mapNotNull { it[Cards.price]?.toDouble() }
-                .minOrNull() ?: 0.0) <= selectionCriterion.maxPricePerCard
+                .mapNotNull { it[Cards.price] }
+                .minOrNull() ?: 1000.0) <= selectionCriterion.maxPricePerCard
           }
           .toMutableList()
 
@@ -175,7 +168,7 @@ fun generateManabase(
         selectedLands.add(pickedLand)
         println("picked ${pickedLand.name}")
       }
-  306
+
   while (selectedLands.size < suggestedLandCount) {
     val pickedLand =
         filteredBasicLands.maxBy {

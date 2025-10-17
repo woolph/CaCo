@@ -13,6 +13,11 @@ group = "at.woolph"
 
 version = "0.3.0"
 
+repositories {
+  mavenCentral()
+  google()
+}
+
 kotlin {
   jvm()
   compilerOptions { freeCompilerArgs.add("-Xwhen-guards") }
