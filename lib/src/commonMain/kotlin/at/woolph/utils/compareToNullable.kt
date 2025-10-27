@@ -1,5 +1,5 @@
 /* Copyright 2025 Wolfgang Mayer */
-package at.woolph.caco.utils
+package at.woolph.utils
 
 fun <A : Comparable<A>> A?.compareToNullable(
     other: A?,

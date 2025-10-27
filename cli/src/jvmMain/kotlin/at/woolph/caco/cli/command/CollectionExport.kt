@@ -33,9 +33,9 @@ class CollectionExport : SuspendingTransactionCliktCommand(name = "export") {
   override suspend fun runTransaction() {
     when (format) {
       CollectionFileFormat.ARCHIDEKT ->
-          CardCollectionItem.Companion.getFromDatabase().exportArchidekt(file)
+          CardCollectionItem.getFromDatabase().exportArchidekt(kotlinx.io.files.Path(file.toString()))
       CollectionFileFormat.DECKBOX ->
-          CardCollectionItem.Companion.getFromDatabase().exportDeckbox(file)
+          CardCollectionItem.getFromDatabase().exportDeckbox(kotlinx.io.files.Path(file.toString()))
     }
   }
 }

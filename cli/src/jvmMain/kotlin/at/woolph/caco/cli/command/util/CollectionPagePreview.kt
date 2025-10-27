@@ -1,8 +1,11 @@
 /* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.cli.command.util
 
+import arrow.core.Either
+import arrow.core.getOrElse
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
-import at.woolph.caco.masterdata.imagecache.ImageCache
+import at.woolph.caco.image.ImageCacheImpl
+import at.woolph.caco.image.LocalFileSystemImageCache
 import at.woolph.libs.pdf.Font
 import at.woolph.libs.pdf.HorizontalAlignment
 import at.woolph.libs.pdf.PagePosition
@@ -98,20 +101,16 @@ class CollectionPagePreview(
             val cardPosition = position(index)
             try {
               val byteArray =
-                  ImageCache.getImageByteArray(card.thumbnail.toString()) {
-                    try {
+                  ImageCacheImpl.getImageByteArray(card.thumbnail.toString()) {
+                    Either.catch {
                       //                                        print("card #$${card.numberInSet}
                       // ${card.name} image downloading\r")
                       progress.update {
                         context = "card #\$${card.collectorNumber} ${card.name} image downloading\r"
                       }
-                      card.thumbnail?.toURL()?.readBytes()
-                    } catch (_: Throwable) {
-                      //                                        print("card #\$${card.numberInSet}
-                      // ${card.name} image is not loaded\r")
-                      null
+                      card.thumbnail?.toURL()?.readBytes() ?: throw Exception("thumbnail url missing")
                     }
-                  }!!
+                  }.getOrElse { throw it }
               val cardImage = createFromByteArray(byteArray, card.name)
               //                            print("card #\$${card.numberInSet} ${card.name} image
               // rendering\r")

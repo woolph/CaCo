@@ -7,7 +7,7 @@ import at.woolph.caco.datamodel.sets.CardVariant
 import at.woolph.caco.datamodel.sets.Finish
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.ScryfallCardSets
-import java.nio.file.Path
+import kotlinx.io.files.Path
 import java.time.ZoneOffset
 import kotlin.math.max
 

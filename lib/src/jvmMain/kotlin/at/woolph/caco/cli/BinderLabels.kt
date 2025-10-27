@@ -1,8 +1,10 @@
 /* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.cli
 
+import at.woolph.caco.binderlabels.MapLabelItem
 import at.woolph.caco.binderlabels.*
 import at.woolph.caco.datamodel.Databases
+import at.woolph.caco.datamodel.sets.IScryfallCardSet
 import at.woolph.caco.datamodel.sets.MultiSetBlock
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.ScryfallCardSets
@@ -204,7 +206,7 @@ fun main() {
               .forEach { rootBlock ->
                 when (rootBlock) {
                   is SingleSetBlock -> {
-                    suspend fun SequenceScope<MapLabelItem>.yieldSet(currentSet: ScryfallCardSet) {
+                    suspend fun SequenceScope<MapLabelItem>.yieldSet(currentSet: IScryfallCardSet) {
                       val (
                           childSetsDefinitelyIncludedInRootSetBinder,
                           childSetsWhichNeedToBeChecked) =
@@ -218,11 +220,11 @@ fun main() {
 
                       val setsInBinder = childSetsDefinitelyIncludedInRootSetBinder.toMutableList()
                       childSetsWhichNeedToBeChecked
-                          .sortedByDescending(ScryfallCardSet::binderPages)
+                          .sortedByDescending(IScryfallCardSet::binderPages)
                           .forEach { childSet ->
                             if (
                                 currentSet.binderPages +
-                                    setsInBinder.sumOf(ScryfallCardSet::totalBinderPages) +
+                                    setsInBinder.sumOf(IScryfallCardSet::totalBinderPages) +
                                     childSet.binderPages <= thresholdTooMuchPages
                             ) {
                               setsInBinder.add(childSet)
@@ -231,7 +233,7 @@ fun main() {
                             }
                           }
                       setsInBinder.addFirst(currentSet)
-                      if (setsInBinder.sumOf(ScryfallCardSet::binderPages) > thresholdTooFewPages) {
+                      if (setsInBinder.sumOf(IScryfallCardSet::binderPages) > thresholdTooFewPages) {
                         yield(AbstractLabelItem(setsInBinder)) // TODO omit same icons
                       }
                     }
@@ -241,7 +243,7 @@ fun main() {
 
                   is MultiSetBlock -> {
                     if (
-                        rootBlock.sets.sumOf(ScryfallCardSet::binderPages) <= thresholdTooMuchPages
+                        rootBlock.sets.sumOf(IScryfallCardSet::binderPages) <= thresholdTooMuchPages
                     ) {
                       yield(MultiSetBlockLabel(rootBlock))
                     } else {

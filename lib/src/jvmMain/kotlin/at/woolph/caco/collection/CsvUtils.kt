@@ -5,51 +5,36 @@ import arrow.core.Either
 import arrow.core.raise.either
 import arrow.core.raise.ensure
 import at.woolph.caco.datamodel.collection.CardPossessions
-import com.opencsv.CSVReader
-import com.opencsv.CSVWriter
-import java.nio.file.Path
-import java.time.Instant
-import java.util.function.Predicate
-import kotlin.io.path.bufferedReader
-import kotlin.io.path.bufferedWriter
+import at.woolph.utils.csv.CsvReader
+import at.woolph.utils.csv.CsvRecord
+import at.woolph.utils.csv.CsvWriter
+import at.woolph.utils.csv.IntentionallySkippedException
+import kotlinx.io.files.Path
 import org.jetbrains.exposed.sql.deleteAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.slf4j.LoggerFactory
+import java.time.Instant
+import java.util.function.Predicate
 
 private val log = LoggerFactory.getLogger("at.woolph.caco.collection.ImportCsv")
 
-class IntentionallySkippedException(message: String, cause: Throwable? = null) :
-    Exception(message, cause)
-
 fun importSequence(
-    file: Path,
-    notImportedOutputFile: Path = Path.of("not-imported.csv"),
-    datePredicate: Predicate<Instant> = Predicate { true },
-    mapper: arrow.core.raise.Raise<Throwable>.(CsvRecord) -> CardCollectionItem,
+  file: Path,
+  notImportedOutputFile: Path = Path("not-imported.csv"),
+  datePredicate: Predicate<Instant> = Predicate { true },
+  mapper: arrow.core.raise.Raise<Throwable>.(CsvRecord) -> CardCollectionItem,
 ): Sequence<Either<Throwable, CardCollectionItem>> = sequence {
   println("importing collection export file $file")
-  CSVWriter(notImportedOutputFile.bufferedWriter()).use { writer ->
-    CSVReader(file.bufferedReader()).use { reader ->
-      val header =
-          reader
-              .readNext()
-              .also {
-                writer.writeNext(
-                    buildList {
-                          addAll(it)
-                          add("Error")
-                        }
-                        .toTypedArray(),
-                    false,
-                )
-              }
-              .withIndex()
-              .associate { it.value to it.index }
+  CsvWriter(notImportedOutputFile).use { writer ->
+
+    CsvReader(file).use { reader ->
+      writer.write(buildList {
+        addAll(reader.header.keys)
+        add("Error")
+      }.toTypedArray())
 
       yieldAll(
           generateSequence { reader.readNext() }
-              .filter { it.size > 1 }
-              .map { CsvRecord(header, it) }
               .map { record ->
                 either {
                       mapper(record).also {
@@ -59,13 +44,12 @@ fun importSequence(
                       }
                     }
                     .onLeft {
-                      writer.writeNext(
+                      writer.write(
                           buildList {
                                 addAll(record.data)
-                                add(it.message)
+                                add(it.message ?: "")
                               }
                               .toTypedArray(),
-                          false,
                       )
                     }
               }
@@ -75,11 +59,11 @@ fun importSequence(
 }
 
 fun import(
-    file: Path,
-    notImportedOutputFile: Path = Path.of("not-imported.csv"),
-    datePredicate: Predicate<Instant> = Predicate { true },
-    clearBeforeImport: Boolean = false,
-    mapper: arrow.core.raise.Raise<Throwable>.(CsvRecord) -> CardCollectionItem,
+  file: Path,
+  notImportedOutputFile: Path = Path("not-imported.csv"),
+  datePredicate: Predicate<Instant> = Predicate { true },
+  clearBeforeImport: Boolean = false,
+  mapper: arrow.core.raise.Raise<Throwable>.(CsvRecord) -> CardCollectionItem,
 ) {
   println("importing collection export file $file")
   transaction {
@@ -122,23 +106,16 @@ fun import(
   }
 }
 
-data class CsvRecord(
-    private val header: Map<String, Int>,
-    val data: Array<String>,
-) {
-  operator fun get(column: String): String? = header[column]?.let { data[it] }
-}
-
 fun Iterable<CardCollectionItem>.export(
     file: Path,
     columnExtractors: Map<String, CardCollectionItem.() -> String>,
 ) {
   println("exporting collection to $file")
-  CSVWriter(file.bufferedWriter()).use { writer ->
+  CsvWriter(file).use { writer ->
     val columnExtractors = columnExtractors.entries
-    writer.writeNext(columnExtractors.map { it.key }.toTypedArray(), false)
+    writer.write(columnExtractors.map { it.key }.toTypedArray())
     filter(CardCollectionItem::isNotEmpty).forEach { item ->
-      writer.writeNext(columnExtractors.map { it.value(item) }.toTypedArray(), false)
+      writer.write(columnExtractors.map { it.value(item) }.toTypedArray())
     }
   }
 }

@@ -14,11 +14,15 @@ kotlin {
     }
   }
 
-  compilerOptions { freeCompilerArgs.add("-Xwhen-guards") }
+  compilerOptions {
+    freeCompilerArgs.add("-Xwhen-guards")
+    optIn.add("kotlin.uuid.ExperimentalUuidApi")
+  }
 
   sourceSets {
     commonMain.dependencies {
       implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
+      implementation("org.jetbrains.kotlinx:kotlinx-io-core:0.8.0")
     }
     commonTest.dependencies { implementation(libs.kotlin.test) }
     jvmMain.dependencies {

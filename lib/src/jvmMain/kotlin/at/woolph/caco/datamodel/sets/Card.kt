@@ -4,12 +4,10 @@ package at.woolph.caco.datamodel.sets
 import at.woolph.caco.cli.manabase.ColorIdentity
 import at.woolph.caco.cli.manabase.ManaColor
 import at.woolph.caco.currency.CurrencyValue
-import at.woolph.caco.datamodel.collection.ArenaCardPossession
-import at.woolph.caco.datamodel.collection.ArenaCardPossessions
 import at.woolph.caco.datamodel.collection.CardPossession
 import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.masterdata.import.toEnumSet
-import at.woolph.caco.utils.compareToNullable
+import at.woolph.utils.compareToNullable
 import java.net.URI
 import java.util.*
 import org.jetbrains.exposed.dao.*
@@ -53,7 +51,7 @@ object Cards : IdTable<UUID>() { // TODO maybe split into card & cardprint (card
   val promoType = array<String>("promoType").default(emptyList())
 }
 
-class Card(id: EntityID<UUID>) : UUIDEntity(id), Comparable<Card>, CardRepresentation {
+class Card(id: EntityID<UUID>) : ICard, UUIDEntity(id), Comparable<Card>, CardRepresentation {
   companion object : UUIDEntityClass<Card>(Cards) {
     val CARD_DRAW_PATTERN = Regex("draws? (|a |two |three )cards?", RegexOption.IGNORE_CASE)
 
@@ -167,7 +165,6 @@ class Card(id: EntityID<UUID>) : UUIDEntity(id), Comparable<Card>, CardRepresent
       )
 
   val possessions by CardPossession referrersOn CardPossessions
-  val arenaPossessions by ArenaCardPossession referrersOn ArenaCardPossessions
 
   val isCreature: Boolean
     get() = type?.contains("Creature") == true

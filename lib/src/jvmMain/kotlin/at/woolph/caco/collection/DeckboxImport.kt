@@ -6,7 +6,9 @@ import arrow.core.raise.Raise
 import at.woolph.caco.datamodel.collection.CardCondition
 import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.sets.*
-import java.nio.file.Path
+import at.woolph.utils.csv.CsvRecord
+import at.woolph.utils.csv.IntentionallySkippedException
+import kotlinx.io.files.Path
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -31,10 +33,10 @@ fun importSequenceDeckbox(
 }
 
 fun importDeckbox(
-    file: Path,
-    notImportedOutputFile: Path = Path.of("not-imported.csv"),
-    datePredicate: Predicate<Instant> = Predicate { true },
-    clearBeforeImport: Boolean = false,
+  file: Path,
+  notImportedOutputFile: Path = Path("not-imported.csv"),
+  datePredicate: Predicate<Instant> = Predicate { true },
+  clearBeforeImport: Boolean = false,
 ) {
   val knownSets = transaction { ScryfallCardSet.all().associate { it.code to it.name } }
   import(
@@ -48,8 +50,8 @@ fun importDeckbox(
 }
 
 fun Raise<Throwable>.mapDeckbox(
-    nextLine: CsvRecord,
-    knownSets: Map<String, String>,
+  nextLine: CsvRecord,
+  knownSets: Map<String, String>,
 ): CardCollectionItem {
   val dateAdded =
       nextLine["Last Updated"]?.let { DATE_FORMAT_DECKBOX.parse(it, Instant::from) }
@@ -168,9 +170,9 @@ fun Raise<Throwable>.mapDeckbox(
       }
   if (token && cardName.contains(" // ")) {
     raise(
-        IntentionallySkippedException(
-            "skipping $cardName because it is an Double Sided Token which is not supported"
-        )
+      IntentionallySkippedException(
+        "skipping $cardName because it is an Double Sided Token which is not supported"
+      )
     )
   } else if (cardName.startsWith("Art Card:")) {
     raise(IntentionallySkippedException("skipping $cardName because it is an Art Card"))

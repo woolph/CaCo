@@ -3,7 +3,7 @@ package at.woolph.caco.collection
 
 import at.woolph.caco.datamodel.collection.CardCondition
 import at.woolph.caco.datamodel.collection.CardLanguage
-import java.nio.file.Path
+import kotlinx.io.files.Path
 import java.time.LocalDate
 import java.time.ZoneOffset
 

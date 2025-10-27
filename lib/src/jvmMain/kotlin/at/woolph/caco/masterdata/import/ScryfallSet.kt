@@ -3,36 +3,38 @@ package at.woolph.caco.masterdata.import
 
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.SetType
+import at.woolph.caco.lib.Uri
 import java.net.URI
 import java.time.LocalDate
 import java.util.*
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlin.uuid.Uuid
 
 @Serializable
 data class ScryfallSet(
-    @SerialName("object") val objectType: String,
-    @Contextual val id: UUID,
-    val code: String,
-    val block_code: String? = null,
-    val block: String? = null,
-    val tcgplayer_id: Int? = null,
-    val mtgo_code: String? = null,
-    val arena_code: String? = null,
-    @Contextual val uri: URI,
-    val digital: Boolean,
-    val card_count: Int,
-    val printed_size: Int? = null,
-    val parent_set_code: String? = null,
-    val name: String,
-    @Contextual val released_at: LocalDate,
-    @Contextual val icon_svg_uri: URI,
-    @Contextual val scryfall_uri: URI,
-    @Contextual val search_uri: URI,
-    val set_type: SetType,
-    val nonfoil_only: Boolean,
-    val foil_only: Boolean,
+  @SerialName("object") val objectType: String,
+  @Contextual val id: Uuid,
+  val code: String,
+  val block_code: String? = null,
+  val block: String? = null,
+  val tcgplayer_id: Int? = null,
+  val mtgo_code: String? = null,
+  val arena_code: String? = null,
+  @Contextual val uri: Uri,
+  val digital: Boolean,
+  val card_count: Int,
+  val printed_size: Int? = null,
+  val parent_set_code: String? = null,
+  val name: String,
+  @Contextual val released_at: LocalDate,
+  @Contextual val icon_svg_uri: Uri,
+  @Contextual val scryfall_uri: Uri,
+  @Contextual val search_uri: Uri,
+  val set_type: SetType,
+  val nonfoil_only: Boolean,
+  val foil_only: Boolean,
 ) : ScryfallBase {
   override fun isValid() = objectType == "set"
 

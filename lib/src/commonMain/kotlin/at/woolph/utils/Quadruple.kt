@@ -1,5 +1,4 @@
-/* Copyright 2025 Wolfgang Mayer */
-package at.woolph.caco.utils
+package at.woolph.utils
 
 data class Quadruple<A, B, C, D>(
     val t1: A,

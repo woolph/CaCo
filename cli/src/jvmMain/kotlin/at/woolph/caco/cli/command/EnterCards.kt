@@ -203,8 +203,8 @@ class EnterCards : SuspendingTransactionCliktCommand() {
           }
       val file = Path("./http-requests/import.csv")
       when (format) {
-        CollectionFileFormat.DECKBOX -> cardCollectionItems.exportDeckbox(file)
-        CollectionFileFormat.ARCHIDEKT -> cardCollectionItems.exportArchidekt(file)
+        CollectionFileFormat.DECKBOX -> cardCollectionItems.exportDeckbox(kotlinx.io.files.Path(file.toString()))
+        CollectionFileFormat.ARCHIDEKT -> cardCollectionItems.exportArchidekt(kotlinx.io.files.Path(file.toString()))
       }
 
       cardCollectionItems.forEach(CardCollectionItem::addToCollection)

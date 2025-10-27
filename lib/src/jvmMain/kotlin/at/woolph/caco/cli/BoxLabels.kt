@@ -7,6 +7,7 @@ import at.woolph.caco.icon.commonBinderLabelIconRenderer
 import at.woolph.caco.icon.lazyIcon
 import at.woolph.caco.icon.lazySetIcon
 import at.woolph.caco.icon.mythicBinderLabelIconRenderer
+import at.woolph.caco.lib.Uri
 import at.woolph.libs.pdf.*
 import java.awt.Color
 import java.net.URI
@@ -46,7 +47,7 @@ open class CardSymbolBoxLabel(override val title: String, symbolId: String) : On
   override val icon by
       lazyIcon(
           "card-symbol-$symbolId",
-          URI("https://svgs.scryfall.io/card-symbols/$symbolId.svg"),
+        Uri("https://svgs.scryfall.io/card-symbols/$symbolId.svg"),
           commonBinderLabelIconRenderer,
       )
 }

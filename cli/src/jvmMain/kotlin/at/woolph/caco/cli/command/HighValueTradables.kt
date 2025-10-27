@@ -4,7 +4,7 @@ package at.woolph.caco.cli.command
 import at.woolph.caco.collection.DEFAULT_COLLECTION_SETTINGS
 import at.woolph.caco.datamodel.sets.Finish
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
-import at.woolph.caco.utils.Quadruple
+import at.woolph.utils.Quadruple
 import at.woolph.lib.clikt.SuspendingTransactionCliktCommand
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option

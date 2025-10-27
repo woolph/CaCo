@@ -1,6 +1,7 @@
 /* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.cli
 
+import at.woolph.caco.datamodel.decks.DeckZone
 import at.woolph.caco.datamodel.decks.Format
 
 class DeckListBuilder {

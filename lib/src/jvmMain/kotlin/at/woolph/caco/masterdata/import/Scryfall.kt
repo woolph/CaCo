@@ -16,10 +16,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 private val LOG = LoggerFactory.getLogger("at.woolph.caco.importer.sets.Scryfall")
 
 // TODO import double sided tokens as they are printed (especially those of the commander precons)
+@OptIn(ExperimentalUuidApi::class)
 suspend fun importSet(setCode: String): ScryfallCardSet =
     useHttpClient(Dispatchers.IO) { client ->
       val response: HttpResponse = client.get("https://api.scryfall.com/sets/$setCode")
@@ -82,7 +85,7 @@ fun importSets(): Flow<ScryfallCardSet> = flow {
 
   // FIXME ask scryfall to add these oversized dungeon tokens to their database
   val afr = ScryfallCardSet.findByCode("afr") ?: throw Exception("set afr not found")
-  val oafrId = UUID.fromString("c954ce81-07b0-4881-b350-af3d7780ec22")
+  val oafrId = Uuid.parse("c954ce81-07b0-4881-b350-af3d7780ec22")
   ScryfallCardSet.newOrUpdate(oafrId) { scryfallCardSet ->
     scryfallCardSet.code = "oafr"
     scryfallCardSet.name = "Adventures in the Forgotten Realms Oversized"

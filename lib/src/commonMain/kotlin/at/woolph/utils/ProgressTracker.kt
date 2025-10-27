@@ -1,5 +1,4 @@
-/* Copyright 2025 Wolfgang Mayer */
-package at.woolph.caco
+package at.woolph.utils
 
 interface ProgressTracker<Context, Unit : Number> {
   fun updateContext(newContext: Context)

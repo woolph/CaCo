@@ -91,7 +91,7 @@ class CollectionImport :
   private fun Raise<NoFileFoundError>.getImportFile(
       file: Path,
       globPattern: String,
-  ): Path =
+  ): kotlinx.io.files.Path = kotlinx.io.files.Path(
       if (file.isDirectory()) {
         val pathMatcher = FileSystems.getDefault().getPathMatcher(globPattern)
         file.useDirectoryEntries { entries ->
@@ -109,5 +109,5 @@ class CollectionImport :
         }
       } else {
         file
-      }
+      }.toString())
 }

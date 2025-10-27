@@ -2,7 +2,6 @@
 package at.woolph.caco.datamodel
 
 import at.woolph.caco.HomeDirectory
-import at.woolph.caco.datamodel.collection.ArenaCardPossessions
 import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.datamodel.decks.Builds
 import at.woolph.caco.datamodel.decks.DeckArchetypes
@@ -29,7 +28,6 @@ object Databases {
           DeckArchetypes,
           Builds,
           DeckCards,
-          ArenaCardPossessions,
       )
     }
   }

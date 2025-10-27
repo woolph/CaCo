@@ -22,7 +22,6 @@ import com.github.ajalt.mordant.widgets.progress.progressBarContextLayout
 import com.github.ajalt.mordant.widgets.progress.text
 import com.github.ajalt.mordant.widgets.progress.timeRemaining
 import java.awt.Color
-import kotlin.collections.plusAssign
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import org.apache.pdfbox.pdmodel.common.PDRectangle

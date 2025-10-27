@@ -15,7 +15,7 @@ class TerminalDecklistPrinter(
               "Commander:" to deck.commandZone,
               "Mainboard:" to deck.mainboard,
               "Sideboard:" to deck.sideboard,
-              "Maybeboard:" to deck.maybeboard,
+              "Maybeboard:" to deck.maybeMainboard + deck.maybeSideboard,
           )
           .filter { it.second.isNotEmpty() }
           .forEach { (sectionName, sectionCards) ->

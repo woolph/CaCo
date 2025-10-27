@@ -11,7 +11,7 @@ import org.jetbrains.exposed.dao.id.IntIdTable
 object DeckCards : IntIdTable() {
   val build = reference("build", Builds).index()
   val name = varchar("archetypeName", length = 256).index()
-  val place = enumeration("place", Place::class).index()
+  val deckZone = enumeration("deckZone", DeckZone::class).index()
   val count = integer("count").index()
   val roles =
       long("roles")
@@ -38,7 +38,7 @@ class DeckCard(id: EntityID<Int>) : IntEntity(id) {
 
   var build by Build referencedOn DeckCards.build
   var name by DeckCards.name
-  var place by DeckCards.place
+  var deckZone by DeckCards.deckZone
   var count by DeckCards.count
   var roles by DeckCards.roles
   var comment by DeckCards.comment

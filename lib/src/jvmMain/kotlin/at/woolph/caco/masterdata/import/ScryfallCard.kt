@@ -1,7 +1,6 @@
 /* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.masterdata.import
 
-import at.woolph.caco.currency.Currencies
 import at.woolph.caco.currency.CurrencyValue
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.CardVariant
@@ -10,7 +9,6 @@ import at.woolph.caco.datamodel.sets.LayoutType
 import at.woolph.caco.datamodel.sets.Legality
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.parseRarity
-import at.woolph.caco.exchangeTo
 import at.woolph.libs.exposed.newOrUpdate
 import java.net.URI
 import java.time.LocalDate
@@ -32,6 +30,7 @@ import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import org.slf4j.LoggerFactory
+import kotlin.uuid.Uuid
 
 private val LOG = LoggerFactory.getLogger("at.woolph.caco.masterdata.import.ScryfallCard")
 
@@ -198,7 +197,7 @@ data class ScryfallCard(
     val reprint: Boolean,
     val variation: Boolean,
     @Contextual val variation_of: UUID? = null,
-    @Contextual val set_id: UUID,
+    @Contextual val set_id: Uuid,
     val set: String,
     val set_name: String,
     val set_type: String,

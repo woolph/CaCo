@@ -11,7 +11,10 @@ version = "0.3.0"
 kotlin {
   jvm { testRuns["test"].executionTask.configure { useJUnitPlatform() } }
 
-  compilerOptions { freeCompilerArgs.add("-Xwhen-guards") }
+  compilerOptions {
+    freeCompilerArgs.add("-Xwhen-guards")
+    optIn.add("kotlin.uuid.ExperimentalUuidApi")
+  }
 
   sourceSets {
     commonTest.dependencies { implementation(libs.kotlin.test) }

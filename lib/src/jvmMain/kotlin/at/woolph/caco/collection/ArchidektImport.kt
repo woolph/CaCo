@@ -7,7 +7,8 @@ import at.woolph.caco.datamodel.collection.CardCondition
 import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.sets.CardRepresentation
 import at.woolph.caco.datamodel.sets.Finish
-import java.nio.file.Path
+import at.woolph.utils.csv.CsvRecord
+import kotlinx.io.files.Path
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -17,10 +18,10 @@ import kotlin.text.toDoubleOrNull
 import kotlin.text.toInt
 
 fun importArchidekt(
-    file: Path,
-    notImportedOutputFile: Path = Path.of("not-imported.csv"),
-    datePredicate: Predicate<Instant> = Predicate { true },
-    clearBeforeImport: Boolean = false,
+  file: Path,
+  notImportedOutputFile: Path = Path("not-imported.csv"),
+  datePredicate: Predicate<Instant> = Predicate { true },
+  clearBeforeImport: Boolean = false,
 ) =
     import(
         file = file,
@@ -32,7 +33,7 @@ fun importArchidekt(
 
 fun importSequenceArchidekt(
     file: Path,
-    notImportedOutputFile: Path = Path.of("not-imported.csv"),
+    notImportedOutputFile: Path = Path("not-imported.csv"),
 ): Sequence<Either<Throwable, CardCollectionItem>> =
     importSequence(
         file,

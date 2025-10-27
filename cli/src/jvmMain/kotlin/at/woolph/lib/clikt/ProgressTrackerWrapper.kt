@@ -1,7 +1,7 @@
 /* Copyright 2025 Wolfgang Mayer */
 package at.woolph.lib.clikt
 
-import at.woolph.caco.ProgressTracker
+import at.woolph.utils.ProgressTracker
 import com.github.ajalt.mordant.animation.coroutines.CoroutineProgressTaskAnimator
 import com.github.ajalt.mordant.animation.progress.advance
 

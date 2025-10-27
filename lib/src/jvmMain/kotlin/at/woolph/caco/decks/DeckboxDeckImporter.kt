@@ -1,9 +1,9 @@
 /* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.decks
 
-import at.woolph.caco.ProgressTracker
+import at.woolph.utils.ProgressTracker
 import at.woolph.caco.cli.DeckList
-import at.woolph.caco.cli.DeckZone
+import at.woolph.caco.datamodel.decks.DeckZone
 import at.woolph.caco.datamodel.decks.Format
 import java.net.URI
 import java.net.URL
@@ -103,8 +103,8 @@ class DeckboxDeckImporter(
               format,
               deckZones = mapOf(
                 DeckZone.COMMAND_ZONE to commanders,
-                DeckZone.MAIN_BOARD to mainboard,
-                DeckZone.MAYBE_BOARD to sideboard,
+                DeckZone.MAINBOARD to mainboard,
+                DeckZone.MAYBE_MAINBOARD to sideboard,
               ),
           )
       else ->
@@ -113,7 +113,7 @@ class DeckboxDeckImporter(
               format,
               deckZones = mapOf(
                 DeckZone.COMMAND_ZONE to commanders,
-                DeckZone.SIDE_BOARD to sideboard,
+                DeckZone.SIDEBOARD to sideboard,
               ),
           )
     }

@@ -2,11 +2,11 @@
 package at.woolph.caco.cli.command
 
 import at.woolph.caco.cli.DeckListBuilder
-import at.woolph.caco.cli.DeckZone
+import at.woolph.caco.datamodel.decks.DeckZone
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.Cards
 import at.woolph.caco.datamodel.sets.Finish
-import at.woolph.caco.utils.Quadruple
+import at.woolph.utils.Quadruple
 import com.github.ajalt.clikt.command.SuspendingCliktCommand
 import com.github.ajalt.clikt.core.terminal
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
@@ -16,17 +16,17 @@ class CheckDecklistMissingCards : SuspendingCliktCommand(name = "check-deck") {
 
     terminal.println("Enter decklist:")
 
-    var currentDeckZone: DeckZone? = DeckZone.MAIN_BOARD // null is metainfo section
+    var currentDeckZone: DeckZone? = DeckZone.MAINBOARD // null is metainfo section
     val deckList = generateSequence { terminal.readLineOrNull(false) }
       .takeWhile { it != "EOF" }
       .filter { it.isNotBlank() }
       .fold(DeckListBuilder()) { deckListBuilder, line ->
          when (line) {
           "About" -> currentDeckZone = null
-          "Deck", "Mainboard", "Main" -> currentDeckZone = DeckZone.MAIN_BOARD
-          "Sideboard" -> currentDeckZone = DeckZone.SIDE_BOARD
+          "Deck", "Mainboard", "Main" -> currentDeckZone = DeckZone.MAINBOARD
+          "Sideboard" -> currentDeckZone = DeckZone.SIDEBOARD
           "Commander" -> currentDeckZone = DeckZone.COMMAND_ZONE
-          "Maybeboard" -> currentDeckZone = DeckZone.MAYBE_BOARD
+          "Maybeboard" -> currentDeckZone = DeckZone.MAYBE_SIDEBOARD
            else -> {
              if (currentDeckZone == null) { // metainfo section
                try {

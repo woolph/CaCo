@@ -1,38 +1,26 @@
 /* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.datamodel.sets
 
-import at.woolph.caco.utils.compareToNullable
-import java.net.URI
-import java.util.*
-import kotlin.collections.List
-import kotlin.collections.asSequence
-import kotlin.collections.component1
-import kotlin.collections.component2
-import kotlin.collections.contains
-import kotlin.collections.filter
-import kotlin.collections.filterNot
-import kotlin.collections.first
-import kotlin.collections.firstOrNull
-import kotlin.collections.flatMap
-import kotlin.collections.forEach
-import kotlin.collections.groupBy
-import kotlin.collections.listOf
-import kotlin.collections.map
-import kotlin.collections.partition
-import kotlin.collections.sortedDescending
-import kotlin.collections.sumOf
-import kotlin.sequences.Sequence
-import kotlin.sequences.flatMap
-import kotlin.sequences.sequence
-import org.jetbrains.exposed.dao.UUIDEntity
-import org.jetbrains.exposed.dao.UUIDEntityClass
+import at.woolph.caco.lib.Uri
+import at.woolph.libs.exposed.UuidEntity
+import at.woolph.libs.exposed.UuidEntityClass
+import at.woolph.libs.exposed.ktUuid
+import at.woolph.utils.compareToNullable
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
-import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.Op
+import org.jetbrains.exposed.sql.SizedIterable
+import org.jetbrains.exposed.sql.SortOrder
+import org.jetbrains.exposed.sql.SqlExpressionBuilder
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.emptySized
 import org.jetbrains.exposed.sql.javatime.date
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
-object ScryfallCardSets : IdTable<UUID>() {
-  override val id = uuid("id").entityId()
+@OptIn(ExperimentalUuidApi::class)
+object ScryfallCardSets : IdTable<Uuid>() {
+  override val id = ktUuid("id").entityId()
   override val primaryKey = PrimaryKey(id)
 
   val code = varchar("setCode", length = 10).uniqueIndex()
@@ -51,28 +39,9 @@ object ScryfallCardSets : IdTable<UUID>() {
   val icon = varchar("iconUri", length = 256).nullable()
 }
 
-sealed interface Block {
-  val blockCode: String
-  val blockName: String
-}
-
-data class SingleSetBlock(val set: ScryfallCardSet) : Block {
-  override val blockCode: String
-    get() = set.code
-
-  override val blockName: String
-    get() = set.name
-}
-
-data class MultiSetBlock(
-    override val blockCode: String,
-    override val blockName: String,
-    val sets: List<ScryfallCardSet>,
-) : Block
-
-class ScryfallCardSet(id: EntityID<UUID>) : UUIDEntity(id), Comparable<ScryfallCardSet> {
-
-  companion object : UUIDEntityClass<ScryfallCardSet>(ScryfallCardSets) {
+@OptIn(ExperimentalUuidApi::class)
+class ScryfallCardSet(id: EntityID<Uuid>) : IScryfallCardSet, UuidEntity(id) {
+  companion object : UuidEntityClass<ScryfallCardSet>(ScryfallCardSets) {
     fun findByCode(code: String?) = code?.let { find { ScryfallCardSets.code eq it }.firstOrNull() }
 
     fun findByParentSetCode(code: String?) =
@@ -133,61 +102,28 @@ class ScryfallCardSet(id: EntityID<UUID>) : UUIDEntity(id), Comparable<ScryfallC
         }
   }
 
-  var code by ScryfallCardSets.code
-  var parentSetCode by ScryfallCardSets.parentSetCode
-  var name by ScryfallCardSets.name
+  override val uuid: Uuid = id.value
+  override var code by ScryfallCardSets.code
+  override var parentSetCode by ScryfallCardSets.parentSetCode
+  override var name by ScryfallCardSets.name
 
-  var type by ScryfallCardSets.type
-  var digitalOnly by ScryfallCardSets.digitalOnly
-  var cardCount by ScryfallCardSets.cardCount
-  var printedSize by ScryfallCardSets.printedSize
-  var blockCode by ScryfallCardSets.blockCode
-  var blockName by ScryfallCardSets.blockName
+  override var type by ScryfallCardSets.type
+  override var digitalOnly by ScryfallCardSets.digitalOnly
+  override var cardCount by ScryfallCardSets.cardCount
+  override var printedSize by ScryfallCardSets.printedSize
+  override var blockCode by ScryfallCardSets.blockCode
+  override var blockName by ScryfallCardSets.blockName
 
-  var releaseDate by ScryfallCardSets.releaseDate
-  var icon by ScryfallCardSets.icon.transform({ it?.toString() }, { it?.let { URI(it) } })
+  override var releaseDate by ScryfallCardSets.releaseDate
+  override var icon by ScryfallCardSets.icon.transform({ it?.toString() }, { it?.let { Uri(it) } })
 
-  val cards by Card referrersOn Cards.set
+  override val cards by Card referrersOn Cards.set
 
-  val totalCardCount: Int
-    get() = cardCount + childSets.sumOf(ScryfallCardSet::cardCount)
-
-  val binderPages: Int
-    get() = (cardCount / 18 + if (cardCount % 18 > 0) 1 else 0)
-
-  val totalBinderPages: Int
-    get() = binderPages + childSets.sumOf(ScryfallCardSet::binderPages)
-
-  val childSets: SizedIterable<ScryfallCardSet>
+  override val childSets: SizedIterable<ScryfallCardSet>
     get() = findByParentSetCode(code)
 
-  val selfAndNonRootChildSets: Sequence<ScryfallCardSet>
-    get() = sequence {
-      yield(this@ScryfallCardSet)
-      yieldAll(
-          childSets
-              .filterNot(ScryfallCardSet::isRootSet)
-              .flatMap(ScryfallCardSet::selfAndNonRootChildSets)
-      )
-    }
-
-  val cardsOfSelfAndNonRootChildSets = selfAndNonRootChildSets.flatMap { it.cards.asSequence() }
-
-  val parentSet: ScryfallCardSet?
+  override val parentSet: ScryfallCardSet?
     get() = findByCode(parentSetCode)
-
-  val isRootSet: Boolean
-    get() =
-        parentSetCode == null ||
-            (parentSet?.type != SetType.COMMANDER && type == SetType.COMMANDER) ||
-            code in childSetsConsideredToBeRootSets
-
-  override fun compareTo(other: ScryfallCardSet): Int {
-    if (id == other.id) return 0
-    return releaseDate.compareToNullable(other.releaseDate)?.let { -it }
-        ?: compareSetCodeNullable(code, other.code)
-        ?: 0
-  }
 
   override fun toString() = "[$code] $name"
 }
