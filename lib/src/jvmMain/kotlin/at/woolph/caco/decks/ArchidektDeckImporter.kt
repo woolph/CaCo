@@ -5,6 +5,7 @@ import at.woolph.utils.ProgressTracker
 import at.woolph.caco.cli.DeckList
 import at.woolph.caco.datamodel.decks.DeckZone
 import at.woolph.caco.datamodel.decks.Format
+import at.woolph.utils.ktor.request
 import kotlinx.coroutines.flow.*
 
 class ArchidektDeckImporter(

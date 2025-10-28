@@ -1,9 +1,8 @@
 package at.woolph.caco.datamodel.sets
 
-import at.woolph.caco.lib.Uri
+import at.woolph.utils.Uri
 import at.woolph.utils.compareToNullable
 import java.time.LocalDate
-import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 interface IScryfallCardSet: Comparable<IScryfallCardSet> {
@@ -26,7 +25,6 @@ interface IScryfallCardSet: Comparable<IScryfallCardSet> {
         )
   }
 
-  @OptIn(ExperimentalUuidApi::class)
   val uuid: Uuid
   val code: String
   val parentSetCode: String?
@@ -76,7 +74,6 @@ interface IScryfallCardSet: Comparable<IScryfallCardSet> {
             (parentSet?.type != SetType.COMMANDER && type == SetType.COMMANDER) ||
             code in childSetsConsideredToBeRootSets
 
-  @OptIn(ExperimentalUuidApi::class)
   override fun compareTo(other: IScryfallCardSet): Int {
     if (uuid == other.uuid) return 0
     return releaseDate.compareToNullable(other.releaseDate)?.let { -it }

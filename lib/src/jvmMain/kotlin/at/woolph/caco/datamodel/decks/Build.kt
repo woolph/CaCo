@@ -7,7 +7,6 @@ import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.javatime.date
-import kotlin.uuid.ExperimentalUuidApi
 
 object Builds : IntIdTable() {
   val archetype = reference("archetype", DeckArchetypes).index()
@@ -17,7 +16,6 @@ object Builds : IntIdTable() {
   val version = varchar("version", length = 64).index().default("")
   val dateOfCreation = date("dateOfCreation").index()
   val dateOfLastModification = date("dateOfLastModification").index()
-  @OptIn(ExperimentalUuidApi::class)
   val latestSetConsidered = reference("latestSetConsidered", ScryfallCardSets).index().nullable()
   val comment = text("comment").nullable()
 
@@ -36,7 +34,6 @@ class Build(
   var version by Builds.version
   var dateOfCreation by Builds.dateOfCreation
   var dateOfLastModification by Builds.dateOfLastModification
-  @OptIn(ExperimentalUuidApi::class)
   var latestSetConsidered by Builds.latestSetConsidered
   var comment by Builds.comment
 

@@ -3,34 +3,26 @@ package at.woolph.caco.icon
 
 import arrow.core.Either
 import arrow.core.raise.either
-import at.woolph.caco.datamodel.sets.IScryfallCardSet
-import at.woolph.caco.lib.Uri
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.cio.CIO
-import io.ktor.client.request.request
-import io.ktor.client.statement.readRawBytes
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
+import at.woolph.utils.Uri
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.apache.batik.transcoder.TranscoderInput
 import org.apache.batik.transcoder.TranscoderOutput
 import org.apache.batik.transcoder.image.ImageTranscoder
 import org.apache.batik.transcoder.image.PNGTranscoder
 import org.slf4j.LoggerFactory
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 
-class IconRendererImpl(
-    val iconResolution: Float = 256f,
+actual class IconRendererImpl actual constructor(
+    val svgLoader: SvgLoader,
+    val iconResolution: Float,
 ): IconRenderer {
   override suspend fun renderSvg(
     id: String,
     uri: Uri,
   ): Either<Throwable, ByteArray> = either {
-    val byteArray =
-      withContext(Dispatchers.IO) {
-        HttpClient(CIO).use { it.request(uri.toURL()).readRawBytes() }
-      }
+    val byteArray = svgLoader.loadSvg(uri).bind().toByteArray()
 
     withContext(Dispatchers.Default) {
       val transcoder =
@@ -60,19 +52,3 @@ class IconRendererImpl(
     val log = LoggerFactory.getLogger(this::class.java.declaringClass)
   }
 }
-
-suspend fun IconRenderer.cachedImage(set: IScryfallCardSet): ByteArray? =
-    set.icon?.let {
-      renderSvg("set-icon-${set.code}", it)
-        .onLeft { IconRendererImpl.log.error("couldn't get icon for $set", it) }
-        .getOrNull()
-    }
-
-fun IScryfallCardSet?.lazySetIcon(iconRenderer: IconRenderer): Lazy<ByteArray?> =
-    this?.let { lazy { runBlocking { iconRenderer.cachedImage(it) } } } ?: lazyOf(null)
-
-val IScryfallCardSet?.lazyIconMythic: Lazy<ByteArray?>
-  get() = lazySetIcon(mythicBinderLabelIconRenderer)
-
-val IScryfallCardSet?.lazyIconUncommon: Lazy<ByteArray?>
-  get() = lazySetIcon(uncommonBinderLabelIconRenderer)

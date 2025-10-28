@@ -12,20 +12,28 @@ kotlin {
   jvm { testRuns["test"].executionTask.configure { useJUnitPlatform() } }
 
   compilerOptions {
-    freeCompilerArgs.add("-Xwhen-guards")
-    optIn.add("kotlin.uuid.ExperimentalUuidApi")
+    freeCompilerArgs.addAll(
+      "-Xwhen-guards",
+      "-Xexpect-actual-classes",
+    )
+    optIn.addAll(
+      "kotlin.uuid.ExperimentalUuidApi",
+    )
   }
 
   sourceSets {
-    commonTest.dependencies { implementation(libs.kotlin.test) }
-    jvmMain.dependencies {
-      implementation(kotlin("reflect"))
-
+    commonMain.dependencies {
       implementation(project.dependencies.platform("io.ktor:ktor-bom:3.3.1"))
       implementation("io.ktor:ktor-client-core")
       implementation("io.ktor:ktor-client-cio")
       implementation("io.ktor:ktor-client-content-negotiation")
       implementation("io.ktor:ktor-serialization-kotlinx-json")
+    }
+    commonTest.dependencies {
+      implementation(libs.kotlin.test)
+    }
+    jvmMain.dependencies {
+      implementation(kotlin("reflect"))
 
       api(libs.arrow.core)
       implementation(libs.arrow.fx.coroutines)

@@ -7,10 +7,17 @@ import at.woolph.caco.icon.commonBinderLabelIconRenderer
 import at.woolph.caco.icon.lazyIcon
 import at.woolph.caco.icon.lazySetIcon
 import at.woolph.caco.icon.mythicBinderLabelIconRenderer
-import at.woolph.caco.lib.Uri
-import at.woolph.libs.pdf.*
+import at.woolph.utils.Uri
+import at.woolph.utils.pdf.Font
+import at.woolph.utils.pdf.HorizontalAlignment
+import at.woolph.utils.pdf.pdfDocument
+import at.woolph.utils.pdf.dotsPerMillimeter
+import at.woolph.utils.pdf.drawAsImageLeft
+import at.woolph.utils.pdf.drawAsImageRight
+import at.woolph.utils.pdf.drawBorder
+import at.woolph.utils.pdf.drawText
+import at.woolph.utils.pdf.frame
 import java.awt.Color
-import java.net.URI
 import java.nio.file.Path
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -148,13 +155,13 @@ object PromoBoxLabel : MultipleSymbolBoxLabel {
 class BoxLabels {
   fun printLabel(file: Path, labels: List<BoxLabel>) {
     transaction {
-      createPdfDocument(file) {
+      pdfDocument(file) {
         val fontColor = Color.BLACK
 
         val fontFamilyPlanewalker =
-            loadType0Font(javaClass.getResourceAsStream("/fonts/PlanewalkerBold-xZj5.ttf")!!)
+          loadType0Font(javaClass.getResourceAsStream("/fonts/PlanewalkerBold-xZj5.ttf")!!)
         val fontFamily72Black =
-            loadType0Font(javaClass.getResourceAsStream("/fonts/72-Black.ttf")!!)
+          loadType0Font(javaClass.getResourceAsStream("/fonts/72-Black.ttf")!!)
 
         val pageFormat = PDRectangle.A4
 
@@ -186,10 +193,10 @@ class BoxLabels {
               rowItems.forEachIndexed { columnIndex, columnItem ->
                 val borderWidth = 2f
                 frame(
-                    columnWidth * columnIndex,
-                    rowHeight * rowIndex,
-                    (columnWidth) * (columns - columnIndex - 1),
-                    (rowHeight) * (rows - rowIndex - 1),
+                  columnWidth * columnIndex,
+                  rowHeight * rowIndex,
+                  (columnWidth) * (columns - columnIndex - 1),
+                  (rowHeight) * (rows - rowIndex - 1),
                 ) {
                   drawBorder(borderWidth, fontColor)
                   contentStream.apply {
@@ -204,79 +211,81 @@ class BoxLabels {
                       is BlankBoxLabel -> {}
                       is OneSymbolBoxLabel -> {
                         drawText(
-                            columnItem.title,
-                            fontCode,
-                            HorizontalAlignment.LEFT,
-                            maximumIconWidth + defaultGapSize,
-                            box.height + fontCode.descent,
-                            fontColor,
+                          columnItem.title,
+                          fontCode,
+                          HorizontalAlignment.LEFT,
+                          maximumIconWidth + defaultGapSize,
+                          box.height + fontCode.descent,
+                          fontColor,
                         )
-                        columnItem.icon?.toPDImage(this@page)?.let {
+                        columnItem.icon?.let {
                           drawAsImageLeft(
-                              it,
-                              maximumIconWidth,
-                              desiredHeight,
-                              0f,
-                              box.height - desiredHeight,
+                            createFromByteArray(it, "OneSymbolBoxLabel(${columnItem.title})"),
+                            maximumIconWidth,
+                            desiredHeight,
+                            0f,
+                            box.height - desiredHeight,
                           )
                         }
                         columnItem.subtitle?.let {
                           drawText(
-                              it,
-                              fontSubtitle,
-                              HorizontalAlignment.LEFT,
-                              maximumIconWidth + defaultGapSize + 8f,
-                              box.height + fontSubtitle.descent + 2f,
-                              fontColor,
+                            it,
+                            fontSubtitle,
+                            HorizontalAlignment.LEFT,
+                            maximumIconWidth + defaultGapSize + 8f,
+                            box.height + fontSubtitle.descent + 2f,
+                            fontColor,
                           )
                         }
                       }
+
                       is DualSymbolBoxLabel -> {
                         drawText(
-                            columnItem.title,
-                            fontCode,
-                            HorizontalAlignment.LEFT,
-                            maximumIconWidth + defaultGapSize,
-                            box.height + fontCode.descent,
-                            fontColor,
+                          columnItem.title,
+                          fontCode,
+                          HorizontalAlignment.LEFT,
+                          maximumIconWidth + defaultGapSize,
+                          box.height + fontCode.descent,
+                          fontColor,
                         )
-                        columnItem.icon?.toPDImage(this@page)?.let {
+                        columnItem.icon?.let {
                           drawAsImageLeft(
-                              it,
-                              maximumIconWidth,
-                              desiredHeight,
-                              0f,
-                              box.height - desiredHeight,
+                            createFromByteArray(it, "DualSymbolBoxLabel(${columnItem.title})"),
+                            maximumIconWidth,
+                            desiredHeight,
+                            0f,
+                            box.height - desiredHeight,
                           )
                         }
-                        columnItem.icon2?.toPDImage(this@page)?.let {
+                        columnItem.icon2?.let {
                           drawAsImageRight(
-                              it,
-                              maximumIconWidth,
-                              desiredHeight,
-                              0f,
-                              box.height - desiredHeight,
+                            createFromByteArray(it, "boxLabel2(${columnItem.title})"),
+                            maximumIconWidth,
+                            desiredHeight,
+                            0f,
+                            box.height - desiredHeight,
                           )
                         }
                         columnItem.subtitle?.let {
                           drawText(
-                              it,
-                              fontSubtitle,
-                              HorizontalAlignment.LEFT,
-                              maximumIconWidth + defaultGapSize + 8f,
-                              box.height + fontSubtitle.descent + 2f,
-                              fontColor,
+                            it,
+                            fontSubtitle,
+                            HorizontalAlignment.LEFT,
+                            maximumIconWidth + defaultGapSize + 8f,
+                            box.height + fontSubtitle.descent + 2f,
+                            fontColor,
                           )
                         }
                       }
+
                       is MultipleSymbolBoxLabel -> {
                         drawText(
-                            columnItem.title,
-                            fontCode2,
-                            HorizontalAlignment.LEFT,
-                            0f,
-                            box.height + fontCode.descent + 2f,
-                            fontColor,
+                          columnItem.title,
+                          fontCode2,
+                          HorizontalAlignment.LEFT,
+                          0f,
+                          box.height + fontCode.descent + 2f,
+                          fontColor,
                         )
                         val width = fontCode2.getWidth(columnItem.title) + defaultGapSize
 
@@ -287,32 +296,31 @@ class BoxLabels {
                         val gapY = iconHeight * 0.75f
 
                         columnItem.icons
-                            .map { it?.toPDImage(this@page) }
-                            .forEachIndexed { i, nullableIcon ->
-                              nullableIcon?.let { icon ->
-                                val row = i % columnItem.rows
-                                val column = i / columnItem.rows
+                          .forEachIndexed { i, nullableIcon ->
+                            nullableIcon?.let { icon ->
+                              val row = i % columnItem.rows
+                              val column = i / columnItem.rows
 
-                                val displacingX = gapX * column + gapXWithinColummn * row
-                                val displacingY = gapY * (columnItem.rows - row - 1)
+                              val displacingX = gapX * column + gapXWithinColummn * row
+                              val displacingY = gapY * (columnItem.rows - row - 1)
 
-                                drawAsImageLeft(
-                                    icon,
-                                    iconWidth,
-                                    iconHeight,
-                                    width + displacingX,
-                                    box.height - iconHeight - displacingY,
-                                )
-                              }
+                              drawAsImageLeft(
+                                createFromByteArray(icon, "MultipleSymbolBoxLabel(${columnItem.title}#$i)"),
+                                iconWidth,
+                                iconHeight,
+                                width + displacingX,
+                                box.height - iconHeight - displacingY,
+                              )
                             }
+                          }
                         columnItem.subtitle?.let {
                           drawText(
-                              it,
-                              fontSubtitle,
-                              HorizontalAlignment.LEFT,
-                              8f,
-                              box.height + fontSubtitle.descent + 2f,
-                              fontColor,
+                            it,
+                            fontSubtitle,
+                            HorizontalAlignment.LEFT,
+                            8f,
+                            box.height + fontSubtitle.descent + 2f,
+                            fontColor,
                           )
                         }
                       }

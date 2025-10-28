@@ -6,7 +6,13 @@ import at.woolph.caco.datamodel.sets.Finish
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.lib.clikt.SuspendingTransactionCliktCommand
 import at.woolph.lib.clikt.prompt
-import at.woolph.libs.pdf.*
+import at.woolph.utils.pdf.Font
+import at.woolph.utils.pdf.HorizontalAlignment
+import at.woolph.utils.pdf.columns
+import at.woolph.utils.pdf.pdfDocument
+import at.woolph.utils.pdf.drawText
+import at.woolph.utils.pdf.frame
+import at.woolph.utils.pdf.framePagePosition
 import com.github.ajalt.clikt.core.terminal
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.convert
@@ -43,23 +49,23 @@ class PrintExcessPossessions : SuspendingTransactionCliktCommand(name = "excess"
           .prompt("Enter the set codes to be printed")
 
   override suspend fun runTransaction() = coroutineScope {
-    createPdfDocument(output) {
+    pdfDocument(output) {
       val fontTitle = Font(PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 10f)
       val fontLine = Font(PDType1Font(Standard14Fonts.FontName.HELVETICA), 6.0f)
       val progressBar =
-          progressBarContextLayout<ScryfallCardSet?> {
-                percentage()
-                progressBar()
-                completed()
-                timeRemaining()
-                text { "printing ${this.context?.name}" }
-              }
-              .animateInCoroutine(
-                  terminal,
-                  context = null,
-                  total = sets.size.toLong(),
-                  completed = 0,
-              )
+        progressBarContextLayout<ScryfallCardSet?> {
+          percentage()
+          progressBar()
+          completed()
+          timeRemaining()
+          text { "printing ${this.context?.name}" }
+        }
+          .animateInCoroutine(
+            terminal,
+            context = null,
+            total = sets.size.toLong(),
+            completed = 0,
+          )
 
       launch { progressBar.execute() }
 
@@ -73,12 +79,12 @@ class PrintExcessPossessions : SuspendingTransactionCliktCommand(name = "excess"
           page(PDRectangle.A4) {
             framePagePosition(20f, 20f, 20f, 20f) {
               drawText(
-                  "Inventory ${set.name} Page ${pageIndex + 1}",
-                  fontTitle,
-                  HorizontalAlignment.CENTER,
-                  0f,
-                  10f,
-                  Color.BLACK,
+                "Inventory ${set.name} Page ${pageIndex + 1}",
+                fontTitle,
+                HorizontalAlignment.CENTER,
+                0f,
+                10f,
+                Color.BLACK,
               )
 
               // TODO calc metrics for all sets (so that formatting is the same for all pages)
@@ -92,47 +98,52 @@ class PrintExcessPossessions : SuspendingTransactionCliktCommand(name = "excess"
                     var totalSumFoil = 0
 
                     val excesses =
-                        CardLanguage.entries
-                            .map { language ->
-                              language to
-                                  it.possessions.count {
-                                    it.language == language && it.finish == Finish.Normal
-                                  }
+                      CardLanguage.entries
+                        .map { language ->
+                          language to
+                            it.possessions.count {
+                              it.language == language && it.finish == Finish.Normal
                             }
-                            .map { (language, possessions) ->
-                              val excess = (possessions - (wanted - totalSum)).coerceAtLeast(0)
-                              totalSum = (totalSum + possessions).coerceAtMost(wanted)
-                              language to excess
-                            }
-                            .filter { it.second > 0 }
+                        }
+                        .map { (language, possessions) ->
+                          val excess = (possessions - (wanted - totalSum)).coerceAtLeast(0)
+                          totalSum = (totalSum + possessions).coerceAtMost(wanted)
+                          language to excess
+                        }
+                        .filter { it.second > 0 }
                     val excessesFoil =
-                        CardLanguage.entries
-                            .map { language ->
-                              language to
-                                  it.possessions.count {
-                                    it.language == language && it.finish != Finish.Normal
-                                  }
+                      CardLanguage.entries
+                        .map { language ->
+                          language to
+                            it.possessions.count {
+                              it.language == language && it.finish != Finish.Normal
                             }
-                            .map { (language, possessions) ->
-                              val excess =
-                                  (possessions - (wantedFoil - totalSumFoil)).coerceAtLeast(0)
-                              totalSumFoil = (totalSumFoil + possessions).coerceAtMost(wantedFoil)
-                              language to excess
-                            }
-                            .filter { it.second > 0 }
+                        }
+                        .map { (language, possessions) ->
+                          val excess =
+                            (possessions - (wantedFoil - totalSumFoil)).coerceAtLeast(0)
+                          totalSumFoil = (totalSumFoil + possessions).coerceAtMost(wantedFoil)
+                          language to excess
+                        }
+                        .filter { it.second > 0 }
 
                     this@columns.get(i) {
                       val color =
-                          when {
-                            excesses.isEmpty() -> Color.LIGHT_GRAY
-                            (it.priceNormal?.value ?: 0.0) > 1.0 -> Color.CYAN
-                            (it.priceNormal?.value ?: 0.0) > 0.2 -> Color.MAGENTA
-                            else -> Color.BLACK
-                          }
+                        when {
+                          excesses.isEmpty() -> Color.LIGHT_GRAY
+                          (it.priceNormal?.value ?: 0.0) > 1.0 -> Color.CYAN
+                          (it.priceNormal?.value ?: 0.0) > 0.2 -> Color.MAGENTA
+                          else -> Color.BLACK
+                        }
                       drawText(
-                          "${it.collectorNumber.replace('\u2605','*')} ${it.name} ${it.priceNormal?.toString() ?: "-"} " +
-                              "${excesses.joinToString { "${it.second}x ${it.first}" }}  Foil ${excessesFoil.joinToString { "${it.second}x ${it.first}" }} ",
-                          color,
+                        "${
+                          it.collectorNumber.replace(
+                            '\u2605',
+                            '*'
+                          )
+                        } ${it.name} ${it.priceNormal?.toString() ?: "-"} " +
+                          "${excesses.joinToString { "${it.second}x ${it.first}" }}  Foil ${excessesFoil.joinToString { "${it.second}x ${it.first}" }} ",
+                        color,
                       )
                     }
                     i++

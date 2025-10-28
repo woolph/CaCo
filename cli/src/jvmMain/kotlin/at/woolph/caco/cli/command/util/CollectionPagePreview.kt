@@ -4,16 +4,15 @@ package at.woolph.caco.cli.command.util
 import arrow.core.Either
 import arrow.core.getOrElse
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
-import at.woolph.caco.image.ImageCacheImpl
-import at.woolph.caco.image.LocalFileSystemImageCache
-import at.woolph.libs.pdf.Font
-import at.woolph.libs.pdf.HorizontalAlignment
-import at.woolph.libs.pdf.PagePosition
-import at.woolph.libs.pdf.Position
-import at.woolph.libs.pdf.createPdfDocument
-import at.woolph.libs.pdf.drawImage
-import at.woolph.libs.pdf.drawText
-import at.woolph.libs.pdf.toPosition
+import at.woolph.caco.image.ImageCache
+import at.woolph.utils.pdf.Font
+import at.woolph.utils.pdf.HorizontalAlignment
+import at.woolph.utils.pdf.PagePosition
+import at.woolph.utils.pdf.Position
+import at.woolph.utils.pdf.pdfDocument
+import at.woolph.utils.pdf.drawImage
+import at.woolph.utils.pdf.drawText
+import at.woolph.utils.pdf.toPosition
 import com.github.ajalt.mordant.animation.coroutines.animateInCoroutine
 import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.terminal.Terminal
@@ -34,7 +33,6 @@ import org.jetbrains.exposed.sql.transactions.transaction
 class CollectionPagePreview(
     val terminal: Terminal,
 ) {
-  @OptIn(ExperimentalStdlibApi::class)
   suspend fun printLabel(setCode: String, file: Path) = coroutineScope {
     terminal.println("Generating collection page preview for set $setCode")
     val progress =
@@ -50,7 +48,7 @@ class CollectionPagePreview(
     launch { progress.execute() }
 
     val cardList =
-        transaction { ScryfallCardSet.Companion.findByCode(setCode)?.cards ?: emptyList() }
+        transaction { ScryfallCardSet.findByCode(setCode)?.cards ?: emptyList() }
             .sortedBy { it.collectorNumber }
 
     progress.update { total = cardList.size.toLong() }
@@ -60,7 +58,7 @@ class CollectionPagePreview(
         cardList.partition { it.collectorNumber.matches(endsWithLetter) }
     val collectionPages = ordinaryCardList.chunked(9) + specialVersionCardList.chunked(9)
 
-    createPdfDocument(file, PagePosition.LEFT) {
+    pdfDocument(file, PagePosition.LEFT) {
       val pageFormat = PDRectangle.A4
 
       val fontColor = Color.BLACK
@@ -101,7 +99,7 @@ class CollectionPagePreview(
             val cardPosition = position(index)
             try {
               val byteArray =
-                  ImageCacheImpl.getImageByteArray(card.thumbnail.toString()) {
+                ImageCache.getImageByteArray(card.thumbnail.toString()) {
                     Either.catch {
                       //                                        print("card #$${card.numberInSet}
                       // ${card.name} image downloading\r")

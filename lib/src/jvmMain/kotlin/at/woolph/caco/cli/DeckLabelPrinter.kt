@@ -1,7 +1,14 @@
 /* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.cli
 
-import at.woolph.libs.pdf.*
+import at.woolph.utils.pdf.Font
+import at.woolph.utils.pdf.HorizontalAlignment
+import at.woolph.utils.pdf.VerticalAlignment
+import at.woolph.utils.pdf.pdfDocument
+import at.woolph.utils.pdf.drawBorder
+import at.woolph.utils.pdf.drawImage
+import at.woolph.utils.pdf.drawText
+import at.woolph.utils.pdf.frameRelative
 import java.awt.Color
 import java.nio.file.Path
 import kotlin.io.path.createParentDirectories
@@ -19,9 +26,9 @@ import qrcode.render.QRCodeGraphics
 class DeckBuildingListPrinter2 {
   // TODO exclude from list every CardPossession which is used for a deck
   suspend fun printList(deckLink: String, name: String, file: Path) {
-    createPdfDocument {
+    pdfDocument {
       val logoBytes =
-          ClassLoader.getSystemResourceAsStream("images/gruul.png")?.readBytes() ?: ByteArray(0)
+        ClassLoader.getSystemResourceAsStream("images/gruul.png")?.readBytes() ?: ByteArray(0)
 
       val pageFormat = PDRectangle.A4
 
@@ -38,72 +45,72 @@ class DeckBuildingListPrinter2 {
         val labelWidth = 70 * POINTS_PER_MM
         val labelHeight = 37 * POINTS_PER_MM
         frameRelative(
-            HorizontalAlignment.LEFT,
-            0f,
-            VerticalAlignment.TOP,
-            0f,
-            labelWidth,
-            labelHeight,
+          HorizontalAlignment.LEFT,
+          0f,
+          VerticalAlignment.TOP,
+          0f,
+          labelWidth,
+          labelHeight,
         ) {
           drawBorder(1f, Color.BLACK)
           drawText(
-              "${name}",
-              fontTitle,
-              HorizontalAlignment.CENTER,
-              0f,
-              fontTitle.height,
-              fontColor,
+            "${name}",
+            fontTitle,
+            HorizontalAlignment.CENTER,
+            0f,
+            fontTitle.height,
+            fontColor,
           )
 
           val helloWorld =
-              QRCode.ofRoundedSquares()
-                  .withRadius(6)
-                  .withSize(16) // Default is 25
-                  .withBeforeRenderAction {
-                    //                            it.fillRect(0, 0, it.width, it.height,
-                    // Colors.WHITE)
-                    it.drawImage(logoBytes, (it.width - 383) / 2, (it.height - 640) / 2)
+            QRCode.ofRoundedSquares()
+              .withRadius(6)
+              .withSize(16) // Default is 25
+              .withBeforeRenderAction {
+                //                            it.fillRect(0, 0, it.width, it.height,
+                // Colors.WHITE)
+                it.drawImage(logoBytes, (it.width - 383) / 2, (it.height - 640) / 2)
+              }
+              .withCustomColorFunction(
+                object : QRCodeColorFunction {
+                  override fun bg(
+                    row: Int,
+                    col: Int,
+                    qrCode: QRCode,
+                    qrCodeGraphics: QRCodeGraphics,
+                  ): Int {
+                    return Colors.TRANSPARENT
                   }
-                  .withCustomColorFunction(
-                      object : QRCodeColorFunction {
-                        override fun bg(
-                            row: Int,
-                            col: Int,
-                            qrCode: QRCode,
-                            qrCodeGraphics: QRCodeGraphics,
-                        ): Int {
-                          return Colors.TRANSPARENT
-                        }
 
-                        override fun fg(
-                            row: Int,
-                            col: Int,
-                            qrCode: QRCode,
-                            qrCodeGraphics: QRCodeGraphics,
-                        ): Int {
-                          val distance =
-                              (sqrt((row * row + col * col).toDouble()) /
-                                      (sqrt(2.0) * qrCode.rawData.size))
-                                  .coerceIn(0.0..1.0)
+                  override fun fg(
+                    row: Int,
+                    col: Int,
+                    qrCode: QRCode,
+                    qrCodeGraphics: QRCodeGraphics,
+                  ): Int {
+                    val distance =
+                      (sqrt((row * row + col * col).toDouble()) /
+                        (sqrt(2.0) * qrCode.rawData.size))
+                        .coerceIn(0.0..1.0)
 
-                          val startComponents = Colors.getRGBA(Colors.GREEN)
-                          val endComponents = Colors.getRGBA(Colors.RED)
+                    val startComponents = Colors.getRGBA(Colors.GREEN)
+                    val endComponents = Colors.getRGBA(Colors.RED)
 
-                          val r = startComponents[0] * (1 - distance) + endComponents[0] * distance
-                          val g = startComponents[1] * (1 - distance) + endComponents[1] * distance
-                          val b = startComponents[2] * (1 - distance) + endComponents[2] * distance
+                    val r = startComponents[0] * (1 - distance) + endComponents[0] * distance
+                    val g = startComponents[1] * (1 - distance) + endComponents[1] * distance
+                    val b = startComponents[2] * (1 - distance) + endComponents[2] * distance
 
-                          return Colors.rgba(
-                              r.roundToInt().coerceIn(0..255),
-                              g.roundToInt().coerceIn(0..255),
-                              b.roundToInt().coerceIn(0..255),
-                              200,
-                          )
-                        }
-                      }
-                  )
-                  //                        .withLogo(logoBytes, 32, 32, clearLogoArea = true)
-                  .build(deckLink)
+                    return Colors.rgba(
+                      r.roundToInt().coerceIn(0..255),
+                      g.roundToInt().coerceIn(0..255),
+                      b.roundToInt().coerceIn(0..255),
+                      200,
+                    )
+                  }
+                }
+              )
+              //                        .withLogo(logoBytes, 32, 32, clearLogoArea = true)
+              .build(deckLink)
 
           val qrCode = helloWorld.render()
 

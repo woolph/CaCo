@@ -9,92 +9,23 @@ import at.woolph.caco.datamodel.sets.LayoutType
 import at.woolph.caco.datamodel.sets.Legality
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.parseRarity
-import at.woolph.libs.exposed.newOrUpdate
-import java.net.URI
-import java.time.LocalDate
-import java.time.ZonedDateTime
-import java.util.*
+import at.woolph.utils.exposed.newOrUpdate
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.serialization.Contextual
-import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.descriptors.PrimitiveKind
-import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
-import kotlinx.serialization.encoding.Decoder
-import kotlinx.serialization.encoding.Encoder
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.modules.SerializersModule
 import org.slf4j.LoggerFactory
+import java.net.URI
+import java.time.LocalDate
+import java.util.UUID
 import kotlin.uuid.Uuid
 
 private val LOG = LoggerFactory.getLogger("at.woolph.caco.masterdata.import.ScryfallCard")
 
-object LocalDateSerializer : KSerializer<LocalDate> {
-  override val descriptor = PrimitiveSerialDescriptor("LocalDate", PrimitiveKind.STRING)
-
-  override fun deserialize(decoder: Decoder): LocalDate {
-    return LocalDate.parse(decoder.decodeString())
-  }
-
-  override fun serialize(encoder: Encoder, value: LocalDate) {
-    encoder.encodeString(value.toString())
-  }
-}
-
-object URISerializer : KSerializer<URI> {
-  override val descriptor = PrimitiveSerialDescriptor("URI", PrimitiveKind.STRING)
-
-  override fun deserialize(decoder: Decoder): URI =
-      try {
-        URI.create(decoder.decodeString())
-      } catch (_: Throwable) {
-        URI.create("about://version")
-      }
-
-  override fun serialize(encoder: Encoder, value: URI) {
-    encoder.encodeString(value.toString())
-  }
-}
-
-object UUIDSerializer : KSerializer<UUID> {
-  override val descriptor = PrimitiveSerialDescriptor("UUID", PrimitiveKind.STRING)
-
-  override fun deserialize(decoder: Decoder): UUID {
-    return UUID.fromString(decoder.decodeString())
-  }
-
-  override fun serialize(encoder: Encoder, value: UUID) {
-    encoder.encodeString(value.toString())
-  }
-}
-
-object ZonedDateTimeSerializer : KSerializer<ZonedDateTime> {
-  override val descriptor = PrimitiveSerialDescriptor("ZonedDateTime", PrimitiveKind.STRING)
-
-  override fun deserialize(decoder: Decoder): ZonedDateTime {
-    return ZonedDateTime.parse(decoder.decodeString())
-  }
-
-  override fun serialize(encoder: Encoder, value: ZonedDateTime) {
-    encoder.encodeString(value.toString())
-  }
-}
-
-val jsonSerializer = Json {
-  decodeEnumsCaseInsensitive = true
-  ignoreUnknownKeys = true
-  serializersModule = SerializersModule {
-    contextual(LocalDate::class, LocalDateSerializer)
-    contextual(URI::class, URISerializer)
-    contextual(UUID::class, UUIDSerializer)
-    contextual(ZonedDateTime::class, ZonedDateTimeSerializer)
-  }
-}
 
 @Serializable
 data class ScryfallRelatedCard(

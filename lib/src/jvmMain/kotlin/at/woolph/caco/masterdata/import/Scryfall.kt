@@ -4,8 +4,9 @@ package at.woolph.caco.masterdata.import
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.SetType
-import at.woolph.caco.utils.httpclient.useHttpClient
-import at.woolph.libs.exposed.newOrUpdate
+import at.woolph.utils.exposed.newOrUpdate
+import at.woolph.utils.ktor.request
+import at.woolph.utils.ktor.useHttpClient
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -16,13 +17,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
-import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 private val LOG = LoggerFactory.getLogger("at.woolph.caco.importer.sets.Scryfall")
 
 // TODO import double sided tokens as they are printed (especially those of the commander precons)
-@OptIn(ExperimentalUuidApi::class)
 suspend fun importSet(setCode: String): ScryfallCardSet =
     useHttpClient(Dispatchers.IO) { client ->
       val response: HttpResponse = client.get("https://api.scryfall.com/sets/$setCode")
@@ -56,7 +55,7 @@ suspend fun loadCard(cardId: String): ScryfallCard =
 
 suspend fun ScryfallCardSet.reimport() =
     useHttpClient(Dispatchers.IO) { client ->
-      LOG.debug("update set ${this@reimport}")
+      LOG.debug("update set {}", this@reimport)
       val response: HttpResponse = client.get("https://api.scryfall.com/sets/${this@reimport.code}")
 
       if (!response.status.isSuccess())

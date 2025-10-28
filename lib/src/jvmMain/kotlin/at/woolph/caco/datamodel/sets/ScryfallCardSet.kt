@@ -1,10 +1,10 @@
 /* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.datamodel.sets
 
-import at.woolph.caco.lib.Uri
-import at.woolph.libs.exposed.UuidEntity
-import at.woolph.libs.exposed.UuidEntityClass
-import at.woolph.libs.exposed.ktUuid
+import at.woolph.utils.Uri
+import at.woolph.utils.exposed.UuidEntity
+import at.woolph.utils.exposed.UuidEntityClass
+import at.woolph.utils.exposed.ktUuid
 import at.woolph.utils.compareToNullable
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.IdTable
@@ -15,10 +15,8 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.emptySized
 import org.jetbrains.exposed.sql.javatime.date
-import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
-@OptIn(ExperimentalUuidApi::class)
 object ScryfallCardSets : IdTable<Uuid>() {
   override val id = ktUuid("id").entityId()
   override val primaryKey = PrimaryKey(id)
@@ -39,7 +37,6 @@ object ScryfallCardSets : IdTable<Uuid>() {
   val icon = varchar("iconUri", length = 256).nullable()
 }
 
-@OptIn(ExperimentalUuidApi::class)
 class ScryfallCardSet(id: EntityID<Uuid>) : IScryfallCardSet, UuidEntity(id) {
   companion object : UuidEntityClass<ScryfallCardSet>(ScryfallCardSets) {
     fun findByCode(code: String?) = code?.let { find { ScryfallCardSets.code eq it }.firstOrNull() }

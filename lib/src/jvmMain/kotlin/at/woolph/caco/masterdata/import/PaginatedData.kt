@@ -2,7 +2,7 @@
 package at.woolph.caco.masterdata.import
 
 import at.woolph.caco.decks.Pageable
-import at.woolph.caco.utils.httpclient.useHttpClient
+import at.woolph.utils.ktor.useHttpClient
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -68,14 +68,3 @@ internal inline fun <reified T : ScryfallBase> paginatedDataRequest(
     progressIndicator?.finished()
   }
 }
-
-internal suspend inline fun <reified T : ScryfallBase> request(query: String): T =
-    useHttpClient { client ->
-      LOG.debug("requesting data from $query")
-      val response: HttpResponse = client.get(query)
-      if (response.status.isSuccess()) {
-        return@useHttpClient response.body<T>()
-      } else {
-        throw Exception("request failed with status code ${response.status.description}")
-      }
-    }

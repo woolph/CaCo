@@ -2,9 +2,9 @@
 package at.woolph.caco.cli.command
 
 import at.woolph.caco.collection.DEFAULT_COLLECTION_SETTINGS
+import at.woolph.caco.currency.CurrencyValue
 import at.woolph.caco.datamodel.sets.Finish
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
-import at.woolph.utils.Quadruple
 import at.woolph.lib.clikt.SuspendingTransactionCliktCommand
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
@@ -67,23 +67,30 @@ class HighValueTradables : SuspendingTransactionCliktCommand() {
                                 Finish.Etched -> "(Etched)"
                               }
 
-                          Quadruple(
+                          ExcessPossionItem(
                               excess,
                               "${card.name}$suffixName$finishedSuffix",
                               card.set.name.let { "$it$suffixSet" },
-                              card.prices(finish)?.value ?: 100000.0,
+                              card.prices(finish) ?: CurrencyValue.eur(100000.0),
                           )
                         }
-                        .filter { it.t1 > 0 && it.t4 >= priceThreshold }
+                        .filter { it.excess > 0 && it.cardPrice.value >= priceThreshold }
                   }
-                  .joinToString("\n") { (excess, cardName, setName, price) ->
-                    "$excess $cardName ($setName) $price"
-                  }
+                  .joinToString("\n")
         }
         .filter { (_: ScryfallCardSet, cards: String) -> cards.isNotBlank() }
         .forEach { (set: ScryfallCardSet, cards: String) ->
           echo("------------------------\n${set.name}\n$cards")
           echo()
         }
+  }
+
+  data class ExcessPossionItem(
+    val excess: Int,
+    val cardName: String,
+    val setName: String,
+    val cardPrice: CurrencyValue,
+  ) {
+    override fun toString() = "$excess $cardName ($setName) $cardPrice"
   }
 }

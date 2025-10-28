@@ -5,8 +5,8 @@ import at.woolph.caco.currency.CurrencyValue
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.masterdata.import.ScryfallCard
 import at.woolph.caco.masterdata.import.downloadBulkData
-import at.woolph.caco.masterdata.import.jsonSerializer
 import at.woolph.lib.clikt.SuspendingTransactionCliktCommand
+import at.woolph.utils.ktor.jsonSerializer
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.serialization.json.decodeToSequence

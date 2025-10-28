@@ -3,7 +3,7 @@ package at.woolph.caco.decks
 
 import at.woolph.caco.masterdata.import.ProgressIndicator
 import at.woolph.caco.masterdata.import.updateProgressIndicator
-import at.woolph.caco.utils.httpclient.useHttpClient
+import at.woolph.utils.ktor.useHttpClient
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -135,15 +135,5 @@ internal inline fun <reified P : Pageable<T>, reified T> paginatedDataRequest(
       }
     }
     progressIndicator?.finished()
-  }
-}
-
-internal suspend inline fun <reified T> request(query: String): T = useHttpClient { client ->
-  LOG.debug("requesting data from $query")
-  val response: HttpResponse = client.get(query)
-  if (response.status.isSuccess()) {
-    return@useHttpClient response.body<T>()
-  } else {
-    throw Exception("request failed with status code ${response.status.description}")
   }
 }

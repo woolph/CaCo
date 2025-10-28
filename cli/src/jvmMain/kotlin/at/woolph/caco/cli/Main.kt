@@ -46,6 +46,7 @@ suspend fun main(args: Array<String>) =
                     PrintMissingStats(),
                     PrintMissing(),
                     EnterCards(),
+                    PrintCollectionBinderLabels(),
                 ),
             suspendNoOpCliktCommand(name = "masterdata")
                 .subcommands(

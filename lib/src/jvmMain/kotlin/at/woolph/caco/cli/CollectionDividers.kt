@@ -8,7 +8,15 @@ import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.SingleSetBlock
 import at.woolph.caco.icon.lazySetIcon
 import at.woolph.caco.icon.mythicBinderLabelIconRenderer
-import at.woolph.libs.pdf.*
+import at.woolph.utils.pdf.Font
+import at.woolph.utils.pdf.HorizontalAlignment
+import at.woolph.utils.pdf.pdfDocument
+import at.woolph.utils.pdf.dotsPerMillimeter
+import at.woolph.utils.pdf.drawAsImageCentered
+import at.woolph.utils.pdf.drawAsImageLeft
+import at.woolph.utils.pdf.drawBorder
+import at.woolph.utils.pdf.drawText
+import at.woolph.utils.pdf.frame
 import java.awt.Color
 import java.nio.file.Path
 import org.apache.pdfbox.pdmodel.common.PDRectangle
@@ -91,12 +99,12 @@ class PileSeparators {
               is MultiSetBlock -> BlockCollectionDivider(it.blockName, it.sets.map { it.code })
             }
           }
-      createPdfDocument {
+      pdfDocument {
         val fontColor = Color.BLACK
         val fontFamilyPlanewalker =
-            loadType0Font(javaClass.getResourceAsStream("/fonts/PlanewalkerBold-xZj5.ttf")!!)
+          loadType0Font(javaClass.getResourceAsStream("/fonts/PlanewalkerBold-xZj5.ttf")!!)
         val fontFamily72Black =
-            PDType0Font.load(this.document, javaClass.getResourceAsStream("/fonts/72-Black.ttf"))
+          PDType0Font.load(this.document, javaClass.getResourceAsStream("/fonts/72-Black.ttf"))
 
         val pageFormat = PDRectangle(PDRectangle.A4.height, PDRectangle.A4.width)
 
@@ -129,10 +137,10 @@ class PileSeparators {
               rowItems.forEachIndexed { columnIndex, columnItem ->
                 val borderWidth = 2f
                 frame(
-                    columnWidth * columnIndex,
-                    rowHeight * rowIndex,
-                    (columnWidth) * (columns - columnIndex - 1),
-                    (rowHeight) * (rows - rowIndex - 1),
+                  columnWidth * columnIndex,
+                  rowHeight * rowIndex,
+                  (columnWidth) * (columns - columnIndex - 1),
+                  (rowHeight) * (rows - rowIndex - 1),
                 ) {
                   drawBorder(borderWidth, fontColor)
                   frame(margin, margin, margin, margin) {
@@ -140,48 +148,51 @@ class PileSeparators {
                       is BlankCollectionDivider -> {}
                       is OneSymbolCollectionDivider -> {
                         drawText(
-                            columnItem.title,
-                            fontCode2,
-                            HorizontalAlignment.CENTER,
-                            0f,
-                            desiredHeight + fontCode2.height,
-                            fontColor,
+                          columnItem.title,
+                          fontCode2,
+                          HorizontalAlignment.CENTER,
+                          0f,
+                          desiredHeight + fontCode2.height,
+                          fontColor,
                         )
                         drawText(
-                            columnItem.code.uppercase(),
-                            fontCode,
-                            HorizontalAlignment.CENTER,
-                            0f,
-                            fontCode.height,
-                            fontColor,
+                          columnItem.code.uppercase(),
+                          fontCode,
+                          HorizontalAlignment.CENTER,
+                          0f,
+                          fontCode.height,
+                          fontColor,
                         )
-                        columnItem.icon?.toPDImage(this@page)?.let {
-                          drawAsImageCentered(it, maximumIconWidth, desiredHeight, -offsetX, 0f)
-                          drawAsImageCentered(it, maximumIconWidth, desiredHeight, +offsetX, 0f)
+                        columnItem.icon?.let {
+                          createFromByteArray(it)
+                        }?.let {
+                            drawAsImageCentered(it, maximumIconWidth, desiredHeight, -offsetX, 0f)
+                            drawAsImageCentered(it, maximumIconWidth, desiredHeight, +offsetX, 0f)
+                          }
                         }
-                      }
+
                       is MultipleSymbolCollectionDivider -> {
                         drawText(
-                            columnItem.title,
-                            fontCode2,
-                            HorizontalAlignment.CENTER,
-                            0f,
-                            desiredHeight + fontCode2.height,
-                            fontColor,
+                          columnItem.title,
+                          fontCode2,
+                          HorizontalAlignment.CENTER,
+                          0f,
+                          desiredHeight + fontCode2.height,
+                          fontColor,
                         )
                         val start =
-                            box.width * 0.5f - maximumIconWidth * columnItem.icons.count() * 0.5f
+                          box.width * 0.5f - maximumIconWidth * columnItem.icons.count() * 0.5f
                         columnItem.icons
-                            .map { it.toPDImage(this@page) }
-                            .forEachIndexed { i, icon ->
-                              drawAsImageLeft(
-                                  icon,
-                                  maximumIconWidth,
-                                  desiredHeight,
-                                  start + maximumIconWidth * i,
-                                  0f,
-                              )
-                            }
+                          .map { createFromByteArray(it) }
+                          .forEachIndexed { i, icon ->
+                            drawAsImageLeft(
+                              icon,
+                              maximumIconWidth,
+                              desiredHeight,
+                              start + maximumIconWidth * i,
+                              0f,
+                            )
+                          }
                       }
                     }
                   }

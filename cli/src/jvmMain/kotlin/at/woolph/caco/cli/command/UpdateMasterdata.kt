@@ -12,8 +12,8 @@ import at.woolph.caco.masterdata.import.ScryfallCard
 import at.woolph.caco.masterdata.import.ScryfallSet
 import at.woolph.caco.masterdata.import.downloadBulkData
 import at.woolph.caco.masterdata.import.importSets
-import at.woolph.caco.masterdata.import.jsonSerializer
-import at.woolph.libs.exposed.newOrUpdate
+import at.woolph.utils.exposed.newOrUpdate
+import at.woolph.utils.ktor.jsonSerializer
 import com.github.ajalt.clikt.command.SuspendingCliktCommand
 import com.github.ajalt.clikt.parameters.groups.default
 import com.github.ajalt.clikt.parameters.groups.mutuallyExclusiveOptions

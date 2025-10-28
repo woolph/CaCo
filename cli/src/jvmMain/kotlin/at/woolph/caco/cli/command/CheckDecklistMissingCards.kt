@@ -2,18 +2,17 @@
 package at.woolph.caco.cli.command
 
 import at.woolph.caco.cli.DeckListBuilder
+import at.woolph.caco.currency.CurrencyValue
 import at.woolph.caco.datamodel.decks.DeckZone
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.Cards
 import at.woolph.caco.datamodel.sets.Finish
-import at.woolph.utils.Quadruple
 import com.github.ajalt.clikt.command.SuspendingCliktCommand
 import com.github.ajalt.clikt.core.terminal
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 
 class CheckDecklistMissingCards : SuspendingCliktCommand(name = "check-deck") {
   override suspend fun run() {
-
     terminal.println("Enter decklist:")
 
     var currentDeckZone: DeckZone? = DeckZone.MAINBOARD // null is metainfo section
@@ -66,7 +65,7 @@ class CheckDecklistMissingCards : SuspendingCliktCommand(name = "check-deck") {
           val lowestPrice = cards.mapNotNull { card -> Finish.entries.mapNotNull { card.prices(it) }.minOrNull() }.minOrNull()
           val possessionAmount = cards.sumOf { it.possessions.count() }
           if (possessionAmount < amount) {
-            Quadruple(deckZone, cardName, amount - possessionAmount, lowestPrice)
+            NeededCard(deckZone, cardName, amount - possessionAmount, lowestPrice)
           } else {
             null
           }
@@ -76,11 +75,18 @@ class CheckDecklistMissingCards : SuspendingCliktCommand(name = "check-deck") {
 
     println("Deck: ${deckList.name}")
     println("Total estimated costs for deck completion: ${neededCards.sumOf { (_,_,_,cost) -> cost?.value ?: 0.0 }}")
-    neededCards.groupBy { it.t1 }.forEach { (deckZone, cardList) ->
+    neededCards.groupBy { it.deckZone }.forEach { (deckZone, cardList) ->
       println("$deckZone")
       cardList.forEach { (_, cardName, amount, _) ->
         println("$amount $cardName")
       }
     }
   }
+
+  data class NeededCard(
+    val deckZone: DeckZone,
+    val cardName: String,
+    val amountNeeded: Long,
+    val price: CurrencyValue?,
+  )
 }

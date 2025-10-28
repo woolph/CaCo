@@ -3,7 +3,7 @@ package at.woolph.caco.masterdata.import
 
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.SetType
-import at.woolph.caco.lib.Uri
+import at.woolph.utils.Uri
 import java.net.URI
 import java.time.LocalDate
 import java.util.*

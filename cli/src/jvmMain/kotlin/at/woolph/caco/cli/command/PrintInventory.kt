@@ -5,7 +5,13 @@ import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.lib.clikt.SuspendingTransactionCliktCommand
 import at.woolph.lib.clikt.prompt
-import at.woolph.libs.pdf.*
+import at.woolph.utils.pdf.Font
+import at.woolph.utils.pdf.HorizontalAlignment
+import at.woolph.utils.pdf.columns
+import at.woolph.utils.pdf.pdfDocument
+import at.woolph.utils.pdf.drawText
+import at.woolph.utils.pdf.frame
+import at.woolph.utils.pdf.framePagePosition
 import com.github.ajalt.clikt.core.terminal
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.convert
@@ -42,23 +48,23 @@ class PrintInventory : SuspendingTransactionCliktCommand(name = "inventory") {
           .prompt("Enter the set codes to be printed")
 
   override suspend fun runTransaction() = coroutineScope {
-    createPdfDocument(output) {
+    pdfDocument(output) {
       val fontTitle = Font(PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 10f)
       val fontLine = Font(PDType1Font(Standard14Fonts.FontName.HELVETICA), 6.0f)
       val progressBar =
-          progressBarContextLayout<ScryfallCardSet?> {
-                percentage()
-                progressBar()
-                completed()
-                timeRemaining()
-                text { "printing ${this.context?.name}" }
-              }
-              .animateInCoroutine(
-                  terminal,
-                  context = null,
-                  total = sets.size.toLong(),
-                  completed = 0,
-              )
+        progressBarContextLayout<ScryfallCardSet?> {
+          percentage()
+          progressBar()
+          completed()
+          timeRemaining()
+          text { "printing ${this.context?.name}" }
+        }
+          .animateInCoroutine(
+            terminal,
+            context = null,
+            total = sets.size.toLong(),
+            completed = 0,
+          )
 
       launch { progressBar.execute() }
 
@@ -72,12 +78,12 @@ class PrintInventory : SuspendingTransactionCliktCommand(name = "inventory") {
           page(PDRectangle.A4) {
             framePagePosition(20f, 20f, 20f, 20f) {
               drawText(
-                  "Inventory ${set.name} Page ${pageIndex + 1}",
-                  fontTitle,
-                  HorizontalAlignment.CENTER,
-                  0f,
-                  10f,
-                  Color.BLACK,
+                "Inventory ${set.name} Page ${pageIndex + 1}",
+                fontTitle,
+                HorizontalAlignment.CENTER,
+                0f,
+                10f,
+                Color.BLACK,
               )
 
               // TODO calc metrics for all sets (so that formatting is the same for all pages)
@@ -89,9 +95,9 @@ class PrintInventory : SuspendingTransactionCliktCommand(name = "inventory") {
                     val ownedCountDE = it.possessions.count { it.language == CardLanguage.GERMAN }
                     this@columns.get(i) {
                       drawTextWithRects(
-                          "${it.rarity} ${it.collectorNumber} ${it.name}",
-                          ownedCountEN,
-                          ownedCountDE,
+                        "${it.rarity} ${it.collectorNumber} ${it.name}",
+                        ownedCountEN,
+                        ownedCountDE,
                       )
                     }
                     i++
