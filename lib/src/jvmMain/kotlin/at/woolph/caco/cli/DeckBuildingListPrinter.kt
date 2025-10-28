@@ -18,13 +18,15 @@ import org.apache.pdfbox.pdmodel.font.Standard14Fonts
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.awt.Color
 import java.nio.file.Path
+import kotlin.io.path.createParentDirectories
+import kotlin.io.path.outputStream
 
 class DeckBuildingListPrinter {
   // TODO exclude from list every CardPossession which is used for a deck
   fun printList(decks: Collection<DeckList>, file: Path) {
     Databases.init()
 
-    pdfDocument(file) {
+    pdfDocument(file.createParentDirectories().outputStream()) {
       decks.forEach { printListToDocument(it) }
     }
   }

@@ -34,7 +34,7 @@ class CollectionImport :
         log = LoggerFactory.getLogger(CollectionImport::class.java),
     ) {
   val format by
-      option(help = "The format of import file")
+      option("--format", "-f", help = "The format of import file")
           .enum<CollectionFileFormat>()
           .default(CollectionFileFormat.ARCHIDEKT)
   val clearBeforeImport by option().boolean().default(true)

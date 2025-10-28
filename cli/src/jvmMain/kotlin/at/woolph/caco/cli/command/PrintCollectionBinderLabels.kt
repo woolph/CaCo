@@ -12,7 +12,7 @@ import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.path
 
 class PrintCollectionBinderLabels : SuspendingTransactionCliktCommand(name = "binder-labels") {
-  val output by option().path(canBeDir = false, canBeFile = true).required()
+  val output by option("--output", "-o").path(canBeDir = false, canBeFile = true).required()
   val sets by
       argument(help = "The set code of the cards to be entered")
           .multiple()

@@ -16,7 +16,7 @@ import kotlin.io.path.Path
 
 class CollectionExport : SuspendingTransactionCliktCommand(name = "export") {
   val format by
-      option(help = "The format to export the entered cards to")
+      option("--format", "-f", help = "The format to export the entered cards to")
           .enum<CollectionFileFormat>()
           .default(CollectionFileFormat.ARCHIDEKT)
 

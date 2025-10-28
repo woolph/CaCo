@@ -33,9 +33,11 @@ import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.font.PDType1Font
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts
 import org.jetbrains.exposed.sql.transactions.transaction
+import kotlin.io.path.createParentDirectories
+import kotlin.io.path.outputStream
 
 class PrintInventory : SuspendingTransactionCliktCommand(name = "inventory") {
-  val output by option().path(canBeDir = false).required()
+  val output by option("--output", "-o").path(canBeDir = false).required()
   val sets by
       argument(help = "The set code of the cards to be entered")
           .convert {
@@ -48,7 +50,7 @@ class PrintInventory : SuspendingTransactionCliktCommand(name = "inventory") {
           .prompt("Enter the set codes to be printed")
 
   override suspend fun runTransaction() = coroutineScope {
-    pdfDocument(output) {
+    pdfDocument(output.createParentDirectories().outputStream()) {
       val fontTitle = Font(PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 10f)
       val fontLine = Font(PDType1Font(Standard14Fonts.FontName.HELVETICA), 6.0f)
       val progressBar =

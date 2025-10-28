@@ -11,7 +11,7 @@ import com.github.ajalt.mordant.table.table
 
 class PrintDeckDiff : SuspendingCliktCommand(name = "archidekt-deckdiff") {
   val userName by option(help = "Archidekt").prompt("Enter URL")
-  val output by option().path(canBeDir = true, canBeFile = true)
+  val output by option("--output", "-o").path(canBeDir = true, canBeFile = true)
 
   override suspend fun run() {
     DeckDiff().diffCommanderDecks(userName).collect { (deck1, deck2, deckdiff) ->

@@ -28,16 +28,16 @@ class PrintArchidektDeck : SuspendingCliktCommand(name = "archidekt-deck") {
           )
           .int()
           .required()
-  val output by option().path(canBeDir = true, canBeFile = true)
+  val output by option("--output", "-o").path(canBeDir = true, canBeFile = true)
 
   override suspend fun run() = coroutineScope {
     val progress =
-        progressBarContextLayout<String> {
+        progressBarContextLayout {
               percentage()
               progressBar()
               completed(style = terminal.theme.success)
               timeRemaining(style = TextColors.magenta)
-              text { "$context" }
+              text { context }
             }
             .animateInCoroutine(terminal, context = "")
 

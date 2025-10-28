@@ -9,9 +9,9 @@ import at.woolph.utils.pdf.Font
 import at.woolph.utils.pdf.HorizontalAlignment
 import at.woolph.utils.pdf.PagePosition
 import at.woolph.utils.pdf.Position
-import at.woolph.utils.pdf.pdfDocument
 import at.woolph.utils.pdf.drawImage
 import at.woolph.utils.pdf.drawText
+import at.woolph.utils.pdf.suspendingPdfDocument
 import at.woolph.utils.pdf.toPosition
 import com.github.ajalt.mordant.animation.coroutines.animateInCoroutine
 import com.github.ajalt.mordant.rendering.TextColors
@@ -29,6 +29,8 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.jetbrains.exposed.sql.transactions.transaction
+import kotlin.io.path.createParentDirectories
+import kotlin.io.path.outputStream
 
 class CollectionPagePreview(
     val terminal: Terminal,
@@ -58,7 +60,7 @@ class CollectionPagePreview(
         cardList.partition { it.collectorNumber.matches(endsWithLetter) }
     val collectionPages = ordinaryCardList.chunked(9) + specialVersionCardList.chunked(9)
 
-    pdfDocument(file, PagePosition.LEFT) {
+    suspendingPdfDocument(file.createParentDirectories().outputStream(), startingPagePosition = PagePosition.LEFT) {
       val pageFormat = PDRectangle.A4
 
       val fontColor = Color.BLACK
@@ -94,7 +96,7 @@ class CollectionPagePreview(
 
       emptyPage(pageFormat)
       collectionPages.forEachIndexed { pageNumber, pageContent ->
-        page(pageFormat) {
+        suspendingPage(pageFormat) {
           pageContent.forEachIndexed { index, card ->
             val cardPosition = position(index)
             try {

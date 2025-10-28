@@ -22,6 +22,7 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import java.awt.Color
 import java.nio.file.Path
 import kotlin.io.path.createParentDirectories
+import kotlin.io.path.outputStream
 
 fun fetchCardSets(codes: Iterable<String>): List<ScryfallCardSet> = transaction {
   codes.map { code ->
@@ -103,8 +104,7 @@ fun determineBinderLabels(thresholdTooMuchPages: Int, thresholdTooFewPages: Int)
     }
 
 fun printBinderLabel(file: Path, labels: List<MapLabelItem>, labelsPerPage: Int) {
-  file.createParentDirectories()
-  pdfDocument(file) {
+  pdfDocument(file.createParentDirectories().outputStream()) {
     val fontColor = Color.BLACK
     val subTitleFontColor = Color.GRAY
     val backgroundColor: Color? = null

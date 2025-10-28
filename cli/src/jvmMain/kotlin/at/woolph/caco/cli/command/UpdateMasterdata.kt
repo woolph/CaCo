@@ -37,10 +37,10 @@ import org.slf4j.LoggerFactory
 class UpdateMasterdata : SuspendingCliktCommand(name = "update") {
   val source by
       mutuallyExclusiveOptions(
-              option("--bulk-data", help = "which bulk data to import").convert {
+              option("--bulk-data", "-b", help = "which bulk data to import").convert {
                 BulkDataApiRequest(it)
               },
-              option("--file", help = "file to import").path(mustExist = true).convert {
+              option("--file", "-f", help = "file to import").path(mustExist = true).convert {
                 BulkDataFile(it)
               },
           )

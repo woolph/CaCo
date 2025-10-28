@@ -13,7 +13,7 @@ import com.github.ajalt.clikt.parameters.types.path
 import kotlin.io.path.createDirectories
 
 class PrintCollectionBinderPageView : SuspendingCliktCommand(name = "collection-pages") {
-  val output by option().path(canBeDir = true, canBeFile = false).required()
+  val output by option("--output", "-o").path(canBeDir = true, canBeFile = false).required()
   val sets by
       argument(help = "The set code of the cards to be entered")
           .multiple()

@@ -12,6 +12,7 @@ kotlin {
   jvm { testRuns["test"].executionTask.configure { useJUnitPlatform() } }
 
   compilerOptions {
+    languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_3)
     freeCompilerArgs.addAll(
       "-Xwhen-guards",
       "-Xexpect-actual-classes",

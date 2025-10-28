@@ -36,6 +36,7 @@ class PrintManaBase : SuspendingCliktCommand(name = "generate-manabase") {
             maxPricePerCard = maxPricePerCard,
         )
 
+    terminal.println("Enter decklist:")
     generateManabase(
             selectionCriterion,
             generateSequence { terminal.readLineOrNull(false) }

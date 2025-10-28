@@ -4,11 +4,11 @@ package at.woolph.caco.cli
 import at.woolph.utils.pdf.Font
 import at.woolph.utils.pdf.HorizontalAlignment
 import at.woolph.utils.pdf.VerticalAlignment
-import at.woolph.utils.pdf.pdfDocument
 import at.woolph.utils.pdf.drawBorder
 import at.woolph.utils.pdf.drawImage
 import at.woolph.utils.pdf.drawText
 import at.woolph.utils.pdf.frameRelative
+import at.woolph.utils.pdf.suspendingPdfDocument
 import java.awt.Color
 import java.nio.file.Path
 import kotlin.io.path.createParentDirectories
@@ -26,7 +26,7 @@ import qrcode.render.QRCodeGraphics
 class DeckBuildingListPrinter2 {
   // TODO exclude from list every CardPossession which is used for a deck
   suspend fun printList(deckLink: String, name: String, file: Path) {
-    pdfDocument {
+    suspendingPdfDocument(file.createParentDirectories().outputStream()) {
       val logoBytes =
         ClassLoader.getSystemResourceAsStream("images/gruul.png")?.readBytes() ?: ByteArray(0)
 
@@ -54,7 +54,7 @@ class DeckBuildingListPrinter2 {
         ) {
           drawBorder(1f, Color.BLACK)
           drawText(
-            "${name}",
+            name,
             fontTitle,
             HorizontalAlignment.CENTER,
             0f,
@@ -123,8 +123,6 @@ class DeckBuildingListPrinter2 {
           }
         }
       }
-
-      save(file)
     }
   }
 }

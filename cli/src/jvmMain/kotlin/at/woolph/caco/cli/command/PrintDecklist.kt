@@ -15,7 +15,7 @@ import java.net.URI
 class PrintDecklist : SuspendingCliktCommand(name = "deckbox-deck") {
   val url by
       option(help = "Deckbox decklist URL").convert { URI.create(it).toURL() }.prompt("Enter URL")
-  val output by option().path(canBeDir = true, canBeFile = true)
+  val output by option("--output", "-o").path(canBeDir = true, canBeFile = true)
 
   override suspend fun run() {
     val decklistPrinter =

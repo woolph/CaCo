@@ -21,6 +21,8 @@ import java.awt.Color
 import java.nio.file.Path
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.jetbrains.exposed.sql.transactions.transaction
+import kotlin.io.path.createParentDirectories
+import kotlin.io.path.outputStream
 
 interface BoxLabel {
   val title: String
@@ -155,7 +157,7 @@ object PromoBoxLabel : MultipleSymbolBoxLabel {
 class BoxLabels {
   fun printLabel(file: Path, labels: List<BoxLabel>) {
     transaction {
-      pdfDocument(file) {
+      pdfDocument(file.createParentDirectories().outputStream()) {
         val fontColor = Color.BLACK
 
         val fontFamilyPlanewalker =

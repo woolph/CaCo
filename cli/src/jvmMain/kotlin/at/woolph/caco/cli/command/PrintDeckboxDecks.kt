@@ -29,16 +29,16 @@ import kotlinx.coroutines.launch
 
 class PrintDeckboxDecks : SuspendingCliktCommand(name = "deckbox-decks") {
   val username by option(help = "Deckbox username").prompt("Enter the username of the deckbox user")
-  val output by option().path(canBeDir = true, canBeFile = true)
+  val output by option("--output", "-o").path(canBeDir = true, canBeFile = true)
 
   override suspend fun run() = coroutineScope {
     val progress =
-        progressBarContextLayout<String> {
+        progressBarContextLayout {
               percentage()
               progressBar()
               completed(style = terminal.theme.success)
               timeRemaining(style = TextColors.magenta)
-              text { "$context" }
+              text { context }
             }
             .animateInCoroutine(terminal, context = "")
 

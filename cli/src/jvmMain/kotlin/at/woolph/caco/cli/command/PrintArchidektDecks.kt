@@ -24,7 +24,7 @@ import kotlinx.coroutines.launch
 class PrintArchidektDecks : SuspendingCliktCommand(name = "archidekt-decks") {
   val username by
       option(help = "Archidekt username").prompt("Enter the username of the Archidekt user")
-  val output by option().path(canBeDir = true, canBeFile = true)
+  val output by option("--output", "-o").path(canBeDir = true, canBeFile = true)
 
   override suspend fun run() = coroutineScope {
     val progress =

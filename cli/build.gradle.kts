@@ -15,8 +15,14 @@ kotlin {
   }
 
   compilerOptions {
-    freeCompilerArgs.add("-Xwhen-guards")
-    optIn.add("kotlin.uuid.ExperimentalUuidApi")
+    languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_3)
+    freeCompilerArgs.addAll(
+      "-Xwhen-guards",
+      "-Xexpect-actual-classes",
+    )
+    optIn.addAll(
+      "kotlin.uuid.ExperimentalUuidApi",
+    )
   }
 
   sourceSets {

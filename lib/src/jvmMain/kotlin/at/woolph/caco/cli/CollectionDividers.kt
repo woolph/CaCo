@@ -22,6 +22,8 @@ import java.nio.file.Path
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.font.PDType0Font
 import org.jetbrains.exposed.sql.transactions.transaction
+import kotlin.io.path.createParentDirectories
+import kotlin.io.path.outputStream
 
 interface CollectionDivider {
   val title: String
@@ -99,7 +101,7 @@ class PileSeparators {
               is MultiSetBlock -> BlockCollectionDivider(it.blockName, it.sets.map { it.code })
             }
           }
-      pdfDocument {
+      pdfDocument(Path.of(file).createParentDirectories().outputStream()) {
         val fontColor = Color.BLACK
         val fontFamilyPlanewalker =
           loadType0Font(javaClass.getResourceAsStream("/fonts/PlanewalkerBold-xZj5.ttf")!!)
@@ -201,7 +203,6 @@ class PileSeparators {
             }
           }
         }
-        save(Path.of(file))
       }
     }
   }

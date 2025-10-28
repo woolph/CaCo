@@ -28,18 +28,18 @@ import org.jetbrains.exposed.sql.and
 
 class EnterCards : SuspendingTransactionCliktCommand() {
   val format by
-      option(help = "The format to export the entered cards to")
+      option("--format", "-f", help = "The format to export the entered cards to")
           .enum<CollectionFileFormat>()
           .default(CollectionFileFormat.ARCHIDEKT)
 
   val condition by
-      option(help = "The language of the cards")
+      option("--condition", "-c", help = "The language of the cards")
           .convert { CardCondition.parse(it) }
           .default(CardCondition.NEAR_MINT)
           .validate { it != CardCondition.UNKNOWN }
 
   val language by
-      option(help = "The language of the cards")
+      option("--language", "-l", help = "The language of the cards")
           .convert { CardLanguage.parse(it) }
           .prompt("Select the language of the cards")
           .validate { it != CardLanguage.UNKNOWN }
