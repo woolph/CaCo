@@ -1,16 +1,22 @@
 package at.woolph.utils.pdf
 
-import arrow.core.raise.either
+import io.ktor.utils.io.core.writeFully
+import kotlinx.io.Buffer
+import kotlinx.io.Sink
+import kotlinx.io.Source
+import kotlinx.io.asInputStream
+import kotlinx.io.asOutputStream
+import kotlinx.io.buffered
+import kotlinx.io.files.SystemFileSystem
+import kotlinx.io.readByteArray
 import org.apache.pdfbox.pdmodel.PDDocument
 import org.apache.pdfbox.pdmodel.PDPage
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.font.PDType0Font
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject
-import java.io.InputStream
-import java.io.OutputStream
 import java.nio.file.Path
 
-class PDFDocument internal constructor(
+actual class PDFDocument internal constructor(
   val document: PDDocument,
   val defaultPageFormat: PDRectangle,
   startingPagePosition: PagePosition,
@@ -22,15 +28,6 @@ class PDFDocument internal constructor(
   fun page(format: PDRectangle = defaultPageFormat, block: Page.() -> Unit): Page =
     Page(this, getAndAlternateCurrentPagePosition(), PDPage(format))
       .use { it.apply(block) }
-      .also { document.addPage(it.pdPage) }
-
-  @PdfDsl
-  suspend fun suspendingPage(format: PDRectangle = defaultPageFormat, block: suspend Page.() -> Unit): Page =
-    Page(this, getAndAlternateCurrentPagePosition(), PDPage(format))
-      .use { it.apply {
-          block()
-        }
-      }
       .also { document.addPage(it.pdPage) }
 
   @PdfDsl
@@ -48,44 +45,37 @@ class PDFDocument internal constructor(
     return oldCurrentPage
   }
 
-  internal fun save(outputStream: OutputStream) {
-    document.save(outputStream)
+  internal fun save(sink: Sink) {
+    sink.asOutputStream().use(document::save)
   }
 
-  fun loadType0Font(resource: String) = either {
-    loadType0Font(
-      javaClass.getResourceAsStream(resource)
-        ?: raise(IllegalArgumentException("resource $resource not found"))
-    )
-  }
+  actual fun loadFont(resource: String): Font =
+    Font(PDType0Font.load(document, javaClass.getResourceAsStream(resource)
+      ?: throw IllegalArgumentException("resource $resource not found")))
 
-  fun loadType0Font(inputStream: InputStream) = PDType0Font.load(document, inputStream)
+    fun createFromByteArray(image: ByteArray, imageName: String? = null) =
+      createFromSource(Buffer().apply {
+        writeFully(image)
+      }, imageName)
 
-  fun createFromFile(file: Path) =
-      PDImageXObject.createFromFileByContent(file.toFile(), this.document)
+  fun createFromPath(path: kotlinx.io.files.Path) =
+    createFromSource(SystemFileSystem.source(path).buffered(), imageName = path.toString())
 
-  fun createFromByteArray(image: ByteArray, imageName: String? = null) =
-      PDImageXObject.createFromByteArray(document, image, imageName)
+  fun createFromSource(source: Source, imageName: String? = null) =
+    source.use { PDImageXObject.createFromByteArray(document, it.readByteArray(), imageName)  }
+
+//  fun createFromFile(file: Path) =
+//      PDImageXObject.createFromFileByContent(file.toFile(), this.document)
+//
 }
 
 @PdfDsl
-fun pdfDocument(
-  outputStream: OutputStream,
-  startingPagePosition: PagePosition = PagePosition.RIGHT,
-  defaultPageFormat: PDRectangle = PDRectangle.A4,
+actual fun pdfDocument(
+  sink: Sink,
+  startingPagePosition: PagePosition,
+  defaultPageFormat: PDRectangle,
   block: PDFDocument.() -> Unit,
 ): Unit = PDFDocument(PDDocument(), defaultPageFormat, startingPagePosition).use {
   it.block()
-  outputStream.use(it::save)
-}
-
-@PdfDsl
-suspend fun suspendingPdfDocument(
-  outputStream: OutputStream,
-  startingPagePosition: PagePosition = PagePosition.RIGHT,
-  defaultPageFormat: PDRectangle = PDRectangle.A4,
-  block: suspend PDFDocument.() -> Unit,
-): Unit = PDFDocument(PDDocument(), defaultPageFormat, startingPagePosition).use {
-  it.block()
-  outputStream.use(it::save)
+  it.save(sink)
 }

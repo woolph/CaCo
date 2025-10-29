@@ -17,11 +17,11 @@ open class Node(
   var currentCursorPosition = box.upperRightY
 }
 
-fun Node.drawText(text: String, font: Font, color: Color, x: Float, y: Float, rotation: Double) {
+fun Node.drawText(text: String, sizedFont: SizedFont, color: Color, x: Float, y: Float, rotation: Double) {
   try {
     contentStream.apply {
       beginText()
-      setFont(font.family, font.size)
+      setFont(sizedFont.family, sizedFont.size)
       // we want to position our text on his baseline
 
       setTextMatrix(
@@ -39,11 +39,11 @@ fun Node.drawText(text: String, font: Font, color: Color, x: Float, y: Float, ro
   }
 }
 
-fun Node.drawText(text: String, font: Font, x: Float, y: Float, color: Color) {
+fun Node.drawText(text: String, sizedFont: SizedFont, x: Float, y: Float, color: Color) {
   try {
     contentStream.apply {
       beginText()
-      setFont(font.family, font.size)
+      setFont(sizedFont.family, sizedFont.size)
       // we want to position our text on his baseline
 
       newLineAtOffset(x, y)
@@ -56,11 +56,11 @@ fun Node.drawText(text: String, font: Font, x: Float, y: Float, color: Color) {
   }
 }
 
-fun Node.drawText90(text: String, font: Font, x: Float, y: Float, color: Color) {
+fun Node.drawText90(text: String, sizedFont: SizedFont, x: Float, y: Float, color: Color) {
   try {
     contentStream.apply {
       beginText()
-      setFont(font.family, font.size)
+      setFont(sizedFont.family, sizedFont.size)
       // we want to position our text on his baseline
 
       setTextMatrix(
@@ -78,11 +78,11 @@ fun Node.drawText90(text: String, font: Font, x: Float, y: Float, color: Color) 
   }
 }
 
-fun Node.drawText270(text: String, font: Font, x: Float, y: Float, color: Color) {
+fun Node.drawText270(text: String, sizedFont: SizedFont, x: Float, y: Float, color: Color) {
   try {
     contentStream.apply {
       beginText()
-      setFont(font.family, font.size)
+      setFont(sizedFont.family, sizedFont.size)
       // we want to position our text on his baseline
 
       setTextMatrix(
@@ -110,21 +110,21 @@ fun Node.drawImage(image: PDImageXObject, x: Float, y: Float, width: Float, heig
   }
 }
 
-fun Node.drawText(text: String, font: Font, x: Float, color: Color) {
-  drawText(text, font, x, currentCursorPosition, color)
-  currentCursorPosition -= font.totalHeight
+fun Node.drawText(text: String, sizedFont: SizedFont, x: Float, color: Color) {
+  drawText(text, sizedFont, x, currentCursorPosition, color)
+  currentCursorPosition -= sizedFont.totalHeight
 }
 
-fun Node.drawText(text: String, font: Font, x: Float, y: Float, color: Color, maxLineWidth: Float) {
+fun Node.drawText(text: String, sizedFont: SizedFont, x: Float, y: Float, color: Color, maxLineWidth: Float) {
   var printedText = text
-  var lineWidth = font.getWidth(printedText)
+  var lineWidth = sizedFont.getWidth(printedText)
   while (lineWidth > maxLineWidth && printedText.length > 4) {
     val tempPrintedText =
       printedText.removeSuffix("...").trimEnd().dropLastWhile { !it.isWhitespace() }
     if (tempPrintedText.isNotEmpty()) printedText = "$tempPrintedText ..."
     else printedText = printedText.removeSuffix("...").dropLast(1) + "..."
-    lineWidth = font.getWidth(printedText)
+    lineWidth = sizedFont.getWidth(printedText)
   }
 
-  drawText(printedText, font, x, y, color)
+  drawText(printedText, sizedFont, x, y, color)
 }

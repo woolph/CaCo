@@ -8,7 +8,7 @@ import at.woolph.caco.icon.lazyIcon
 import at.woolph.caco.icon.lazySetIcon
 import at.woolph.caco.icon.mythicBinderLabelIconRenderer
 import at.woolph.utils.Uri
-import at.woolph.utils.pdf.Font
+import at.woolph.utils.io.asSink
 import at.woolph.utils.pdf.HorizontalAlignment
 import at.woolph.utils.pdf.pdfDocument
 import at.woolph.utils.pdf.dotsPerMillimeter
@@ -17,6 +17,8 @@ import at.woolph.utils.pdf.drawAsImageRight
 import at.woolph.utils.pdf.drawBorder
 import at.woolph.utils.pdf.drawText
 import at.woolph.utils.pdf.frame
+import at.woolph.utils.pdf.loadFont72Black
+import at.woolph.utils.pdf.loadFontPlanewalkerBold
 import java.awt.Color
 import java.nio.file.Path
 import org.apache.pdfbox.pdmodel.common.PDRectangle
@@ -106,7 +108,7 @@ class ReturnToCollectionBoxLabel(override val subtitle: String? = "Returning Des
 
 class AwaitingCollectionBoxLabel(index: Int, override val subtitle: String? = null) :
     OneSymbolBoxLabel {
-  override val title = "To Be Filed $index"
+  override val title = "To Be Filed ${index.toRoman()}"
   override val icon by lazySetIcon("ath", mythicBinderLabelIconRenderer)
 }
 
@@ -143,27 +145,25 @@ open class SubtitledDuplicateBoxLabel(
   }
 }
 
-fun <T, R> Lazy<T>.map(transform: (T) -> R): Lazy<R> = lazy { transform(value) }
 
 class DuplicateBoxLabel(vararg codes: String?) : SubtitledDuplicateBoxLabel(null, *codes)
 
 object PromoBoxLabel : MultipleSymbolBoxLabel {
   override val rows: Int = 1
   override val title: String = "DUP"
-  override val icons: List<ByteArray> by
-      lazySetIcon("star", mythicBinderLabelIconRenderer).map { listOfNotNull(it) }
+  override val icons: List<ByteArray> by lazy {
+    listOfNotNull(lazySetIcon("star", mythicBinderLabelIconRenderer).value)
+  }
 }
 
 class BoxLabels {
   fun printLabel(file: Path, labels: List<BoxLabel>) {
     transaction {
-      pdfDocument(file.createParentDirectories().outputStream()) {
+      pdfDocument(file.createParentDirectories().asSink()) {
         val fontColor = Color.BLACK
 
-        val fontFamilyPlanewalker =
-          loadType0Font(javaClass.getResourceAsStream("/fonts/PlanewalkerBold-xZj5.ttf")!!)
-        val fontFamily72Black =
-          loadType0Font(javaClass.getResourceAsStream("/fonts/72-Black.ttf")!!)
+        val fontFamilyPlanewalker = loadFontPlanewalkerBold()
+        val fontFamily72Black = loadFont72Black()
 
         val pageFormat = PDRectangle.A4
 
@@ -181,9 +181,9 @@ class BoxLabels {
 
         val bannerHeight = 15f * dotsPerMillimeter - margin
 
-        val fontCode = Font(fontFamilyPlanewalker, bannerHeight * 0.7f)
-        val fontCode2 = Font(fontFamily72Black, bannerHeight * 0.7f)
-        val fontSubtitle = Font(fontFamilyPlanewalker, 6f)
+        val sizedFontCode = fontFamilyPlanewalker.withSize( bannerHeight * 0.7f)
+        val sizedFontCode2 = fontFamily72Black.withSize(bannerHeight * 0.7f)
+        val sizedFontSubtitle = fontFamilyPlanewalker.withSize(6f)
 
         val desiredHeight = bannerHeight * 0.8f
         val maximumIconWidth = desiredHeight
@@ -214,10 +214,10 @@ class BoxLabels {
                       is OneSymbolBoxLabel -> {
                         drawText(
                           columnItem.title,
-                          fontCode,
+                          sizedFontCode,
                           HorizontalAlignment.LEFT,
                           maximumIconWidth + defaultGapSize,
-                          box.height + fontCode.descent,
+                          box.height + sizedFontCode.descent,
                           fontColor,
                         )
                         columnItem.icon?.let {
@@ -232,10 +232,10 @@ class BoxLabels {
                         columnItem.subtitle?.let {
                           drawText(
                             it,
-                            fontSubtitle,
+                            sizedFontSubtitle,
                             HorizontalAlignment.LEFT,
                             maximumIconWidth + defaultGapSize + 8f,
-                            box.height + fontSubtitle.descent + 2f,
+                            box.height + sizedFontSubtitle.descent + 2f,
                             fontColor,
                           )
                         }
@@ -244,10 +244,10 @@ class BoxLabels {
                       is DualSymbolBoxLabel -> {
                         drawText(
                           columnItem.title,
-                          fontCode,
+                          sizedFontCode,
                           HorizontalAlignment.LEFT,
                           maximumIconWidth + defaultGapSize,
-                          box.height + fontCode.descent,
+                          box.height + sizedFontCode.descent,
                           fontColor,
                         )
                         columnItem.icon?.let {
@@ -271,10 +271,10 @@ class BoxLabels {
                         columnItem.subtitle?.let {
                           drawText(
                             it,
-                            fontSubtitle,
+                            sizedFontSubtitle,
                             HorizontalAlignment.LEFT,
                             maximumIconWidth + defaultGapSize + 8f,
-                            box.height + fontSubtitle.descent + 2f,
+                            box.height + sizedFontSubtitle.descent + 2f,
                             fontColor,
                           )
                         }
@@ -283,13 +283,13 @@ class BoxLabels {
                       is MultipleSymbolBoxLabel -> {
                         drawText(
                           columnItem.title,
-                          fontCode2,
+                          sizedFontCode2,
                           HorizontalAlignment.LEFT,
                           0f,
-                          box.height + fontCode.descent + 2f,
+                          box.height + sizedFontCode.descent + 2f,
                           fontColor,
                         )
-                        val width = fontCode2.getWidth(columnItem.title) + defaultGapSize
+                        val width = sizedFontCode2.getWidth(columnItem.title) + defaultGapSize
 
                         val iconHeight = desiredHeight / columnItem.rows
                         val iconWidth = maximumIconWidth / columnItem.rows
@@ -318,10 +318,10 @@ class BoxLabels {
                         columnItem.subtitle?.let {
                           drawText(
                             it,
-                            fontSubtitle,
+                            sizedFontSubtitle,
                             HorizontalAlignment.LEFT,
                             8f,
-                            box.height + fontSubtitle.descent + 2f,
+                            box.height + sizedFontSubtitle.descent + 2f,
                             fontColor,
                           )
                         }
@@ -338,46 +338,68 @@ class BoxLabels {
   }
 }
 
+fun Number.toRoman(): String = toRoman("", toInt())
+
+internal tailrec fun toRoman(romanLiteral: String, remainingNumber: Int): String {
+  val (newRomanLiteral, newRemainingNumber) = when {
+    remainingNumber >= 1000 -> "M" to (remainingNumber - 1000)
+    remainingNumber >= 900 -> "CM" to (remainingNumber - 900)
+    remainingNumber >= 500 -> "D" to (remainingNumber - 500)
+    remainingNumber >= 400 -> "CD" to (remainingNumber - 400)
+    remainingNumber >= 100 -> "C" to (remainingNumber - 100)
+    remainingNumber >= 90 -> "XC" to (remainingNumber - 90)
+    remainingNumber >= 50 -> "L" to (remainingNumber - 50)
+    remainingNumber >= 40 -> "XL" to (remainingNumber - 40)
+    remainingNumber >= 10 -> "X" to (remainingNumber - 10)
+    remainingNumber >= 9 -> "IX" to (remainingNumber - 9)
+    remainingNumber >= 5 -> "V" to (remainingNumber - 5)
+    remainingNumber >= 4 -> "IV" to (remainingNumber - 4)
+    remainingNumber >= 1 -> "I" to (remainingNumber - 1)
+    else -> return romanLiteral
+  }
+
+  return toRoman(romanLiteral + newRomanLiteral, newRemainingNumber)
+}
+
 fun main() {
-  val romanNumerals =
-      mapOf(
-          1 to "I",
-          2 to "II",
-          3 to "III",
-          4 to "IV",
-          5 to "V",
-          6 to "VI",
-          7 to "VII",
-          8 to "VIII",
-          9 to "IX",
-          10 to "X",
-          11 to "XI",
-          12 to "XII",
-      )
+  repeat(1000) {
+    println("$it -> ${it.toRoman()}")
+  }
   Databases.init()
   BoxLabels()
       .printLabel(
           Path.of(".\\BoxLabels.pdf"),
           listOf(
+                  ArtSeriesLabel(),
                   PlanechaseBoxLabel(1),
                   PlanechaseBoxLabel(2),
+                  SnowCoveredBasicsAndWastes,
+                  ReturnToCollectionBoxLabel(),
+//                  AwaitingCollectionBoxLabel(1, "Older sets (w/o binder)"),
+//                  AwaitingCollectionBoxLabel(2, "Older sets (w/o binder)"),
+//                  AwaitingCollectionBoxLabel(3, "Older sets (w/o binder)"),
+//                  AwaitingCollectionBoxLabel(4, "Commander sets (w/o binder)"),
+//                  AwaitingCollectionBoxLabel(5, "Masters & Duel Decks"),
+                  AwaitingCatalogizationBoxLabel(
+                    subtitle = "Double-Sided Tokens, Lands, Promos, & Placeholder"
+                  ),
+                  object : GenericBoxLabel("Deck Building") {
+                    override val subtitle: String = "Commander"
+                    override val icon by lazySetIcon("cmd", mythicBinderLabelIconRenderer)
+                  },
+                  object : GenericBoxLabel("Deck Building") {
+                    override val subtitle: String = "Pioneer & Pauper"
+                  },
                   DuplicateBoxLabel("rix"),
                   DuplicateBoxLabel("rix", "kld", "aer", "akh", "hou"),
                   DuplicateBoxLabel("soi", "emn"),
-                  SubtitledDuplicateBoxLabel(subtitle = "Core Set 2021 Pt. I", "m21"),
-                  SubtitledDuplicateBoxLabel(subtitle = "Core Set 2021 Pt. II", "m21"),
+      //                  SubtitledDuplicateBoxLabel(subtitle = "Core Set 2021 Pt. I", "m21"),
+      //                  SubtitledDuplicateBoxLabel(subtitle = "Core Set 2021 Pt. II", "m21"),
                   DuplicateBoxLabel("mid"),
                   DuplicateBoxLabel("vow"),
                   DuplicateBoxLabel("neo"),
                   DuplicateBoxLabel("bbd"),
                   DuplicateBoxLabel("afr"),
-                  AwaitingCollectionBoxLabel(1, "Older sets (w/o binder)"),
-                  AwaitingCollectionBoxLabel(2, "Older sets (w/o binder)"),
-                  AwaitingCollectionBoxLabel(3, "Older sets (w/o binder)"),
-                  AwaitingCollectionBoxLabel(4, "Commander sets (w/o binder)"),
-                  AwaitingCollectionBoxLabel(5, "Masters & Duel Decks"),
-                  SnowCoveredBasicsAndWastes,
-                  ArtSeriesLabel(),
                   SubtitledDuplicateBoxLabel(
                       subtitle = "Older Sets",
                       "por",
@@ -443,18 +465,10 @@ fun main() {
                       "vow",
                   ),
                   DuplicateBoxLabel("mh1", "mh2", "mh3"),
-                  object : GenericBoxLabel("Deck Building") {
-                    override val subtitle: String = "Commander"
-                    override val icon by lazySetIcon("cmd", mythicBinderLabelIconRenderer)
-                  },
-                  object : GenericBoxLabel("Deck Building") {
-                    override val subtitle: String = "Pioneer & Pauper"
-                  },
-                  AwaitingCatalogizationBoxLabel(
-                      subtitle = "Double-Sided Tokens, Lands, Promos, & Placeholder"
-                  ),
                   DuplicateBoxLabel("rvr", "inr"),
                   *listOf(
+                          "ecl",
+                          "eoe",
                           "tdm",
                           "dft",
                           "fdn",
@@ -483,11 +497,10 @@ fun main() {
                       .withIndex()
                       .map { (i, it) ->
                         SubtitledDuplicateBoxLabel(
-                            subtitle = "Standard Sets ${romanNumerals[i+1]}",
+                            subtitle = "Standard Sets ${(i+1).toRoman()}",
                             *it.toTypedArray(),
                         )
                       }
-                      .takeLast(1)
                       .toTypedArray(),
                   *listOf(
                           listOf(
@@ -563,7 +576,7 @@ fun main() {
                       .withIndex()
                       .map { (i, it) ->
                         CollectionBoxLabel(
-                            subtitle = "Standard Sets ${romanNumerals[i+1]}",
+                            subtitle = "Standard Sets ${(i+1).toRoman()}",
                             *it.toTypedArray(),
                         )
                       }
@@ -593,7 +606,7 @@ fun main() {
                       .withIndex()
                       .map { (i, it) ->
                         CollectionBoxLabel(
-                            subtitle = "Core & Master Sets ${romanNumerals[i+1]}",
+                            subtitle = "Core & Master Sets ${(i+1).toRoman()}",
                             *it.toTypedArray(),
                         )
                       }
@@ -631,7 +644,7 @@ fun main() {
                       .withIndex()
                       .map { (i, it) ->
                         CollectionBoxLabel(
-                            subtitle = "Duel Deck Sets ${romanNumerals[i+1]}",
+                            subtitle = "Duel Deck Sets ${(i+1).toRoman()}",
                             *it.toTypedArray(),
                         )
                       }
@@ -668,12 +681,13 @@ fun main() {
                       .withIndex()
                       .map { (i, it) ->
                         CollectionBoxLabel(
-                            subtitle = "Commander & Misc Sets ${romanNumerals[i+1]}",
+                            subtitle = "Commander & Misc Sets ${(i+1).toRoman()}",
                             *it.toTypedArray(),
                         )
                       }
                       .toTypedArray(),
                   *listOf(
+                          "eoc",
                           "tdc",
                           "drc",
                           "fdc",
@@ -700,26 +714,35 @@ fun main() {
                       .withIndex()
                       .map { (i, it) ->
                         SubtitledDuplicateBoxLabel(
-                            subtitle = "Commander Sets ${romanNumerals[i+2]}",
+                            subtitle = "Commander Sets ${(i+1).toRoman()}",
                             *it.toTypedArray(),
                         )
                       }
                       .takeLast(1)
                       .toTypedArray(),
-                  ReturnToCollectionBoxLabel(),
                   DuplicateBoxLabel("tsr", "dmr"),
-                  SubtitledDuplicateBoxLabel(
-                      subtitle = "UB Sets",
-                      "pip",
-                      "who",
-                      "40k",
-                      "acr",
-                      "ltr",
-                      "ltc",
-                      "fin",
-                      "fic",
-                  ),
-              )
-              .takeLast(12),
+                  *listOf(
+                    "pip",
+                    "who",
+                    "40k",
+                    "acr",
+                    "ltr",
+                    "ltc",
+                    "fin",
+                    "fic",
+                    "spm",
+                    "tla",
+                    "tmt",
+                  )
+                    .chunked(12)
+                    .withIndex()
+                    .map { (i, it) ->
+                      SubtitledDuplicateBoxLabel(
+                        subtitle = "UB Sets ${(i+1).toRoman()}",
+                        *it.toTypedArray(),
+                      )
+                    }
+                    .toTypedArray(),
+              ),
       )
 }

@@ -8,7 +8,7 @@ import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.SingleSetBlock
 import at.woolph.caco.icon.lazySetIcon
 import at.woolph.caco.icon.mythicBinderLabelIconRenderer
-import at.woolph.utils.pdf.Font
+import at.woolph.utils.io.asSink
 import at.woolph.utils.pdf.HorizontalAlignment
 import at.woolph.utils.pdf.pdfDocument
 import at.woolph.utils.pdf.dotsPerMillimeter
@@ -17,13 +17,13 @@ import at.woolph.utils.pdf.drawAsImageLeft
 import at.woolph.utils.pdf.drawBorder
 import at.woolph.utils.pdf.drawText
 import at.woolph.utils.pdf.frame
+import at.woolph.utils.pdf.loadFont72Black
+import at.woolph.utils.pdf.loadFontPlanewalkerBold
 import java.awt.Color
 import java.nio.file.Path
 import org.apache.pdfbox.pdmodel.common.PDRectangle
-import org.apache.pdfbox.pdmodel.font.PDType0Font
 import org.jetbrains.exposed.sql.transactions.transaction
 import kotlin.io.path.createParentDirectories
-import kotlin.io.path.outputStream
 
 interface CollectionDivider {
   val title: String
@@ -101,12 +101,10 @@ class PileSeparators {
               is MultiSetBlock -> BlockCollectionDivider(it.blockName, it.sets.map { it.code })
             }
           }
-      pdfDocument(Path.of(file).createParentDirectories().outputStream()) {
+      pdfDocument(Path.of(file).createParentDirectories().asSink()) {
         val fontColor = Color.BLACK
-        val fontFamilyPlanewalker =
-          loadType0Font(javaClass.getResourceAsStream("/fonts/PlanewalkerBold-xZj5.ttf")!!)
-        val fontFamily72Black =
-          PDType0Font.load(this.document, javaClass.getResourceAsStream("/fonts/72-Black.ttf"))
+        val fontFamilyPlanewalker = loadFontPlanewalkerBold()
+        val fontFamily72Black = loadFont72Black()
 
         val pageFormat = PDRectangle(PDRectangle.A4.height, PDRectangle.A4.width)
 
@@ -124,8 +122,8 @@ class PileSeparators {
 
         val bannerHeight = rowHeight - magicCardHeight - margin
 
-        val fontCode = Font(fontFamily72Black, bannerHeight * 0.9f)
-        val fontCode2 = Font(fontFamilyPlanewalker, 8f)
+        val sizedFontCode = fontFamily72Black.withSize(bannerHeight * 0.9f)
+        val sizedFontCode2 = fontFamilyPlanewalker.withSize(8f)
 
         val maximumWidth = columnWidth - 2 * margin
         val desiredHeight = bannerHeight * 0.9f
@@ -151,18 +149,18 @@ class PileSeparators {
                       is OneSymbolCollectionDivider -> {
                         drawText(
                           columnItem.title,
-                          fontCode2,
+                          sizedFontCode2,
                           HorizontalAlignment.CENTER,
                           0f,
-                          desiredHeight + fontCode2.height,
+                          desiredHeight + sizedFontCode2.height,
                           fontColor,
                         )
                         drawText(
                           columnItem.code.uppercase(),
-                          fontCode,
+                          sizedFontCode,
                           HorizontalAlignment.CENTER,
                           0f,
-                          fontCode.height,
+                          sizedFontCode.height,
                           fontColor,
                         )
                         columnItem.icon?.let {
@@ -176,10 +174,10 @@ class PileSeparators {
                       is MultipleSymbolCollectionDivider -> {
                         drawText(
                           columnItem.title,
-                          fontCode2,
+                          sizedFontCode2,
                           HorizontalAlignment.CENTER,
                           0f,
-                          desiredHeight + fontCode2.height,
+                          desiredHeight + sizedFontCode2.height,
                           fontColor,
                         )
                         val start =

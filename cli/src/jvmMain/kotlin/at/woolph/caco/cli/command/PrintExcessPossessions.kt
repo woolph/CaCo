@@ -6,13 +6,14 @@ import at.woolph.caco.datamodel.sets.Finish
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.lib.clikt.SuspendingTransactionCliktCommand
 import at.woolph.lib.clikt.prompt
-import at.woolph.utils.pdf.Font
+import at.woolph.utils.io.asSink
 import at.woolph.utils.pdf.HorizontalAlignment
 import at.woolph.utils.pdf.columns
 import at.woolph.utils.pdf.pdfDocument
 import at.woolph.utils.pdf.drawText
 import at.woolph.utils.pdf.frame
 import at.woolph.utils.pdf.framePagePosition
+import at.woolph.utils.pdf.loadHelveticaBold
 import com.github.ajalt.clikt.core.terminal
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.convert
@@ -31,11 +32,8 @@ import java.awt.Color
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import org.apache.pdfbox.pdmodel.common.PDRectangle
-import org.apache.pdfbox.pdmodel.font.PDType1Font
-import org.apache.pdfbox.pdmodel.font.Standard14Fonts
 import org.jetbrains.exposed.sql.transactions.transaction
 import kotlin.io.path.createParentDirectories
-import kotlin.io.path.outputStream
 
 class PrintExcessPossessions : SuspendingTransactionCliktCommand(name = "excess") {
   val output by option("--output", "-o").path(canBeDir = false).required()
@@ -51,9 +49,9 @@ class PrintExcessPossessions : SuspendingTransactionCliktCommand(name = "excess"
           .prompt("Enter the set codes to be printed")
 
   override suspend fun runTransaction() = coroutineScope {
-    pdfDocument(output.createParentDirectories().outputStream()) {
-      val fontTitle = Font(PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 10f)
-      val fontLine = Font(PDType1Font(Standard14Fonts.FontName.HELVETICA), 6.0f)
+    pdfDocument(output.createParentDirectories().asSink()) {
+      val sizedFontTitle = loadHelveticaBold().withSize(10f)
+      val sizedFontLine = sizedFontTitle.withSize(6f)
       val progressBar =
         progressBarContextLayout<ScryfallCardSet?> {
           percentage()
@@ -82,7 +80,7 @@ class PrintExcessPossessions : SuspendingTransactionCliktCommand(name = "excess"
             framePagePosition(20f, 20f, 20f, 20f) {
               drawText(
                 "Inventory ${set.name} Page ${pageIndex + 1}",
-                fontTitle,
+                sizedFontTitle,
                 HorizontalAlignment.CENTER,
                 0f,
                 10f,
@@ -90,8 +88,8 @@ class PrintExcessPossessions : SuspendingTransactionCliktCommand(name = "excess"
               )
 
               // TODO calc metrics for all sets (so that formatting is the same for all pages)
-              frame(marginTop = fontTitle.height + 20f) {
-                columns(maxColumns, maxRows, 5f, 3.5f, fontLine) {
+              frame(marginTop = sizedFontTitle.height + 20f) {
+                columns(maxColumns, maxRows, 5f, 3.5f, sizedFontLine) {
                   var i = 0
                   items.forEach {
                     val wanted = 4

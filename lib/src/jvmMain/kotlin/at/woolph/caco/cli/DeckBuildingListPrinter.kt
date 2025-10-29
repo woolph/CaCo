@@ -6,11 +6,15 @@ import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.datamodel.sets.Cards
 import at.woolph.caco.datamodel.sets.Finish
 import at.woolph.caco.datamodel.sets.ScryfallCardSets
-import at.woolph.utils.pdf.Font
+import at.woolph.utils.io.asSink
+import at.woolph.utils.pdf.SizedFont
 import at.woolph.utils.pdf.HorizontalAlignment
 import at.woolph.utils.pdf.PDFDocument
 import at.woolph.utils.pdf.drawText
 import at.woolph.utils.pdf.frame
+import at.woolph.utils.pdf.loadFont72Black
+import at.woolph.utils.pdf.loadHelveticaOblique
+import at.woolph.utils.pdf.loadHelveticaRegular
 import at.woolph.utils.pdf.pdfDocument
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.font.PDType1Font
@@ -26,7 +30,7 @@ class DeckBuildingListPrinter {
   fun printList(decks: Collection<DeckList>, file: Path) {
     Databases.init()
 
-    pdfDocument(file.createParentDirectories().outputStream()) {
+    pdfDocument(file.createParentDirectories().asSink()) {
       decks.forEach { printListToDocument(it) }
     }
   }
@@ -35,11 +39,11 @@ class DeckBuildingListPrinter {
     val pageFormat = PDRectangle.A4
 
     val fontColor = Color.BLACK
-    val fontFamily72Black = loadType0Font(javaClass.getResourceAsStream("/fonts/72-Black.ttf")!!)
-    val fontTitle = Font(fontFamily72Black, 12f)
-    val fontCard = Font(PDType1Font(Standard14Fonts.FontName.HELVETICA), 8f)
-    val fontPrice = Font(PDType1Font(Standard14Fonts.FontName.HELVETICA_OBLIQUE), 8f)
-    val fontCode = Font(PDType1Font(Standard14Fonts.FontName.HELVETICA_OBLIQUE), 6f)
+    val fontFamily72Black = loadFont72Black()
+    val sizedFontTitle = fontFamily72Black.withSize(12f)
+    val sizedFontCard = loadHelveticaRegular().withSize(8f)
+    val sizedFontPrice = loadHelveticaOblique().withSize(8f)
+    val sizedFontCode = sizedFontPrice.withSize(6f)
 
     val basics =
       listOf(
@@ -142,10 +146,10 @@ class DeckBuildingListPrinter {
 
         drawText(
           "${deck.name} (${entries.totalPrice()})",
-          fontTitle,
+          sizedFontTitle,
           HorizontalAlignment.CENTER,
           0f,
-          fontTitle.height,
+          sizedFontTitle.height,
           fontColor,
         )
         columns.forEachIndexed { columnIndex, columnEntries ->
@@ -163,25 +167,25 @@ class DeckBuildingListPrinter {
 
               drawText(
                 "$amount $cardName",
-                fontCard,
+                sizedFontCard,
                 HorizontalAlignment.LEFT,
                 0f,
-                fontCard.totalHeight +
-                  line * (3.0f + fontCard.totalHeight + fontCode.totalHeight),
+                sizedFontCard.totalHeight +
+                  line * (3.0f + sizedFontCard.totalHeight + sizedFontCode.totalHeight),
                 fontColor,
               )
 
               drawText(
                 "(${cardPrice?.let { "\$%.2f".format(it) } ?: "$?,??"})",
-                fontPrice,
+                sizedFontPrice,
                 HorizontalAlignment.RIGHT,
                 -15f,
-                fontCard.totalHeight +
-                  line * (3.0f + fontCard.totalHeight + fontCode.totalHeight),
+                sizedFontCard.totalHeight +
+                  line * (3.0f + sizedFontCard.totalHeight + sizedFontCode.totalHeight),
                 fontColor,
               )
 
-              fontCode.adjustedTextToFitWidth(
+              sizedFontCode.adjustedTextToFitWidth(
                 cardSetsString,
                 columnWidth - 15f,
               ) { title, font ->
@@ -190,9 +194,9 @@ class DeckBuildingListPrinter {
                   font,
                   HorizontalAlignment.LEFT,
                   5f,
-                  fontCard.totalHeight +
-                    fontCode.totalHeight +
-                    line * (3.0f + fontCard.totalHeight + fontCode.totalHeight),
+                  sizedFontCard.totalHeight +
+                    sizedFontCode.totalHeight +
+                    line * (3.0f + sizedFontCard.totalHeight + sizedFontCode.totalHeight),
                   fontColor,
                 )
               }

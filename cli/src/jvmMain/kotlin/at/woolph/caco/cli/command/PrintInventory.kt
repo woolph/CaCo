@@ -5,7 +5,8 @@ import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.lib.clikt.SuspendingTransactionCliktCommand
 import at.woolph.lib.clikt.prompt
-import at.woolph.utils.pdf.Font
+import at.woolph.utils.io.asSink
+import at.woolph.utils.pdf.SizedFont
 import at.woolph.utils.pdf.HorizontalAlignment
 import at.woolph.utils.pdf.columns
 import at.woolph.utils.pdf.pdfDocument
@@ -50,9 +51,9 @@ class PrintInventory : SuspendingTransactionCliktCommand(name = "inventory") {
           .prompt("Enter the set codes to be printed")
 
   override suspend fun runTransaction() = coroutineScope {
-    pdfDocument(output.createParentDirectories().outputStream()) {
-      val fontTitle = Font(PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 10f)
-      val fontLine = Font(PDType1Font(Standard14Fonts.FontName.HELVETICA), 6.0f)
+    pdfDocument(output.createParentDirectories().asSink()) {
+      val sizedFontTitle = SizedFont(PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 10f)
+      val sizedFontLine = SizedFont(PDType1Font(Standard14Fonts.FontName.HELVETICA), 6.0f)
       val progressBar =
         progressBarContextLayout<ScryfallCardSet?> {
           percentage()
@@ -81,7 +82,7 @@ class PrintInventory : SuspendingTransactionCliktCommand(name = "inventory") {
             framePagePosition(20f, 20f, 20f, 20f) {
               drawText(
                 "Inventory ${set.name} Page ${pageIndex + 1}",
-                fontTitle,
+                sizedFontTitle,
                 HorizontalAlignment.CENTER,
                 0f,
                 10f,
@@ -89,8 +90,8 @@ class PrintInventory : SuspendingTransactionCliktCommand(name = "inventory") {
               )
 
               // TODO calc metrics for all sets (so that formatting is the same for all pages)
-              frame(marginTop = fontTitle.height + 20f) {
-                columns(maxColumns, maxRows, 5f, 3.5f, fontLine) {
+              frame(marginTop = sizedFontTitle.height + 20f) {
+                columns(maxColumns, maxRows, 5f, 3.5f, sizedFontLine) {
                   var i = 0
                   items.forEach {
                     val ownedCountEN = it.possessions.count { it.language == CardLanguage.ENGLISH }

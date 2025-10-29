@@ -1,4 +1,4 @@
-package at.woolph.caco.binderlabels
+package at.woolph.caco.labels.binder
 
 import at.woolph.caco.icon.lazySetIcon
 import at.woolph.caco.icon.mythicBinderLabelIconRenderer

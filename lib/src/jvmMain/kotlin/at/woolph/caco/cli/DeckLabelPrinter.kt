@@ -1,22 +1,24 @@
 /* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.cli
 
-import at.woolph.utils.pdf.Font
+import at.woolph.utils.io.asSink
 import at.woolph.utils.pdf.HorizontalAlignment
 import at.woolph.utils.pdf.VerticalAlignment
+import at.woolph.utils.pdf.dotsPerMillimeter
 import at.woolph.utils.pdf.drawBorder
 import at.woolph.utils.pdf.drawImage
 import at.woolph.utils.pdf.drawText
 import at.woolph.utils.pdf.frameRelative
-import at.woolph.utils.pdf.suspendingPdfDocument
+import at.woolph.utils.pdf.loadFont72Black
+import at.woolph.utils.pdf.loadHelveticaOblique
+import at.woolph.utils.pdf.loadHelveticaRegular
+import at.woolph.utils.pdf.pdfDocument
 import java.awt.Color
 import java.nio.file.Path
 import kotlin.io.path.createParentDirectories
 import kotlin.io.path.outputStream
 import kotlin.math.*
 import org.apache.pdfbox.pdmodel.common.PDRectangle
-import org.apache.pdfbox.pdmodel.font.PDType1Font
-import org.apache.pdfbox.pdmodel.font.Standard14Fonts
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject
 import qrcode.QRCode
 import qrcode.color.Colors
@@ -25,25 +27,23 @@ import qrcode.render.QRCodeGraphics
 
 class DeckBuildingListPrinter2 {
   // TODO exclude from list every CardPossession which is used for a deck
-  suspend fun printList(deckLink: String, name: String, file: Path) {
-    suspendingPdfDocument(file.createParentDirectories().outputStream()) {
+  fun printList(deckLink: String, name: String, file: Path) {
+    pdfDocument(file.createParentDirectories().asSink()) {
       val logoBytes =
         ClassLoader.getSystemResourceAsStream("images/gruul.png")?.readBytes() ?: ByteArray(0)
 
       val pageFormat = PDRectangle.A4
 
       val fontColor = Color.BLACK
-      val fontFamily72Black = loadType0Font(javaClass.getResourceAsStream("/fonts/72-Black.ttf")!!)
-      val fontTitle = Font(fontFamily72Black, 12f)
-      val fontCard = Font(PDType1Font(Standard14Fonts.FontName.HELVETICA), 8f)
-      val fontPrice = Font(PDType1Font(Standard14Fonts.FontName.HELVETICA_OBLIQUE), 8f)
-      val fontCode = Font(PDType1Font(Standard14Fonts.FontName.HELVETICA_OBLIQUE), 6f)
-
-      val POINTS_PER_MM = 2.8346457f
+      val fontFamily72Black = loadFont72Black()
+      val sizedFontTitle = fontFamily72Black.withSize(12f)
+      val sizedFontCard = loadHelveticaRegular().withSize(8f)
+      val sizedFontPrice = loadHelveticaOblique().withSize(8f)
+      val sizedFontCode = sizedFontPrice.withSize(6f)
 
       page(pageFormat) {
-        val labelWidth = 70 * POINTS_PER_MM
-        val labelHeight = 37 * POINTS_PER_MM
+        val labelWidth = 70 * dotsPerMillimeter
+        val labelHeight = 37 * dotsPerMillimeter
         frameRelative(
           HorizontalAlignment.LEFT,
           0f,
@@ -55,10 +55,10 @@ class DeckBuildingListPrinter2 {
           drawBorder(1f, Color.BLACK)
           drawText(
             name,
-            fontTitle,
+            sizedFontTitle,
             HorizontalAlignment.CENTER,
             0f,
-            fontTitle.height,
+            sizedFontTitle.height,
             fontColor,
           )
 
@@ -127,7 +127,7 @@ class DeckBuildingListPrinter2 {
   }
 }
 
-suspend fun main() {
+fun main() {
   sequenceOf(
           "https://archidekt.com/decks/8175415/erinis_ponza" to "Erinis Gruul Ponza",
       )

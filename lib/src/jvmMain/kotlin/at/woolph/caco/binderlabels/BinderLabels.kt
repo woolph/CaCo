@@ -1,13 +1,18 @@
 /* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.binderlabels
 
-import arrow.core.getOrElse
 import at.woolph.caco.datamodel.sets.IScryfallCardSet
 import at.woolph.caco.datamodel.sets.MultiSetBlock
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.ScryfallCardSets
 import at.woolph.caco.datamodel.sets.SingleSetBlock
-import at.woolph.utils.pdf.Font
+import at.woolph.caco.labels.binder.AbstractLabelItem
+import at.woolph.caco.labels.binder.GenericLabel
+import at.woolph.caco.labels.binder.MapLabelItem
+import at.woolph.caco.labels.binder.MultiSetBlockLabel
+import at.woolph.caco.labels.binder.PromosLabel
+import at.woolph.utils.io.asSink
+import at.woolph.utils.io.createParentDirectories
 import at.woolph.utils.pdf.HorizontalAlignment
 import at.woolph.utils.pdf.pdfDocument
 import at.woolph.utils.pdf.paginatedColumnedContent
@@ -16,13 +21,15 @@ import at.woolph.utils.pdf.drawBackground
 import at.woolph.utils.pdf.drawBorder
 import at.woolph.utils.pdf.drawText
 import at.woolph.utils.pdf.frame
+import at.woolph.utils.pdf.loadFont72Black
+import at.woolph.utils.pdf.loadFontPlanewalkerBold
+import at.woolph.utils.pdf.loadPlantinItalic
+import kotlinx.io.files.Path
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.awt.Color
-import java.nio.file.Path
 import kotlin.io.path.createParentDirectories
-import kotlin.io.path.outputStream
 
 fun fetchCardSets(codes: Iterable<String>): List<ScryfallCardSet> = transaction {
   codes.map { code ->
@@ -104,24 +111,24 @@ fun determineBinderLabels(thresholdTooMuchPages: Int, thresholdTooFewPages: Int)
     }
 
 fun printBinderLabel(file: Path, labels: List<MapLabelItem>, labelsPerPage: Int) {
-  pdfDocument(file.createParentDirectories().outputStream()) {
+  pdfDocument(file.createParentDirectories().asSink()) {
     val fontColor = Color.BLACK
     val subTitleFontColor = Color.GRAY
     val backgroundColor: Color? = null
 
-    val mtgLogo = createFromFile(Path.of("./assets/images/mtg.png"))
+    val mtgLogo = createFromPath(Path("./assets/images/mtg.png"))
 
-    val fontFamilyPlanewalker = loadType0Font("/fonts/planewalker-bold.ttf").getOrElse { throw it }
-    val fontPlantin = loadType0Font("/fonts/mplantin-italic.ttf").getOrElse { throw it }
-    val fontFamily72Black = loadType0Font("/fonts/72-Black.ttf").getOrElse { throw it }
+    val fontFamilyPlanewalker = loadFontPlanewalkerBold()
+    val fontPlantin = loadPlantinItalic()
+    val fontFamily72Black = loadFont72Black()
 
     val pageFormat = PDRectangle.A4
     val columnWidth = pageFormat.width / labelsPerPage
 
-    val fontTitle = Font(fontFamilyPlanewalker, columnWidth * 0.5f)
-    val fontSubTitle = Font(fontPlantin, columnWidth * 0.14f)
-    val fontCode = Font(fontFamily72Black, columnWidth * 0.28f)
-    val fontCodeCommanderSubset = Font(fontFamily72Black, columnWidth * 0.14f)
+    val sizedFontTitle = fontFamilyPlanewalker.withSize(columnWidth * 0.5f)
+    val sizedFontSubTitle = fontPlantin.withSize(columnWidth * 0.14f)
+    val sizedFontCode = fontFamily72Black.withSize(columnWidth * 0.28f)
+    val sizedFontCodeCommanderSubset = fontFamily72Black.withSize(columnWidth * 0.14f)
 
     val margin = 12f
 
@@ -135,13 +142,13 @@ fun printBinderLabel(file: Path, labels: List<MapLabelItem>, labelsPerPage: Int)
 
     val defaultGapSize = 5f
     val mainIconYPos = 0f
-    val codeYPos = mainIconYPos + desiredHeight + fontCode.totalHeight + defaultGapSize
-    val subCodeYPos = codeYPos + fontCodeCommanderSubset.totalHeight
+    val codeYPos = mainIconYPos + desiredHeight + sizedFontCode.totalHeight + defaultGapSize
+    val subCodeYPos = codeYPos + sizedFontCodeCommanderSubset.totalHeight
 
     val setDivHeight =
       desiredHeight +
-        fontCode.totalHeight +
-        fontCodeCommanderSubset.totalHeight +
+        sizedFontCode.totalHeight +
+        sizedFontCodeCommanderSubset.totalHeight +
         defaultGapSize
     val setDivYPos = maximumHeight - setDivHeight
 
@@ -171,13 +178,13 @@ fun printBinderLabel(file: Path, labels: List<MapLabelItem>, labelsPerPage: Int)
             magicLogoYPosition,
           )
 
-          fontTitle.adjustedTextToFitWidth(
+          sizedFontTitle.adjustedTextToFitWidth(
             set.title,
             maxTitleWidth,
           ) { title, font ->
               val titleXPosition = (maximumWidth + font.height) * 0.5f
 
-              fontSubTitle.adjustedTextToFitWidth(
+              sizedFontSubTitle.adjustedTextToFitWidth(
                 set.subTitle,
                 maxTitleWidth,
               ) { subTitle, subTitleFont ->
@@ -198,7 +205,7 @@ fun printBinderLabel(file: Path, labels: List<MapLabelItem>, labelsPerPage: Int)
           frame(0f, setDivYPos, 0f, 0f) {
             drawText(
               set.code.uppercase(),
-              fontCode,
+              sizedFontCode,
               HorizontalAlignment.CENTER,
               0f,
               codeYPos,
@@ -208,7 +215,7 @@ fun printBinderLabel(file: Path, labels: List<MapLabelItem>, labelsPerPage: Int)
             set.subCode?.let { subCode ->
               drawText(
                 subCode.uppercase(),
-                fontCodeCommanderSubset,
+                sizedFontCodeCommanderSubset,
                 HorizontalAlignment.CENTER,
                 0f,
                 subCodeYPos,
@@ -220,6 +227,7 @@ fun printBinderLabel(file: Path, labels: List<MapLabelItem>, labelsPerPage: Int)
             val desiredHeightSub = 20f
             val xOffsetIcons = 27f
             val yOffsetIcons = mainIconYPos + desiredHeight - 15f
+
 
             set.subIconRight?.let {
               drawAsImageCentered(

@@ -1,4 +1,4 @@
-package at.woolph.caco.binderlabels
+package at.woolph.caco.labels.binder
 
 interface MapLabelItem {
   val code: String

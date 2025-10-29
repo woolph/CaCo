@@ -5,6 +5,7 @@ import at.woolph.caco.binderlabels.determineBinderLabels
 import at.woolph.caco.binderlabels.printBinderLabel
 import at.woolph.lib.clikt.SuspendingTransactionCliktCommand
 import at.woolph.lib.clikt.prompt
+import at.woolph.utils.io.toKotlinxPath
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.multiple
 import com.github.ajalt.clikt.parameters.options.option
@@ -25,7 +26,7 @@ class PrintCollectionBinderLabels : SuspendingTransactionCliktCommand(name = "bi
     )
 
     printBinderLabel(
-        file = output,
+        file = output.toKotlinxPath(),
         labels = labels.toList(),
         labelsPerPage = 5, // TODO parameterize
       )

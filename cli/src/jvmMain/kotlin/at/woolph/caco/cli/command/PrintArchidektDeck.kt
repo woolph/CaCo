@@ -55,6 +55,7 @@ class PrintArchidektDeck : SuspendingCliktCommand(name = "archidekt-deck") {
     decklistPrinter.print(
         listOf(ArchidektDeckImporter(ProgressTrackerWrapper(progress)).importDeck(deckId))
     )
+    terminal.println("done with printing $deckId")
 
     job.cancel("everything is done")
   }
