@@ -7,7 +7,6 @@ import at.woolph.caco.datamodel.sets.Cards
 import at.woolph.caco.datamodel.sets.Finish
 import at.woolph.caco.datamodel.sets.ScryfallCardSets
 import at.woolph.utils.io.asSink
-import at.woolph.utils.pdf.SizedFont
 import at.woolph.utils.pdf.HorizontalAlignment
 import at.woolph.utils.pdf.PDFDocument
 import at.woolph.utils.pdf.drawText
@@ -17,13 +16,10 @@ import at.woolph.utils.pdf.loadHelveticaOblique
 import at.woolph.utils.pdf.loadHelveticaRegular
 import at.woolph.utils.pdf.pdfDocument
 import org.apache.pdfbox.pdmodel.common.PDRectangle
-import org.apache.pdfbox.pdmodel.font.PDType1Font
-import org.apache.pdfbox.pdmodel.font.Standard14Fonts
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.awt.Color
 import java.nio.file.Path
 import kotlin.io.path.createParentDirectories
-import kotlin.io.path.outputStream
 
 class DeckBuildingListPrinter {
   // TODO exclude from list every CardPossession which is used for a deck
@@ -99,7 +95,7 @@ class DeckBuildingListPrinter {
               val cardPrice =
                 Cards.select(Cards.price)
                   .where { (Cards.name match cardName) }
-                  .mapNotNull { it[Cards.price]?.toDouble() }
+                  .mapNotNull { it[Cards.price] }
                   .minOrNull()
               val cardSets =
                 CardPossessions.innerJoin(Cards)
@@ -115,7 +111,7 @@ class DeckBuildingListPrinter {
                       it[CardPossessions.finish]
                   }
                   .groupingBy { it.first }
-                  .aggregate { setCode, acc: Map<Finish, Int>?, element, first ->
+                  .aggregate { _, acc: Map<Finish, Int>?, element, first ->
                     if (first) mapOf(element.second to 1)
                     else
                       (acc ?: mapOf()) +

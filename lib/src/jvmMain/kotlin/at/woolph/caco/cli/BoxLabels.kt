@@ -19,12 +19,12 @@ import at.woolph.utils.pdf.drawText
 import at.woolph.utils.pdf.frame
 import at.woolph.utils.pdf.loadFont72Black
 import at.woolph.utils.pdf.loadFontPlanewalkerBold
+import at.woolph.utils.toRoman
 import java.awt.Color
 import java.nio.file.Path
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.jetbrains.exposed.sql.transactions.transaction
 import kotlin.io.path.createParentDirectories
-import kotlin.io.path.outputStream
 
 interface BoxLabel {
   val title: String
@@ -338,33 +338,7 @@ class BoxLabels {
   }
 }
 
-fun Number.toRoman(): String = toRoman("", toInt())
-
-internal tailrec fun toRoman(romanLiteral: String, remainingNumber: Int): String {
-  val (newRomanLiteral, newRemainingNumber) = when {
-    remainingNumber >= 1000 -> "M" to (remainingNumber - 1000)
-    remainingNumber >= 900 -> "CM" to (remainingNumber - 900)
-    remainingNumber >= 500 -> "D" to (remainingNumber - 500)
-    remainingNumber >= 400 -> "CD" to (remainingNumber - 400)
-    remainingNumber >= 100 -> "C" to (remainingNumber - 100)
-    remainingNumber >= 90 -> "XC" to (remainingNumber - 90)
-    remainingNumber >= 50 -> "L" to (remainingNumber - 50)
-    remainingNumber >= 40 -> "XL" to (remainingNumber - 40)
-    remainingNumber >= 10 -> "X" to (remainingNumber - 10)
-    remainingNumber >= 9 -> "IX" to (remainingNumber - 9)
-    remainingNumber >= 5 -> "V" to (remainingNumber - 5)
-    remainingNumber >= 4 -> "IV" to (remainingNumber - 4)
-    remainingNumber >= 1 -> "I" to (remainingNumber - 1)
-    else -> return romanLiteral
-  }
-
-  return toRoman(romanLiteral + newRomanLiteral, newRemainingNumber)
-}
-
 fun main() {
-  repeat(1000) {
-    println("$it -> ${it.toRoman()}")
-  }
   Databases.init()
   BoxLabels()
       .printLabel(

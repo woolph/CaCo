@@ -1,9 +1,6 @@
 [versions]
-jvmTarget = "21"
-javafx = "21"
 kotlin = "2.2.20"
 arrow = "2.0.1"
-doodle = "0.11.4"
 
 androidx-lifecycle = "2.9.4"
 composeHotReload = "1.0.0-beta07"
