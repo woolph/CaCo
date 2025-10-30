@@ -12,7 +12,7 @@ open class Node(
   val document: PDFDocument,
   val contentStream: PDPageContentStream,
   val box: PDRectangle,
-  val parentNode: Node? = null
+  val parentNode: Node? = null,
 ) {
   var currentCursorPosition = box.upperRightY
 }

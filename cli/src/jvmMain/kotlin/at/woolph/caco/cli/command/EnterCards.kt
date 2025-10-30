@@ -97,22 +97,22 @@ class EnterCards : SuspendingTransactionCliktCommand() {
       val cardPossessionUpdates = mutableMapOf<Pair<Card, Finish>, PossessionUpdate2>()
 
       lateinit var set: ScryfallCardSet
-      lateinit var prevSetNumber: String
+      lateinit var prevSetNumberAndFinish: Pair<String, Finish>
       var setCodeNumber =
           terminal.prompt("collector number (optional with setCode)")!!.also {
             stdinPrint.println(it)
           }
 
       while (setCodeNumber.isNotBlank()) {
-        fun add(setNumber: String) {
-          val finish =
-              when {
-                setNumber.endsWith("#") -> Finish.Etched
-                setNumber.endsWith("*") -> Finish.Foil
-                else -> Finish.Normal
-              }
-          val setNumber2 = setNumber.removeSuffix("*").removeSuffix("#")
-          val card = set.cards.firstOrNull { it.collectorNumber == setNumber2 }
+        fun extractSetNumberAndFinish(encodedSetNumber: String): Pair<String, Finish?> =
+          encodedSetNumber.removeSuffix("*").removeSuffix("#").removeSuffix("/") to when {
+            encodedSetNumber.endsWith("#") -> Finish.Etched
+            encodedSetNumber.endsWith("*") -> Finish.Foil
+            encodedSetNumber.endsWith("/") -> Finish.Normal
+            else -> Finish.Normal
+          }
+        fun add(setNumber: String, finish: Finish) {
+          val card = set.cards.firstOrNull { it.collectorNumber == setNumber }
           if (card != null) {
             echo(
                 "add ${set.code.uppercase()} #${card.collectorNumber} \"${card.name}\" ${if (finish != Finish.Normal) " in \u001B[38:5:0m\u001B[48:5:214mf\u001B[48:5:215mo\u001B[48:5:216mi\u001B[48:5:217ml\u001B[0m" else ""}",
@@ -130,19 +130,12 @@ class EnterCards : SuspendingTransactionCliktCommand() {
                   .increment()
             }
           } else {
-            terminal.danger("\u001b[31madd #${setNumber2} not found!\u001b[0m")
+            terminal.danger("\u001b[31madd #${setNumber} not found!\u001b[0m")
           }
         }
 
-        fun remove(setNumber: String) {
-          val finish =
-              when {
-                setNumber.endsWith("#") -> Finish.Etched
-                setNumber.endsWith("*") -> Finish.Foil
-                else -> Finish.Normal
-              }
-          val setNumber2 = setNumber.removeSuffix("*").removeSuffix("#")
-          val card = set.cards.first { it.collectorNumber == setNumber2 }
+        fun remove(setNumber: String, finish: Finish) {
+          val card = set.cards.first { it.collectorNumber == setNumber }
           echo(
               "removed #${card.collectorNumber} \"${card.name}\" ${if (finish != Finish.Normal) " in \u001B[38:5:0m\u001B[48:5:214mf\u001B[48:5:215mo\u001B[48:5:216mi\u001B[48:5:217ml\u001B[0m" else ""}",
               trailingNewline = false,
@@ -155,7 +148,7 @@ class EnterCards : SuspendingTransactionCliktCommand() {
 
         try {
           val tokens = setCodeNumber.split("#", limit = 2)
-          val (setCode, setNumber) =
+          val (setCode, encodedSetNumber) =
               if (tokens.size == 2) {
                 (ScryfallCardSet.findByCode(tokens[0].lowercase())
                     ?: throw IllegalArgumentException("unknown set ${tokens[0]}")) to tokens[1]
@@ -164,21 +157,26 @@ class EnterCards : SuspendingTransactionCliktCommand() {
               }
           set = setCode
 
-          prevSetNumber =
+          val (setNumber, finish) = extractSetNumberAndFinish(encodedSetNumber)
+          prevSetNumberAndFinish =
               when (setNumber) {
-                "+" -> {
-                  add(prevSetNumber)
-                  prevSetNumber
+                "++" -> {
+                  prevSetNumberAndFinish.first.toIntOrNull()?.let {
+                    "${it+1}" to (finish ?: prevSetNumberAndFinish.second)
+                  }?.also {
+                    add(it.first, it.second)
+                  } ?: prevSetNumberAndFinish.also {
+                    terminal.danger("couldn't increment the setNumber ${prevSetNumberAndFinish.first}")
+                  }
                 }
-
-                "-" -> {
-                  remove(prevSetNumber)
-                  prevSetNumber
+                "+" -> (prevSetNumberAndFinish.first to (finish ?: prevSetNumberAndFinish.second)).also {
+                  add(it.first, it.second)
                 }
-
-                else -> {
-                  add(setNumber)
-                  setNumber
+                "-" -> (prevSetNumberAndFinish.first to (finish ?: prevSetNumberAndFinish.second)).also {
+                  remove(it.first, it.second)
+                }
+                else -> (setNumber to (finish ?: Finish.Normal)).also {
+                  add(it.first, it.second)
                 }
               }
         } catch (e: Exception) {

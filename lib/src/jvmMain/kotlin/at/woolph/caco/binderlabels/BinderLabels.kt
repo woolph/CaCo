@@ -29,7 +29,6 @@ import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.awt.Color
-import kotlin.io.path.createParentDirectories
 
 fun fetchCardSets(codes: Iterable<String>): List<ScryfallCardSet> = transaction {
   codes.map { code ->

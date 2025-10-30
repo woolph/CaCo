@@ -35,7 +35,6 @@ import org.apache.pdfbox.pdmodel.font.PDType1Font
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts
 import org.jetbrains.exposed.sql.transactions.transaction
 import kotlin.io.path.createParentDirectories
-import kotlin.io.path.outputStream
 
 class PrintInventory : SuspendingTransactionCliktCommand(name = "inventory") {
   val output by option("--output", "-o").path(canBeDir = false).required()

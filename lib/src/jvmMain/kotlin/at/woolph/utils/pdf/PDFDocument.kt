@@ -4,7 +4,6 @@ import io.ktor.utils.io.core.writeFully
 import kotlinx.io.Buffer
 import kotlinx.io.Sink
 import kotlinx.io.Source
-import kotlinx.io.asInputStream
 import kotlinx.io.asOutputStream
 import kotlinx.io.buffered
 import kotlinx.io.files.SystemFileSystem
@@ -14,7 +13,6 @@ import org.apache.pdfbox.pdmodel.PDPage
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.font.PDType0Font
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject
-import java.nio.file.Path
 
 actual class PDFDocument internal constructor(
   val document: PDDocument,

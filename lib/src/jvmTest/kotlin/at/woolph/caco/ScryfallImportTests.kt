@@ -3,8 +3,8 @@ package at.woolph.caco /* Copyright 2025 Wolfgang Mayer */
 
 import at.woolph.caco.masterdata.import.ScryfallCard
 import at.woolph.caco.masterdata.import.ScryfallSet
-import at.woolph.caco.masterdata.import.jsonSerializer
 import at.woolph.caco.masterdata.import.paginatedDataRequest
+import at.woolph.utils.ktor.jsonSerializer
 import io.kotest.matchers.shouldBe
 import java.util.*
 import kotlin.test.Test
