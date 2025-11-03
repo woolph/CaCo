@@ -6,6 +6,7 @@ include(
   ":lib",
   ":cli",
   ":gui",
+  ":tornadofx2"
 )
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
