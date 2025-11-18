@@ -1,8 +1,7 @@
 /* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.decks
 
-import at.woolph.caco.masterdata.import.ProgressIndicator
-import at.woolph.caco.masterdata.import.updateProgressIndicator
+import at.woolph.utils.ProgressTracker
 import at.woolph.utils.ktor.useHttpClient
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -109,7 +108,7 @@ private val LOG = LoggerFactory.getLogger("at.woolph.caco.importer.deck")
 internal inline fun <reified P : Pageable<T>, reified T> paginatedDataRequest(
     initialQuery: String,
     optional: Boolean = false,
-    progressIndicator: ProgressIndicator? = null,
+    progressIndicator: ProgressTracker<String, Int>? = null,
 ): Flow<T> = flow {
   var currentQuery: String? = initialQuery
 
@@ -126,7 +125,7 @@ internal inline fun <reified P : Pageable<T>, reified T> paginatedDataRequest(
         emitAll(
             paginatedData
                 .contents()
-                .updateProgressIndicator(progressIndicator, paginatedData.totalItems)
+                .onEach { progressIndicator?.advance(1) }
         )
       } else {
         if (!optional)

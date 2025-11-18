@@ -6,7 +6,6 @@ plugins {
 group = "no.tornado"
 version = "2.0.0"
 
-
 repositories {
   mavenCentral()
 }

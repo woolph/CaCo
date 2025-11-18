@@ -5,7 +5,6 @@
     <option name="MAIN_CLASS_NAME" value="at.woolph.caco.gui.MainKt" />
     <module name="CaCo.gui.jvmMain" />
     <shortenClasspath name="NONE" />
-    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>

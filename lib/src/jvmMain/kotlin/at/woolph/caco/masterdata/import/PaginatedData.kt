@@ -2,6 +2,7 @@
 package at.woolph.caco.masterdata.import
 
 import at.woolph.caco.decks.Pageable
+import at.woolph.utils.ProgressTracker
 import at.woolph.utils.ktor.useHttpClient
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.isActive
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
@@ -41,7 +43,7 @@ private val LOG = LoggerFactory.getLogger("at.woolph.caco.masterdata.import.Pagi
 internal inline fun <reified T : ScryfallBase> paginatedDataRequest(
     initialQuery: String,
     optional: Boolean = false,
-    progressIndicator: ProgressIndicator? = null,
+    progressIndicator: ProgressTracker<String, Int>? = null,
 ): Flow<T> = flow {
   var currentQuery: String? = initialQuery
 
@@ -57,6 +59,7 @@ internal inline fun <reified T : ScryfallBase> paginatedDataRequest(
 
         emitAll(
             paginatedData.data.asFlow().filter { it.isValid() }
+              .onEach { progressIndicator?.advance(1) }
             //                    .onEach { LOG.trace("emitting $it") }
         )
       } else {

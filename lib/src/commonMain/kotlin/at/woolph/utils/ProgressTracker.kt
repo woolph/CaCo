@@ -6,4 +6,6 @@ interface ProgressTracker<Context, Unit : Number> {
   fun advance(units: Unit)
 
   fun setTotal(totalUnits: Unit)
+
+  fun finished()
 }

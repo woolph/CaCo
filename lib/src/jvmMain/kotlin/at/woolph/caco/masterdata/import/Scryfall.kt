@@ -1,10 +1,17 @@
 /* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.masterdata.import
 
+import arrow.core.Either
+import arrow.core.flatMap
+import at.woolph.caco.currency.CurrencyValue
 import at.woolph.caco.datamodel.sets.Card
+import at.woolph.caco.datamodel.sets.CardVariant
+import at.woolph.caco.datamodel.sets.Cards
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
+import at.woolph.caco.datamodel.sets.ScryfallCardSets
 import at.woolph.caco.datamodel.sets.SetType
 import at.woolph.utils.exposed.newOrUpdate
+import at.woolph.utils.ktor.jsonSerializer
 import at.woolph.utils.ktor.request
 import at.woolph.utils.ktor.useHttpClient
 import io.ktor.client.call.*
@@ -16,6 +23,9 @@ import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.decodeToSequence
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.slf4j.LoggerFactory
 import kotlin.uuid.Uuid
 
@@ -133,4 +143,132 @@ suspend fun downloadBulkData(type: String, block: suspend (InputStream) -> Unit)
   withContext(Dispatchers.IO) {
     bulkData.downloadUri.toURL().openConnection().getInputStream().use { block(it) }
   }
+}
+
+context(log: org.slf4j.Logger)
+suspend fun updateMasterDataFromBulkData(bulkDataInputStream: InputStream) {
+  val variant = mutableListOf<Pair<ScryfallCard, CardVariant.Type>>()
+
+  newSuspendedTransaction {
+    jsonSerializer
+      .decodeToSequence<ScryfallCard>(bulkDataInputStream)
+      .asFlow()
+      .filter(ScryfallCard::isImportWorthy)
+      .collect {
+        try {
+          when (val cardVariant = it.variant) {
+            null -> Card.newOrUpdate(it.id, it::update)
+            else -> variant.add(it to cardVariant)
+          }
+        } catch (t: ScryfallCard.SetNotInDatabaseException) {
+          if (t.setType != "memorabilia" || it.set in ScryfallSet.memorabiliaWhiteList) {
+            log.error("error while importing card ${it.name}: ${t.message}")
+          } else {
+            log.debug("not importing card ${it.name} cause set is not to be imported")
+          }
+        } catch (t: Throwable) {
+          log.error("error while importing card ${it.name}: ${t.message}")
+        }
+      }
+  }
+
+  newSuspendedTransaction {
+    variant.forEach { (scryfallCard, variantType) ->
+      determineOriginalCardFor(scryfallCard, variantType)
+        .onRight { originalCard ->
+          try {
+            CardVariant.newOrUpdate(scryfallCard.id) {
+              it.baseVariantCard = originalCard
+              it.variantType = variantType
+            }
+          } catch (e: org.jetbrains.exposed.exceptions.ExposedSQLException) {
+            log.error("error while importing variant card ${scryfallCard.id} ${scryfallCard.uri} ${scryfallCard.name} (which is considered to be a variant of type $variantType): ${e.message}")
+          }
+        }
+        .onLeft { t ->
+          log.error("error while determining the original card for ${scryfallCard.collector_number} ${scryfallCard.name} (which is considered to be a variant of type $variantType): ${t.message}")
+        }
+    }
+  }
+}
+
+internal fun determineOriginalCardFor(
+  it: ScryfallCard,
+  variantType: CardVariant.Type,
+) =
+  when (variantType) {
+    CardVariant.Type.TheList -> {
+      val (setCode, collectorNumber) = it.collector_number.split("-", limit = 2)
+      getOriginalCard(setCode.lowercase(), collectorNumber)
+    }
+    CardVariant.Type.PrereleaseStamped -> {
+      val collectorNumber =
+        it.collector_number.replace(PRERELEASE_STAMPED_REPLACEMENT_PATTERN, "")
+      val setCode = it.set.assumedSetCode(collectorNumber)
+      getOriginalCard(setCode, collectorNumber)
+    }
+    CardVariant.Type.PromopackStamped -> {
+      val collectorNumber =
+        it.collector_number.replace(PROMOPACK_STAMPED_REPLACEMENT_PATTERN, "")
+      val setCode = it.set.assumedSetCode(collectorNumber)
+      getOriginalCard(setCode, collectorNumber)
+    }
+  }
+
+internal fun getOriginalCard(
+  setCode: String,
+  collectorNumber: String,
+) =
+  getSetByCode(setCode).flatMap { set ->
+    Either.catch {
+      Card.find {
+        Cards.set eq set.id and (Cards.collectorNumber eq collectorNumber)
+      }
+        .single()
+    }
+      .mapLeft {
+        Exception(
+          "no unique card in set $set with collectorNumber $collectorNumber found",
+          it,
+        )
+      }
+  }
+
+internal fun getSetByCode(setCode: String) =
+  Either.catch {
+    ScryfallCardSet.find { ScryfallCardSets.code eq setCode }.single()
+  }
+    .mapLeft { Exception("no unique set with code $setCode found", it) }
+
+val PRERELEASE_STAMPED_REPLACEMENT_PATTERN = Regex("s(?=★?$)")
+val PROMOPACK_STAMPED_REPLACEMENT_PATTERN = Regex("p(?=★?$)")
+
+fun String.assumedSetCode(assumedCollectorNumber: String) =
+  if (assumedCollectorNumber.contains("★")) {
+    this
+  } else {
+    removePrefix("p")
+  }
+
+context(log: org.slf4j.Logger)
+suspend fun updateMasterDataPrice(bulkDataInputStream: InputStream) {
+  jsonSerializer
+    .decodeToSequence<ScryfallCard>(bulkDataInputStream)
+    .asFlow()
+    .filter(ScryfallCard::isImportWorthy)
+    .collect {
+      try {
+        Card.findByIdAndUpdate(it.id) { card ->
+          it.update(card)
+          card.cardmarketUri = it.purchase_uris["cardmarket"]
+
+          card.priceNormal = it.prices["eur"]?.toDouble()?.let { CurrencyValue.eur(it) }
+          card.priceFoil = it.prices["eur_foil"]?.toDouble()?.let { CurrencyValue.eur(it) }
+          //        it.priceEtched = prices["usd_etched"]?.toDouble()?.let {
+          // CurrencyValue.usd(it).exchangeTo(Currencies.EUR) }
+        }
+      } catch (t: Throwable) {
+        log.error("error while updating price for card ${it.name}")
+      }
+    }
 }

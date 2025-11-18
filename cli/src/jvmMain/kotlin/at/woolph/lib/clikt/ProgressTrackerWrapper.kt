@@ -19,4 +19,8 @@ class ProgressTrackerWrapper<Context, Unit : Number>(
   override fun setTotal(totalUnits: Unit) {
     coroutineProgressTaskAnimator.update { total = totalUnits.toLong() }
   }
+
+  override fun finished() {
+//    coroutineProgressTaskAnimator.update { = total}
+  }
 }

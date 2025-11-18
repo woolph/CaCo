@@ -1,14 +1,8 @@
 /* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.gui
 
-import androidx.compose.ui.window.Window
-import androidx.compose.ui.window.application
+import tornadofx.launch
 
-fun main() = application {
-  Window(
-      onCloseRequest = ::exitApplication,
-      title = "KotlinProject",
-  ) {
-    App()
-  }
+fun main(args: Array<String>) {
+  launch<MyApp>(args)
 }

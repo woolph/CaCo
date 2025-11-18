@@ -4,6 +4,7 @@ import kotlinx.io.Sink
 import kotlinx.io.buffered
 import kotlinx.io.files.FileSystem
 import kotlinx.io.files.SystemFileSystem
+import java.io.File
 import java.nio.file.Path
 
 fun kotlinx.io.files.Path.createParentDirectories(fileSystem: FileSystem = SystemFileSystem): kotlinx.io.files.Path = this.also {
@@ -14,6 +15,9 @@ fun kotlinx.io.files.Path.asSink(fileSystem: FileSystem = SystemFileSystem): Sin
   fileSystem.sink(this).buffered()
 
 fun Path.toKotlinxPath(): kotlinx.io.files.Path =
+  kotlinx.io.files.Path(toString())
+
+fun File.toKotlinxPath(): kotlinx.io.files.Path =
   kotlinx.io.files.Path(toString())
 
 fun Path.asSink(fileSystem: FileSystem = SystemFileSystem): Sink =
