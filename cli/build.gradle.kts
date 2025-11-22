@@ -37,19 +37,9 @@ kotlin {
       implementation("com.github.ajalt.mordant:mordant:3.0.2")
       implementation("com.github.ajalt.mordant:mordant-coroutines:3.0.2")
 
-//      implementation("co.touchlab:kermit:2.0.8")
-//      implementation("co.touchlab:kermit-koin:2.0.8")
-//
-//      implementation(project.dependencies.platform("io.insert-koin:koin-bom:4.1.1"))
-//      implementation("io.insert-koin:koin-core")
+      implementation("co.touchlab:kermit:2.0.8")
     }
     commonTest.dependencies { implementation(libs.kotlin.test) }
-
-    jvmMain.dependencies {
-      implementation("org.slf4j:slf4j-api:2.0.17")
-      implementation("org.slf4j:slf4j-ext:2.0.17")
-      runtimeOnly("ch.qos.logback:logback-classic:1.5.19")
-    }
 
     all {
       languageSettings.enableLanguageFeature("ContextParameters")

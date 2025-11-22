@@ -34,6 +34,7 @@ suspend fun main(args: Array<String>) =
           PrintPagePositions(),
           PrintMissingStats(),
           PrintMissing(),
+          PrintMissingCmd(),
           EnterCards(),
           PrintCollectionBinderLabels(),
         ),

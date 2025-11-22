@@ -11,7 +11,7 @@ import com.github.ajalt.clikt.parameters.arguments.transformAll
 import com.github.ajalt.mordant.terminal.ConfirmationPrompt
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Prompt
-import java.util.*
+import java.util.Locale
 
 fun <T> ProcessedArgument<List<T>, T>.prompt(
     text: String? = null,

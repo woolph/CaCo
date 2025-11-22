@@ -1,6 +1,7 @@
 /* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.cli.command
 
+import at.woolph.caco.CacoLogger
 import at.woolph.caco.masterdata.import.downloadBulkData
 import at.woolph.caco.masterdata.import.importSets
 import at.woolph.caco.masterdata.import.updateMasterDataFromBulkData
@@ -15,7 +16,6 @@ import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransacti
 import java.io.InputStream
 import java.nio.file.Path
 import kotlin.io.path.inputStream
-import org.slf4j.LoggerFactory
 
 
 /** updates the masterdata from scryfall into the database */
@@ -61,6 +61,6 @@ class UpdateMasterdata: SuspendingCliktCommand(name = "update") {
   }
 
   companion object {
-    val log = LoggerFactory.getLogger(this::class.java.declaringClass)
+    val log = CacoLogger
   }
 }

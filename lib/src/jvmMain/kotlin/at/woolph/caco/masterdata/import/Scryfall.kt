@@ -14,6 +14,7 @@ import at.woolph.utils.exposed.newOrUpdate
 import at.woolph.utils.ktor.jsonSerializer
 import at.woolph.utils.ktor.request
 import at.woolph.utils.ktor.useHttpClient
+import co.touchlab.kermit.Logger
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -23,6 +24,7 @@ import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.decodeToSequence
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
@@ -145,7 +147,8 @@ suspend fun downloadBulkData(type: String, block: suspend (InputStream) -> Unit)
   }
 }
 
-context(log: org.slf4j.Logger)
+@OptIn(ExperimentalSerializationApi::class)
+context(log: Logger)
 suspend fun updateMasterDataFromBulkData(bulkDataInputStream: InputStream) {
   val variant = mutableListOf<Pair<ScryfallCard, CardVariant.Type>>()
 
@@ -162,12 +165,12 @@ suspend fun updateMasterDataFromBulkData(bulkDataInputStream: InputStream) {
           }
         } catch (t: ScryfallCard.SetNotInDatabaseException) {
           if (t.setType != "memorabilia" || it.set in ScryfallSet.memorabiliaWhiteList) {
-            log.error("error while importing card ${it.name}: ${t.message}")
+            log.e("error while importing card ${it.name}: ${t.message}")
           } else {
-            log.debug("not importing card ${it.name} cause set is not to be imported")
+            log.d("not importing card ${it.name} cause set is not to be imported")
           }
         } catch (t: Throwable) {
-          log.error("error while importing card ${it.name}: ${t.message}")
+          log.e("error while importing card ${it.name}: ${t.message}")
         }
       }
   }
@@ -182,11 +185,11 @@ suspend fun updateMasterDataFromBulkData(bulkDataInputStream: InputStream) {
               it.variantType = variantType
             }
           } catch (e: org.jetbrains.exposed.exceptions.ExposedSQLException) {
-            log.error("error while importing variant card ${scryfallCard.id} ${scryfallCard.uri} ${scryfallCard.name} (which is considered to be a variant of type $variantType): ${e.message}")
+            log.e("error while importing variant card ${scryfallCard.id} ${scryfallCard.uri} ${scryfallCard.name} (which is considered to be a variant of type $variantType): ${e.message}")
           }
         }
         .onLeft { t ->
-          log.error("error while determining the original card for ${scryfallCard.collector_number} ${scryfallCard.name} (which is considered to be a variant of type $variantType): ${t.message}")
+          log.e("error while determining the original card for ${scryfallCard.collector_number} ${scryfallCard.name} (which is considered to be a variant of type $variantType): ${t.message}")
         }
     }
   }
@@ -250,25 +253,26 @@ fun String.assumedSetCode(assumedCollectorNumber: String) =
     removePrefix("p")
   }
 
-context(log: org.slf4j.Logger)
+@OptIn(ExperimentalSerializationApi::class)
+context(log: Logger)
 suspend fun updateMasterDataPrice(bulkDataInputStream: InputStream) {
   jsonSerializer
     .decodeToSequence<ScryfallCard>(bulkDataInputStream)
     .asFlow()
     .filter(ScryfallCard::isImportWorthy)
-    .collect {
+    .collect { scryfallCard ->
       try {
-        Card.findByIdAndUpdate(it.id) { card ->
-          it.update(card)
-          card.cardmarketUri = it.purchase_uris["cardmarket"]
+        Card.findByIdAndUpdate(scryfallCard.id) { card ->
+          scryfallCard.update(card)
+          card.cardmarketUri = scryfallCard.purchase_uris["cardmarket"]
 
-          card.priceNormal = it.prices["eur"]?.toDouble()?.let { CurrencyValue.eur(it) }
-          card.priceFoil = it.prices["eur_foil"]?.toDouble()?.let { CurrencyValue.eur(it) }
-          //        it.priceEtched = prices["usd_etched"]?.toDouble()?.let {
+          card.priceNormal = scryfallCard.prices["eur"]?.toDouble()?.let { CurrencyValue.eur(it) }
+          card.priceFoil = scryfallCard.prices["eur_foil"]?.toDouble()?.let { CurrencyValue.eur(it) }
+          //        card.priceEtched = scryfallCard.prices["usd_etched"]?.toDouble()?.let {
           // CurrencyValue.usd(it).exchangeTo(Currencies.EUR) }
         }
       } catch (t: Throwable) {
-        log.error("error while updating price for card ${it.name}")
+        log.e("error while updating price for card ${scryfallCard.name}: ${t.message}")
       }
     }
 }

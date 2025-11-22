@@ -36,10 +36,7 @@ kotlin {
       implementation("io.ktor:ktor-serialization-kotlinx-json")
       api("org.jetbrains.kotlinx:kotlinx-io-core:0.8.0")
 
-//      implementation("co.touchlab:kermit:2.0.8")
-//      implementation("co.touchlab:kermit-koin:2.0.8")
-      implementation(project.dependencies.platform("io.insert-koin:koin-bom:4.1.1"))
-      implementation("io.insert-koin:koin-core")
+      implementation("co.touchlab:kermit:2.0.8")
     }
 
     commonTest.dependencies {
@@ -76,7 +73,6 @@ kotlin {
       implementation("io.github.g0dkar:qrcode-kotlin:4.2.0")
 
       implementation("org.slf4j:slf4j-api:2.0.17")
-//      implementation("org.slf4j:slf4j-ext:2.0.17")
     }
 
     jvmTest.dependencies {

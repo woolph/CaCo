@@ -2,6 +2,7 @@
 package at.woolph.caco.cli.command
 
 import arrow.core.raise.Raise
+import at.woolph.caco.CacoLogger
 import at.woolph.caco.collection.CollectionFileFormat
 import at.woolph.caco.collection.importArchidekt
 import at.woolph.caco.collection.importDeckbox
@@ -31,7 +32,7 @@ import org.slf4j.LoggerFactory
 class CollectionImport :
     RaiseCliktCommand<NoFileFoundError>(
         name = "import",
-        log = LoggerFactory.getLogger(CollectionImport::class.java),
+        log = CacoLogger,
     ) {
   val format by
       option("--format", "-f", help = "The format of import file")

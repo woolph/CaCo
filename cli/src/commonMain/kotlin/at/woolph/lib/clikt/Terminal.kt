@@ -3,9 +3,10 @@ package at.woolph.lib.clikt
 
 import at.woolph.caco.cli.DeckList
 import at.woolph.caco.decks.DecklistPrinter
+import com.github.ajalt.mordant.terminal.Terminal
 
 class TerminalDecklistPrinter(
-    val terminal: com.github.ajalt.mordant.terminal.Terminal,
+    val terminal: Terminal,
 ) : DecklistPrinter {
   override suspend fun print(decks: Collection<DeckList>) {
     decks.forEach { deck ->
