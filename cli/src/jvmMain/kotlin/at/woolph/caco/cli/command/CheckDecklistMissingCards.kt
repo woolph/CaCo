@@ -2,14 +2,15 @@
 package at.woolph.caco.cli.command
 
 import at.woolph.caco.cli.DeckListBuilder
-import at.woolph.caco.currency.CurrencyValue
+import at.woolph.utils.currency.CurrencyValue
 import at.woolph.caco.datamodel.decks.DeckZone
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.Cards
 import at.woolph.caco.datamodel.sets.Finish
 import com.github.ajalt.clikt.command.SuspendingCliktCommand
 import com.github.ajalt.clikt.core.terminal
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
+import org.jetbrains.exposed.v1.core.match
+import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 
 class CheckDecklistMissingCards : SuspendingCliktCommand(name = "check-deck") {
   override suspend fun run() {
@@ -58,7 +59,7 @@ class CheckDecklistMissingCards : SuspendingCliktCommand(name = "check-deck") {
         deckListBuilder
       }.build()
 
-    val neededCards = newSuspendedTransaction {
+    val neededCards = suspendTransaction {
       deckList.deckZones.filter { it.key.isPartOfDeck } .flatMap { (deckZone, cardList) ->
         cardList.mapNotNull { (cardName, amount) ->
           val cards = Card.find { Cards.name match cardName }

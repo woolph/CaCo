@@ -18,7 +18,7 @@ import at.woolph.utils.pdf.toPosition
 import kotlinx.coroutines.coroutineScope
 import kotlinx.io.files.Path
 import org.apache.pdfbox.pdmodel.common.PDRectangle
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import java.awt.Color
 
 class CollectionPagePreview(

@@ -4,9 +4,7 @@ package at.woolph.caco.masterdata.import
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.SetType
 import at.woolph.utils.Uri
-import java.net.URI
-import java.time.LocalDate
-import java.util.*
+import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

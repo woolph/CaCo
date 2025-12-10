@@ -32,7 +32,7 @@ import java.awt.Color
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import org.apache.pdfbox.pdmodel.common.PDRectangle
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import kotlin.io.path.createParentDirectories
 
 class PrintExcessPossessions : SuspendingTransactionCliktCommand(name = "excess") {

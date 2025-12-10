@@ -3,13 +3,12 @@ package at.woolph.caco.masterdata.import
 
 import arrow.core.Either
 import arrow.core.flatMap
-import at.woolph.caco.currency.CurrencyValue
+import at.woolph.utils.currency.CurrencyValue
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.CardVariant
 import at.woolph.caco.datamodel.sets.Cards
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.ScryfallCardSets
-import at.woolph.caco.datamodel.sets.SetType
 import at.woolph.utils.exposed.newOrUpdate
 import at.woolph.utils.ktor.jsonSerializer
 import at.woolph.utils.ktor.request
@@ -20,16 +19,16 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import java.io.InputStream
-import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.decodeToSequence
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
+import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 import org.slf4j.LoggerFactory
-import kotlin.uuid.Uuid
 
 private val LOG = LoggerFactory.getLogger("at.woolph.caco.importer.sets.Scryfall")
 
@@ -81,7 +80,7 @@ suspend fun ScryfallCardSet.reimport() =
 internal fun loadSetsFromScryfall(): Flow<ScryfallSet> =
     paginatedDataRequest<ScryfallSet>("https://api.scryfall.com/sets")
 
-fun importSets(): Flow<ScryfallCardSet> = flow {
+suspend fun importSets() {
   val (importWorthySets, _) = loadSetsFromScryfall().toList().partition(ScryfallSet::isImportWorthy)
 
   importWorthySets.forEach {
@@ -95,48 +94,46 @@ fun importSets(): Flow<ScryfallCardSet> = flow {
   }
 
   // FIXME ask scryfall to add these oversized dungeon tokens to their database
-  val afr = ScryfallCardSet.findByCode("afr") ?: throw Exception("set afr not found")
-  val oafrId = Uuid.parse("c954ce81-07b0-4881-b350-af3d7780ec22")
-  ScryfallCardSet.newOrUpdate(oafrId) { scryfallCardSet ->
-    scryfallCardSet.code = "oafr"
-    scryfallCardSet.name = "Adventures in the Forgotten Realms Oversized"
-    scryfallCardSet.parentSetCode = afr.code
-    scryfallCardSet.cardCount = 3
-    scryfallCardSet.digitalOnly = false
-    scryfallCardSet.type = SetType.TOKEN
-    scryfallCardSet.releaseDate = afr.releaseDate
-  }
-
-  mapOf(
-          "6f509dbe-6ec7-4438-ab36-e20be46c9922" to
-              "20665182-5b20-4bb7-8638-4bea6bcfabb3", // Dungeon of the Mad Mage
-          "59b11ff8-f118-4978-87dd-509dc0c8c932" to
-              "3377d60a-586d-4e59-8f6c-4c27664c1f40", // Lost Mine of Phandelver
-          "70b284bd-7a8f-4b60-8238-f746bdc5b236" to
-              "3ccf204e-8431-457c-aa3e-d0e2703f5a32", // Tomb of Annihilation
-      )
-      .forEach { (nonOversizedVersionId, oversizedVersionId) ->
-        val nonOversizedVersion = loadCard(nonOversizedVersionId)
-        val id0 = UUID.fromString(oversizedVersionId)
-        Card.newOrUpdate(id0) { card ->
-          nonOversizedVersion
-              .copy(
-                  oversized = true,
-                  id = id0,
-                  set = "oafr",
-                  set_id = oafrId,
-              )
-              .update(card)
-        }
-      }
+//  val afr = ScryfallCardSet.findByCode("afr") ?: throw Exception("set afr not found")
+//  val oafrId = Uuid.parse("c954ce81-07b0-4881-b350-af3d7780ec22")
+//  ScryfallCardSet.newOrUpdate(oafrId) { scryfallCardSet ->
+//    scryfallCardSet.code = "oafr"
+//    scryfallCardSet.name = "Adventures in the Forgotten Realms Oversized"
+//    scryfallCardSet.parentSetCode = afr.code
+//    scryfallCardSet.cardCount = 3
+//    scryfallCardSet.digitalOnly = false
+//    scryfallCardSet.type = SetType.TOKEN
+//    scryfallCardSet.releaseDate = afr.releaseDate
+//  }
+//
+//  mapOf(
+//          "6f509dbe-6ec7-4438-ab36-e20be46c9922" to
+//              "20665182-5b20-4bb7-8638-4bea6bcfabb3", // Dungeon of the Mad Mage
+//          "59b11ff8-f118-4978-87dd-509dc0c8c932" to
+//              "3377d60a-586d-4e59-8f6c-4c27664c1f40", // Lost Mine of Phandelver
+//          "70b284bd-7a8f-4b60-8238-f746bdc5b236" to
+//              "3ccf204e-8431-457c-aa3e-d0e2703f5a32", // Tomb of Annihilation
+//      )
+//      .forEach { (nonOversizedVersionId, oversizedVersionId) ->
+//        val nonOversizedVersion = loadCard(nonOversizedVersionId)
+//        val id0 = UUID.fromString(oversizedVersionId)
+//        Card.newOrUpdate(id0) { card ->
+//          nonOversizedVersion
+//              .copy(
+//                  oversized = true,
+//                  id = id0,
+//                  set = "oafr",
+//                  set_id = oafrId,
+//              )
+//              .update(card)
+//        }
+//      }
 
   // FIXME possessions of oversized dungeon cards are lost when importing to archidekt and
   // reimporting the archidekt export!!!!!
   // FIXME add oversized undercity dungeon
   // FIXME prerelease-stamped promo-stamped are lost when importing to archidekt and reimporting the
   // archidekt export!!!!! => add
-
-  emitAll(ScryfallCardSet.all().asFlow())
 }
 
 suspend fun downloadBulkData(type: String, block: suspend (InputStream) -> Unit) {
@@ -152,7 +149,7 @@ context(log: Logger)
 suspend fun updateMasterDataFromBulkData(bulkDataInputStream: InputStream) {
   val variant = mutableListOf<Pair<ScryfallCard, CardVariant.Type>>()
 
-  newSuspendedTransaction {
+  suspendTransaction {
     jsonSerializer
       .decodeToSequence<ScryfallCard>(bulkDataInputStream)
       .asFlow()
@@ -175,7 +172,7 @@ suspend fun updateMasterDataFromBulkData(bulkDataInputStream: InputStream) {
       }
   }
 
-  newSuspendedTransaction {
+  suspendTransaction {
     variant.forEach { (scryfallCard, variantType) ->
       determineOriginalCardFor(scryfallCard, variantType)
         .onRight { originalCard ->
@@ -184,7 +181,7 @@ suspend fun updateMasterDataFromBulkData(bulkDataInputStream: InputStream) {
               it.baseVariantCard = originalCard
               it.variantType = variantType
             }
-          } catch (e: org.jetbrains.exposed.exceptions.ExposedSQLException) {
+          } catch (e: ExposedSQLException) {
             log.e("error while importing variant card ${scryfallCard.id} ${scryfallCard.uri} ${scryfallCard.name} (which is considered to be a variant of type $variantType): ${e.message}")
           }
         }

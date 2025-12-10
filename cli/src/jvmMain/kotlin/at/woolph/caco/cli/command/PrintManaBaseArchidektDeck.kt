@@ -1,11 +1,12 @@
 /* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.cli.command
 
-import at.woolph.caco.cli.manabase.ColorIdentity
 import at.woolph.caco.cli.manabase.SelectionCriterion
 import at.woolph.caco.cli.manabase.generateManabase
 import at.woolph.caco.cli.manabase.toDecklistEntries
 import at.woolph.caco.cli.manabase.toDecklistEntryCards
+import at.woolph.caco.datamodel.ColorIdentity
+import at.woolph.caco.datamodel.decks.Format
 import at.woolph.caco.decks.ArchidektDeckImporter
 import at.woolph.lib.clikt.ProgressTrackerWrapper
 import com.github.ajalt.clikt.command.SuspendingCliktCommand
@@ -26,14 +27,14 @@ import com.github.ajalt.mordant.widgets.progress.timeRemaining
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
+import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 
 class PrintManaBaseArchidektDeck : SuspendingCliktCommand(name = "archidekt-manabase") {
   val deckId by option(help = "ID of the deck").int().required()
 
   val minBasicLandCount by option(help = "minBasicLandCount").int()
-  val basicLandTypeFactors by option(help = "basicLandTypeFactors").double().default(0.5)
-  val fastStartFactor by option(help = "fastStartFactor").double().default(0.8)
+  val basicLandTypeFactors by option(help = "basicLandTypeFactors").double().default(0.05)
+  val fastStartFactor by option(help = "fastStartFactor").double().default(1.2)
   val maxPricePerCard by option(help = "maxPricePerCard").double().default(Double.MAX_VALUE)
 
   override suspend fun run() = coroutineScope {
@@ -52,7 +53,7 @@ class PrintManaBaseArchidektDeck : SuspendingCliktCommand(name = "archidekt-mana
     job.cancel("everything is done")
     println()
 
-    newSuspendedTransaction {
+    suspendTransaction {
       val decklistCommandZone = deckList.commandZone.toDecklistEntries().toDecklistEntryCards()
       val decklistMainboard = deckList.mainboard.toDecklistEntries().toDecklistEntryCards()
 
@@ -73,6 +74,7 @@ class PrintManaBaseArchidektDeck : SuspendingCliktCommand(name = "archidekt-mana
       generateManabase(
               selectionCriterion,
               decklistCommandZone + decklistMainboard,
+              deckFormat = Format.Commander,
           )
           .forEach { println(it) }
     }

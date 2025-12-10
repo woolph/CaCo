@@ -26,6 +26,7 @@ kotlin {
     )
     optIn.addAll(
       "kotlin.uuid.ExperimentalUuidApi",
+      "kotlin.time.ExperimentalTime",
     )
   }
 
@@ -38,6 +39,9 @@ kotlin {
       implementation("com.github.ajalt.mordant:mordant-coroutines:3.0.2")
 
       implementation("co.touchlab:kermit:2.0.8")
+
+      implementation(project.dependencies.platform("org.jetbrains.exposed:exposed-bom:1.0.0-rc-4"))
+      implementation("org.jetbrains.exposed:exposed-jdbc")
     }
     commonTest.dependencies { implementation(libs.kotlin.test) }
 

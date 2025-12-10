@@ -9,7 +9,7 @@ import at.woolph.caco.datamodel.sets.*
 import at.woolph.utils.csv.CsvRecord
 import at.woolph.utils.csv.IntentionallySkippedException
 import kotlinx.io.files.Path
-import java.time.Instant
+import kotlin.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -22,8 +22,11 @@ import kotlin.text.removePrefix
 import kotlin.text.removeSuffix
 import kotlin.text.startsWith
 import kotlin.text.toInt
-import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.core.*
+import org.jetbrains.exposed.v1.jdbc.select
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import kotlin.time.Clock
+import kotlin.time.toKotlinInstant
 
 fun importSequenceDeckbox(
     file: Path,
@@ -54,8 +57,8 @@ fun Raise<Throwable>.mapDeckbox(
   knownSets: Map<String, String>,
 ): CardCollectionItem {
   val dateAdded =
-      nextLine["Last Updated"]?.let { DATE_FORMAT_DECKBOX.parse(it, Instant::from) }
-          ?: Instant.now()
+      nextLine["Last Updated"]?.let { DATE_FORMAT_DECKBOX.parse(it, java.time.Instant::from).toKotlinInstant() }
+          ?: Clock.System.now()
 
   val count = nextLine["Count"]!!.toInt()
   val (setCode, setName, isPromo, token, isTheListCard) =

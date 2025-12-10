@@ -5,7 +5,6 @@
     <module name="CaCo.cli.jvmMain" />
     <option name="PROGRAM_PARAMETERS" value="collection export --format=archidekt &quot;C:\Users\001121673\Downloads\archidekt.csv&quot;" />
     <shortenClasspath name="NONE" />
-    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>

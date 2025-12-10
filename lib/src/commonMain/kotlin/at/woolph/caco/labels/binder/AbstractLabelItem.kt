@@ -1,11 +1,11 @@
 package at.woolph.caco.labels.binder
 
-import at.woolph.caco.datamodel.sets.IScryfallCardSet
+import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.icon.lazyIconMythic
 import at.woolph.caco.icon.lazyIconUncommon
 
 open class AbstractLabelItem(
-  val sets: List<IScryfallCardSet>,
+  val sets: List<ScryfallCardSet>,
 ) : MapLabelItem {
   override val title: String
     get() = sets[0].name
@@ -27,7 +27,7 @@ open class AbstractLabelItem(
   override val subCode: String
     get() = sets.drop(1).joinToString("/") { it.code }
 
-  private val setsWithDistinctIcons: List<IScryfallCardSet> = sets.distinctBy { it.icon }
+  private val setsWithDistinctIcons: List<ScryfallCardSet> = sets.distinctBy { it.icon }
   override val mainIcon: ByteArray? by setsWithDistinctIcons.getOrNull(0).lazyIconMythic
   override val subIconLeft: ByteArray? by
       setsWithDistinctIcons.getOrNull(if (sets.size > 2) 1 else 2).lazyIconUncommon

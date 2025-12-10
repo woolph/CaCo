@@ -8,14 +8,22 @@ import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.sets.CardRepresentation
 import at.woolph.caco.datamodel.sets.Finish
 import at.woolph.utils.csv.CsvRecord
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atTime
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
 import kotlinx.io.files.Path
-import java.time.Instant
+import kotlin.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.util.*
 import java.util.function.Predicate
 import kotlin.text.toDoubleOrNull
 import kotlin.text.toInt
+import kotlin.time.Clock
+import kotlin.time.toKotlinInstant
+import kotlin.uuid.Uuid
 
 fun importArchidekt(
   file: Path,
@@ -43,8 +51,8 @@ fun importSequenceArchidekt(
 
 fun Raise<Throwable>.mapArchitect(csvRecord: CsvRecord): CardCollectionItem {
   val dateAdded =
-      csvRecord["Date Added"]?.let { LocalDate.parse(it).atStartOfDay().toInstant(ZoneOffset.UTC) }
-          ?: Instant.now()
+      csvRecord["Date Added"]?.let { kotlinx.datetime.LocalDate.parse(it).atTime(LocalTime(0,0,0)).toInstant(TimeZone.UTC) }
+          ?: Clock.System.now()
 
   val quantity = csvRecord["Quantity"]!!.toInt()
   val finish = Finish.parse(csvRecord["Finish"]!!)
@@ -59,7 +67,7 @@ fun Raise<Throwable>.mapArchitect(csvRecord: CsvRecord): CardCollectionItem {
         else -> CardCondition.UNKNOWN
       }
   val purchasePrice = csvRecord["Purchase Price"]?.toDoubleOrNull()
-  val scryfallId = Either.catch { UUID.fromString(csvRecord["Scryfall ID"]!!) }.bind()
+  val scryfallId = Either.catch { Uuid.parse(csvRecord["Scryfall ID"]!!) }.bind()
   val (card, cardVariantType) =
       CardRepresentation.findByScryfallId(scryfallId)
           ?: raise(Exception("card with id $scryfallId not found"))

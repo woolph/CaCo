@@ -24,7 +24,8 @@ import kotlin.collections.count
 import kotlin.collections.first
 import kotlin.collections.firstOrNull
 import kotlin.io.path.Path
-import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.eq
 
 class EnterCards : SuspendingTransactionCliktCommand() {
   val format by

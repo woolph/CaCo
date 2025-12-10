@@ -6,6 +6,7 @@ import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.ScryfallCardSets
 import at.woolph.caco.datamodel.sets.SetType
 import at.woolph.lib.clikt.SuspendingTransactionCliktCommand
+import org.jetbrains.exposed.v1.core.eq
 
 class PrintMissingCmd : SuspendingTransactionCliktCommand(name = "missing-cmd") {
   override suspend fun runTransaction() {

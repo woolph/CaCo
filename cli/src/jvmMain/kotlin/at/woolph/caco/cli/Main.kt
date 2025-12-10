@@ -3,7 +3,7 @@ package at.woolph.caco.cli
 
 import at.woolph.caco.HomeDirectory
 import at.woolph.caco.cli.command.*
-import at.woolph.caco.datamodel.Databases
+import at.woolph.caco.datamodel.initDatabase
 import at.woolph.lib.clikt.suspendNoOpCliktCommand
 import com.github.ajalt.clikt.command.main
 import com.github.ajalt.clikt.core.context
@@ -15,12 +15,12 @@ import com.github.ajalt.clikt.sources.PropertiesValueSource
 suspend fun main(args: Array<String>) =
   suspendNoOpCliktCommand("caco") {
     val homeDirectory = HomeDirectory()
-    Databases.init(homeDirectory)
-    versionOption("0.3.0")
+    initDatabase(homeDirectory)
+    versionOption("0.4.0")
     context {
       obj = homeDirectory
       autoEnvvarPrefix = HomeDirectory.ENVVAR_PREFIX
-      valueSource = PropertiesValueSource.from(homeDirectory.resolve("settings.properties"))
+      valueSource = PropertiesValueSource.from(homeDirectory.resolve("settings.properties").toString())
     }
   }
     .subcommands(

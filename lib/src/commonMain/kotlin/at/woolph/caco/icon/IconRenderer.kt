@@ -2,7 +2,7 @@
 package at.woolph.caco.icon
 
 import arrow.core.Either
-import at.woolph.caco.datamodel.sets.IScryfallCardSet
+import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.image.ImageCache
 import at.woolph.utils.Uri
 import kotlinx.coroutines.runBlocking
@@ -47,18 +47,18 @@ fun lazySetIcon(
     lazyIcon("set-code-$setCode", Uri("https://svgs.scryfall.io/sets/$setCode.svg"), iconRenderer)
 
 
-suspend fun IconRenderer.cachedImage(set: IScryfallCardSet): ByteArray? =
+suspend fun IconRenderer.cachedImage(set: ScryfallCardSet): ByteArray? =
   set.icon?.let {
     renderSvg("set-icon-${set.code}", it)
       .onLeft { println("couldn't get icon for $set due to ${it.message}") } // TODO KMP logging
       .getOrNull()
   }
 
-fun IScryfallCardSet?.lazySetIcon(iconRenderer: IconRenderer): Lazy<ByteArray?> =
+fun ScryfallCardSet?.lazySetIcon(iconRenderer: IconRenderer): Lazy<ByteArray?> =
   this?.let { lazy { runBlocking { iconRenderer.cachedImage(it) } } } ?: lazyOf(null)
 
-val IScryfallCardSet?.lazyIconMythic: Lazy<ByteArray?>
+val ScryfallCardSet?.lazyIconMythic: Lazy<ByteArray?>
   get() = lazySetIcon(mythicBinderLabelIconRenderer)
 
-val IScryfallCardSet?.lazyIconUncommon: Lazy<ByteArray?>
+val ScryfallCardSet?.lazyIconUncommon: Lazy<ByteArray?>
   get() = lazySetIcon(uncommonBinderLabelIconRenderer)

@@ -2,12 +2,13 @@
 package at.woolph.caco.cli
 
 import at.woolph.caco.binderlabels.*
-import at.woolph.caco.datamodel.Databases
+import at.woolph.caco.datamodel.initDatabase
 import at.woolph.caco.datamodel.sets.MultiSetBlock
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.SingleSetBlock
 import at.woolph.caco.icon.lazySetIcon
 import at.woolph.caco.icon.mythicBinderLabelIconRenderer
+import at.woolph.caco.labels.fetchCardSets
 import at.woolph.utils.io.asSink
 import at.woolph.utils.pdf.HorizontalAlignment
 import at.woolph.utils.pdf.pdfDocument
@@ -22,7 +23,8 @@ import at.woolph.utils.pdf.loadFontPlanewalkerBold
 import java.awt.Color
 import java.nio.file.Path
 import org.apache.pdfbox.pdmodel.common.PDRectangle
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import kotlin.io.path.createParentDirectories
 
 interface CollectionDivider {
@@ -81,7 +83,7 @@ open class BlockCollectionDivider(override val title: String, codes: Iterable<St
 
 class PileSeparators {
   fun printLabel(file: String) {
-    Databases.init()
+    initDatabase()
 
     transaction {
       val blockNameBlacklist =

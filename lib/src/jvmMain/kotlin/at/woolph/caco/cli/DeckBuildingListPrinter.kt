@@ -1,8 +1,8 @@
 /* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.cli
 
-import at.woolph.caco.datamodel.Databases
 import at.woolph.caco.datamodel.collection.CardPossessions
+import at.woolph.caco.datamodel.initDatabase
 import at.woolph.caco.datamodel.sets.Cards
 import at.woolph.caco.datamodel.sets.Finish
 import at.woolph.caco.datamodel.sets.ScryfallCardSets
@@ -16,7 +16,9 @@ import at.woolph.utils.pdf.loadHelveticaOblique
 import at.woolph.utils.pdf.loadHelveticaRegular
 import at.woolph.utils.pdf.pdfDocument
 import org.apache.pdfbox.pdmodel.common.PDRectangle
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.core.match
+import org.jetbrains.exposed.v1.jdbc.select
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import java.awt.Color
 import java.nio.file.Path
 import kotlin.io.path.createParentDirectories
@@ -24,7 +26,7 @@ import kotlin.io.path.createParentDirectories
 class DeckBuildingListPrinter {
   // TODO exclude from list every CardPossession which is used for a deck
   fun printList(decks: Collection<DeckList>, file: Path) {
-    Databases.init()
+    initDatabase()
 
     pdfDocument(file.createParentDirectories().asSink()) {
       decks.forEach { printListToDocument(it) }

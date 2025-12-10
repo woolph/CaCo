@@ -8,7 +8,7 @@ import at.woolph.caco.datamodel.sets.Cards
 import io.kotest.assertions.withClue
 import io.kotest.matchers.shouldBe
 import kotlin.test.Test
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
@@ -18,7 +18,7 @@ class CheapRampTests {
     @JvmStatic
     @BeforeAll
     fun startDb() {
-      Databases.init()
+      initDatabase()
     }
   }
 

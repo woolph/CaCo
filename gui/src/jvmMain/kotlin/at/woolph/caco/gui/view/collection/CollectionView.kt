@@ -41,7 +41,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.javafx.asFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
+import org.jetbrains.exposed.v1.core.transactions.experimental.newSuspendedTransaction
 import org.slf4j.LoggerFactory
 import tornadofx.View
 import tornadofx.button

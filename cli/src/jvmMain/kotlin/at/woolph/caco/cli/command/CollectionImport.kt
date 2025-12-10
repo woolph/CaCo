@@ -19,8 +19,11 @@ import com.github.ajalt.clikt.parameters.types.path
 import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.nio.file.attribute.BasicFileAttributes
-import java.time.Instant
-import java.time.LocalDate
+import kotlin.time.Instant
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atTime
+import kotlinx.datetime.toInstant
 import java.time.ZoneOffset
 import java.util.function.Predicate
 import kotlin.io.path.Path
@@ -41,11 +44,11 @@ class CollectionImport :
   val clearBeforeImport by option().boolean().default(true)
   val after by
       option(help = "Restrict import to only lines updated after this date").convert {
-        LocalDate.parse(it).atTime(23, 59, 59, 999_999_999).toInstant(ZoneOffset.UTC)
+        LocalDate.parse(it).atTime(23, 59, 59, 999_999_999).toInstant(TimeZone.UTC)
       }
   val before by
       option(help = "Restrict import to only lines updated before this date").convert {
-        LocalDate.parse(it).atStartOfDay().toInstant(ZoneOffset.UTC)
+        LocalDate.parse(it).atTime(0,0,0, 0).toInstant(TimeZone.UTC)
       }
 
   val file by
@@ -64,9 +67,9 @@ class CollectionImport :
 
   override suspend fun Raise<NoFileFoundError>.run() {
     val afterPredicate =
-        after?.let { Predicate<Instant> { toBeTestedInstant -> toBeTestedInstant.isAfter(it) } }
+        after?.let { Predicate<Instant> { toBeTestedInstant -> toBeTestedInstant > it } }
     val beforePredicate =
-        before?.let { Predicate<Instant> { toBeTestedInstant -> toBeTestedInstant.isBefore(it) } }
+        before?.let { Predicate<Instant> { toBeTestedInstant -> toBeTestedInstant < it } }
     val datePredicate: Predicate<Instant> =
         sequenceOf(afterPredicate, beforePredicate).filterNotNull().fold(
             Predicate { true },

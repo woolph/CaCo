@@ -6,6 +6,7 @@ import at.woolph.caco.datamodel.collection.CardLanguage
 import kotlinx.io.files.Path
 import java.time.LocalDate
 import java.time.ZoneOffset
+import kotlin.time.toJavaInstant
 
 fun Iterable<CardCollectionItem>.exportArchidekt(file: Path) =
     export(
@@ -41,7 +42,7 @@ fun Iterable<CardCollectionItem>.exportArchidekt(file: Path) =
                 {
                   cardCollectionItemId.card.set.code
                 }, // is optional but better for human interpretation
-            "Date added" to { LocalDate.from(dateAdded.atOffset(ZoneOffset.UTC)).toString() },
+            "Date added" to { LocalDate.from(dateAdded.toJavaInstant().atOffset(ZoneOffset.UTC)).toString() },
             "Purchase Price" to { purchasePrice?.toString() ?: "" },
         ),
     )

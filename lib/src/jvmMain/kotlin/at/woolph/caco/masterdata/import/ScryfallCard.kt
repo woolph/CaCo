@@ -1,7 +1,9 @@
 /* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.masterdata.import
 
-import at.woolph.caco.currency.CurrencyValue
+import at.woolph.caco.datamodel.MtgColor
+import at.woolph.caco.datamodel.decks.Format
+import at.woolph.utils.currency.CurrencyValue
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.CardVariant
 import at.woolph.caco.datamodel.sets.Finish
@@ -9,6 +11,8 @@ import at.woolph.caco.datamodel.sets.LayoutType
 import at.woolph.caco.datamodel.sets.Legality
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.parseRarity
+import at.woolph.caco.datamodel.toColor
+import at.woolph.caco.datamodel.toColorIdentity
 import at.woolph.utils.exposed.newOrUpdate
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -28,43 +32,31 @@ private val LOG = LoggerFactory.getLogger("at.woolph.caco.masterdata.import.Scry
 
 
 @Serializable
-data class ScryfallRelatedCard(
-    @SerialName("object") val objectType: String,
-    @Contextual val id: UUID,
-    val component: String,
-    val name: String,
-    val type_line: String,
-    @Contextual val uri: URI,
-) : ScryfallBase {
-  override fun isValid() = objectType == "related_card"
-}
-
-@Serializable
 data class ScryfallCardFace(
-    @SerialName("object") val objectType: String,
-    val name: String,
-    val cmc: Double? = null,
-    val mana_cost: String,
-    val type_line: String? = null,
-    @Contextual val oracle_id: UUID? = null,
-    val oracle_text: String,
-    val layout: LayoutType? = null,
-    val printed_name: String? = null,
-    val printed_text: String? = null,
-    val printed_type_line: String? = null,
-    val colors: Set<MtgColor>? = null,
-    val color_indicator: Set<MtgColor>? = null,
-    val power: String? = null,
-    val toughness: String? = null,
-    val loyalty: String? = null,
-    val defense: String? = null,
-    val flavor_text: String? = null,
-    val flavor_name: String? = null,
-    val watermark: String? = null,
-    val artist: String? = null,
-    @Contextual val artist_id: UUID? = null,
-    @Contextual val illustration_id: UUID? = null,
-    val image_uris: Map<String, @Contextual URI>? = null,
+  @SerialName("object") val objectType: String,
+  val name: String,
+  val cmc: Double? = null,
+  val mana_cost: String,
+  val type_line: String? = null,
+  @Contextual val oracle_id: UUID? = null,
+  val oracle_text: String,
+  val layout: LayoutType? = null,
+  val printed_name: String? = null,
+  val printed_text: String? = null,
+  val printed_type_line: String? = null,
+  val colors: Set<MtgColor>? = null,
+  val color_indicator: Set<MtgColor>? = null,
+  val power: String? = null,
+  val toughness: String? = null,
+  val loyalty: String? = null,
+  val defense: String? = null,
+  val flavor_text: String? = null,
+  val flavor_name: String? = null,
+  val watermark: String? = null,
+  val artist: String? = null,
+  @Contextual val artist_id: UUID? = null,
+  @Contextual val illustration_id: UUID? = null,
+  val image_uris: Map<String, @Contextual URI>? = null,
 ) : ScryfallBase {
   override fun isValid() = objectType == "card_face"
 }
@@ -78,92 +70,92 @@ data class ScryfallPreviewInfo(
 
 @Serializable
 data class ScryfallCard(
-    @SerialName("object") val objectType: String,
-    @Contextual val id: UUID,
-    @Contextual val oracle_id: UUID? = null,
-    val multiverse_ids: Set<Int>,
-    val mtgo_id: Int? = null,
-    val mtgo_foil_id: Int? = null,
-    val arena_id: Int? = null,
-    val tcgplayer_id: Int? = null,
-    val tcgplayer_etched_id: Int? = null,
-    val cardmarket_id: Int? = null,
-    val name: String,
-    val printed_name: String? = null,
-    val lang: String,
-    @Contextual val released_at: LocalDate,
-    @Contextual val uri: URI,
-    @Contextual val scryfall_uri: URI,
-    val layout: LayoutType,
-    val highres_image: Boolean,
-    val image_status: String,
-    val image_uris: Map<String, @Contextual URI>? = null,
-    val card_faces: List<ScryfallCardFace>? = null,
-    val mana_cost: String? = null,
-    val cmc: Double? = null,
-    val type_line: String? = null,
-    val printed_type_line: String? = null,
-    val oracle_text: String? = null,
-    val life_modifier: String? = null,
-    val hand_modifier: String? = null,
-    val printed_text: String? = null,
-    val power: String? = null,
-    val toughness: String? = null,
-    val loyalty: String? = null,
-    val colors: Set<MtgColor>? = null,
-    val color_identity: Set<MtgColor>,
-    val color_indicator: Set<MtgColor>? = null,
-    val keywords: Set<String>,
-    val produced_mana: Set<MtgColor>? = null,
-    val all_parts: List<ScryfallRelatedCard> = emptyList(),
-    val legalities: Map<String, Legality>,
-    val games: Set<String>,
-    val reserved: Boolean,
-    val foil: Boolean,
-    val nonfoil: Boolean,
-    val finishes: Set<Finish>,
-    val oversized: Boolean,
-    val promo: Boolean,
-    val promo_types: Set<String> = emptySet(),
-    val reprint: Boolean,
-    val variation: Boolean,
-    @Contextual val variation_of: UUID? = null,
-    @Contextual val set_id: Uuid,
-    val set: String,
-    val set_name: String,
-    val set_type: String,
-    @Contextual val set_uri: URI,
-    @Contextual val set_search_uri: URI,
-    @Contextual val scryfall_set_uri: URI,
-    @Contextual val rulings_uri: URI,
-    @Contextual val prints_search_uri: URI,
-    val collector_number: String,
-    val digital: Boolean,
-    val rarity: String,
-    val watermark: String? = null,
-    val flavor_text: String? = null,
-    val flavor_name: String? = null,
-    @Contextual val card_back_id: UUID? = null,
-    val artist: String,
-    val artist_ids: Set<@Contextual UUID> = emptySet(),
-    @Contextual val illustration_id: UUID? = null,
-    val border_color: String,
-    val frame: String,
-    val frame_effects: Set<String> = emptySet(),
-    val security_stamp: String? = null,
-    val full_art: Boolean,
-    val textless: Boolean,
-    val game_changer: Boolean,
-    val booster: Boolean,
-    val story_spotlight: Boolean,
-    val edhrec_rank: Int? = null,
-    val penny_rank: Int? = null,
-    val preview: ScryfallPreviewInfo? = null,
-    val prices: Map<String, String?>,
-    val related_uris: Map<String, @Contextual URI>,
-    val purchase_uris: Map<String, @Contextual URI> = emptyMap(),
-    val content_warning: Boolean = false,
-    val attraction_lights: Set<Int>? = null,
+  @SerialName("object") val objectType: String,
+  @Contextual val id: Uuid,
+  @Contextual val oracle_id: Uuid? = null,
+  val multiverse_ids: Set<Int>,
+  val mtgo_id: Int? = null,
+  val mtgo_foil_id: Int? = null,
+  val arena_id: Int? = null,
+  val tcgplayer_id: Int? = null,
+  val tcgplayer_etched_id: Int? = null,
+  val cardmarket_id: Int? = null,
+  val name: String,
+  val printed_name: String? = null,
+  val lang: String,
+  @Contextual val released_at: LocalDate,
+  @Contextual val uri: URI,
+  @Contextual val scryfall_uri: URI,
+  val layout: LayoutType,
+  val highres_image: Boolean,
+  val image_status: String,
+  val image_uris: Map<String, @Contextual URI>? = null,
+  val card_faces: List<ScryfallCardFace>? = null,
+  val mana_cost: String? = null,
+  val cmc: Double? = null,
+  val type_line: String? = null,
+  val printed_type_line: String? = null,
+  val oracle_text: String? = null,
+  val life_modifier: String? = null,
+  val hand_modifier: String? = null,
+  val printed_text: String? = null,
+  val power: String? = null,
+  val toughness: String? = null,
+  val loyalty: String? = null,
+  val colors: Set<MtgColor>? = null,
+  val color_identity: Set<MtgColor>,
+  val color_indicator: Set<MtgColor>? = null,
+  val keywords: Set<String>,
+  val produced_mana: Set<MtgColor>? = null,
+  val all_parts: List<ScryfallRelatedCard> = emptyList(),
+  val legalities: Map<Format, Legality>,
+  val games: Set<String>,
+  val reserved: Boolean,
+  val foil: Boolean,
+  val nonfoil: Boolean,
+  val finishes: Set<Finish>,
+  val oversized: Boolean,
+  val promo: Boolean,
+  val promo_types: Set<String> = emptySet(),
+  val reprint: Boolean,
+  val variation: Boolean,
+  @Contextual val variation_of: UUID? = null,
+  @Contextual val set_id: Uuid,
+  val set: String,
+  val set_name: String,
+  val set_type: String,
+  @Contextual val set_uri: URI,
+  @Contextual val set_search_uri: URI,
+  @Contextual val scryfall_set_uri: URI,
+  @Contextual val rulings_uri: URI,
+  @Contextual val prints_search_uri: URI,
+  val collector_number: String,
+  val digital: Boolean,
+  val rarity: String,
+  val watermark: String? = null,
+  val flavor_text: String? = null,
+  val flavor_name: String? = null,
+  @Contextual val card_back_id: UUID? = null,
+  val artist: String,
+  val artist_ids: Set<@Contextual Uuid> = emptySet(),
+  @Contextual val illustration_id: Uuid? = null,
+  val border_color: String,
+  val frame: String,
+  val frame_effects: Set<String> = emptySet(),
+  val security_stamp: String? = null,
+  val full_art: Boolean,
+  val textless: Boolean,
+  val game_changer: Boolean,
+  val booster: Boolean,
+  val story_spotlight: Boolean,
+  val edhrec_rank: Int? = null,
+  val penny_rank: Int? = null,
+  val preview: ScryfallPreviewInfo? = null,
+  val prices: Map<String, String?>,
+  val related_uris: Map<String, @Contextual URI>,
+  val purchase_uris: Map<String, @Contextual URI> = emptyMap(),
+  val content_warning: Boolean = false,
+  val attraction_lights: Set<Int>? = null,
 ) : ScryfallBase {
   override fun isValid() = objectType == "card"
 
@@ -217,13 +209,14 @@ data class ScryfallCard(
         it.cardmarketUri = purchase_uris["cardmarket"]
 
         it.extra = !booster
-        it.finishes = finishes.asSequence().toEnumSet()
+        it.finishes = finishes
         it.fullArt = full_art
         it.extendedArt = frame_effects.contains("extendedart")
 
         it.colorIdentity = color_identity.toColorIdentity()
+        it.producedMana = produced_mana?.toColor()
 
-        it.manaCost = mana_cost ?: card_faces?.mapNotNull { it.mana_cost }?.joinToString(" // ")
+        it.manaCost = mana_cost ?: card_faces?.joinToString(" // ") { it.mana_cost }
         it.manaValue = cmc?.toFloat() ?: 0.0f
         it.oracleText =
             sequence {
@@ -231,11 +224,12 @@ data class ScryfallCard(
                   yieldAll(card_faces?.asSequence()?.map { it.oracle_text } ?: emptySequence())
                 }
                 .joinToString("\n")
-        it.priceNormal = prices["eur"]?.toDouble()?.let { CurrencyValue.eur(it) }
-        it.priceFoil = prices["eur_foil"]?.toDouble()?.let { CurrencyValue.eur(it) }
-//        it.priceEtched = prices["usd_etched"]?.toDouble()?.let { CurrencyValue.usd(it).exchangeTo(Currencies.EUR) }
+        it.priceNormal = prices["usd"]?.toDouble()?.let(CurrencyValue::usd)
+        it.priceFoil = prices["usd_foil"]?.toDouble()?.let(CurrencyValue::usd)
+        it.priceEtched = prices["usd_etched"]?.toDouble()?.let(CurrencyValue::usd)
         it.type = type_line ?: card_faces?.mapNotNull { it.type_line }?.joinToString(" // ")
         it.promoType = promo_types
+        it.legalities = legalities
 
         val patternSpecialDeckRestrictions =
             Regex(

@@ -5,9 +5,9 @@ import at.woolph.caco.datamodel.decks.DeckZone
 import at.woolph.caco.datamodel.decks.Format
 
 data class DeckList(
-    val name: String,
-    val format: Format,
-    val deckZones: Map<DeckZone, Map<String, Int>> = mutableMapOf(
+  val name: String,
+  val format: Format,
+  val deckZones: Map<DeckZone, Map<String, Int>> = mutableMapOf(
       DeckZone.MAINBOARD to mutableMapOf()
     ),
 ) {

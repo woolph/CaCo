@@ -5,7 +5,7 @@ sealed interface Block {
   val blockName: String
 }
 
-data class SingleSetBlock(val set: IScryfallCardSet) : Block {
+data class SingleSetBlock(val set: ScryfallCardSet) : Block {
   override val blockCode: String
     get() = set.code
 
@@ -16,5 +16,5 @@ data class SingleSetBlock(val set: IScryfallCardSet) : Block {
 data class MultiSetBlock(
     override val blockCode: String,
     override val blockName: String,
-    val sets: List<IScryfallCardSet>,
+    val sets: List<ScryfallCardSet>,
 ) : Block

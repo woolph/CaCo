@@ -8,7 +8,7 @@ import at.woolph.caco.datamodel.sets.Finish
 import javafx.beans.binding.Bindings
 import javafx.beans.binding.IntegerBinding
 import javafx.beans.property.SimpleIntegerProperty
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import tornadofx.integerBinding
 import tornadofx.stringBinding
 import kotlin.math.min

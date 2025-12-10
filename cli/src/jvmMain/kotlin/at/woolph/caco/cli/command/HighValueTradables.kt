@@ -2,7 +2,7 @@
 package at.woolph.caco.cli.command
 
 import at.woolph.caco.collection.DEFAULT_COLLECTION_SETTINGS
-import at.woolph.caco.currency.CurrencyValue
+import at.woolph.utils.currency.CurrencyValue
 import at.woolph.caco.datamodel.sets.Finish
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.lib.clikt.SuspendingTransactionCliktCommand

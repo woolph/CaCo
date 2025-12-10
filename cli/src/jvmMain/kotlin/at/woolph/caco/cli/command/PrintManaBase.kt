@@ -1,11 +1,12 @@
 /* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.cli.command
 
-import at.woolph.caco.cli.manabase.ColorIdentity
 import at.woolph.caco.cli.DecklistEntry
 import at.woolph.caco.cli.manabase.SelectionCriterion
 import at.woolph.caco.cli.manabase.generateManabase
 import at.woolph.caco.cli.manabase.toDecklistEntryCards
+import at.woolph.caco.datamodel.ColorIdentity
+import at.woolph.caco.datamodel.decks.Format
 import com.github.ajalt.clikt.command.SuspendingCliktCommand
 import com.github.ajalt.clikt.core.terminal
 import com.github.ajalt.clikt.parameters.options.convert
@@ -44,6 +45,7 @@ class PrintManaBase : SuspendingCliktCommand(name = "generate-manabase") {
                 .map { DecklistEntry(it.removePrefix("1 ")) }
                 .toList()
                 .toDecklistEntryCards(),
+            deckFormat = Format.Commander,
         )
         .forEach { println(it) }
   }

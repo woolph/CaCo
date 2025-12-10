@@ -12,7 +12,7 @@ import com.github.ajalt.clikt.parameters.groups.single
 import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.path
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
+import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 import java.io.InputStream
 import java.nio.file.Path
 import kotlin.io.path.inputStream
@@ -51,8 +51,9 @@ class UpdateMasterdata: SuspendingCliktCommand(name = "update") {
   }
 
   override suspend fun run() {
-    newSuspendedTransaction { importSets().collect {} }
-
+    suspendTransaction {
+      importSets()
+    }
     source.processBulkData { bulkDataInputStream ->
       context(log) {
         updateMasterDataFromBulkData(bulkDataInputStream)

@@ -2,7 +2,6 @@
 package at.woolph.caco.gui.view.collection
 
 import arrow.core.Either
-import arrow.core.raise.either
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.Finish
 import at.woolph.caco.image.ImageCache

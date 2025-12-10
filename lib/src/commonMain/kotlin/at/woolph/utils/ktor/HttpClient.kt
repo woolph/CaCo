@@ -24,6 +24,7 @@ import java.net.URI
 import java.time.LocalDate
 import java.time.ZonedDateTime
 import java.util.UUID
+import kotlin.uuid.Uuid
 
 suspend fun <R> useHttpClient(
   context: CoroutineContext = EmptyCoroutineContext,
@@ -42,8 +43,10 @@ val jsonSerializer = Json {
   ignoreUnknownKeys = true
   serializersModule = SerializersModule {
     contextual(LocalDate::class, LocalDateSerializer)
+    contextual(kotlinx.datetime.LocalDate::class, KtLocalDateSerializer)
     contextual(URI::class, URISerializer)
     contextual(UUID::class, UUIDSerializer)
+    contextual(Uuid::class, UuidSerializer)
     contextual(ZonedDateTime::class, ZonedDateTimeSerializer)
   }
 }
@@ -56,6 +59,18 @@ object LocalDateSerializer : KSerializer<LocalDate> {
   }
 
   override fun serialize(encoder: Encoder, value: LocalDate) {
+    encoder.encodeString(value.toString())
+  }
+}
+
+object KtLocalDateSerializer : KSerializer<kotlinx.datetime.LocalDate> {
+  override val descriptor = PrimitiveSerialDescriptor("KtLocalDate", PrimitiveKind.STRING)
+
+  override fun deserialize(decoder: Decoder): kotlinx.datetime.LocalDate {
+    return kotlinx.datetime.LocalDate.parse(decoder.decodeString())
+  }
+
+  override fun serialize(encoder: Encoder, value: kotlinx.datetime.LocalDate) {
     encoder.encodeString(value.toString())
   }
 }
@@ -84,6 +99,18 @@ object UUIDSerializer : KSerializer<UUID> {
 
   override fun serialize(encoder: Encoder, value: UUID) {
     encoder.encodeString(value.toString())
+  }
+}
+
+object UuidSerializer : KSerializer<Uuid> {
+  override val descriptor = PrimitiveSerialDescriptor("Uuid", PrimitiveKind.STRING)
+
+  override fun deserialize(decoder: Decoder): Uuid {
+    return Uuid.parse(decoder.decodeString())
+  }
+
+  override fun serialize(encoder: Encoder, value: Uuid) {
+    encoder.encodeString(value.toHexDashString())
   }
 }
 

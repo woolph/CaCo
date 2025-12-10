@@ -8,8 +8,10 @@ import at.woolph.caco.datamodel.sets.Finish
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.ScryfallCardSets
 import kotlinx.io.files.Path
+import org.jetbrains.exposed.v1.core.eq
 import java.time.ZoneOffset
 import kotlin.math.max
+import kotlin.time.toJavaInstant
 
 fun Iterable<CardCollectionItem>.exportDeckbox(file: Path) =
     export(
@@ -87,7 +89,7 @@ fun Iterable<CardCollectionItem>.exportDeckbox(file: Path) =
                 },
             "Textless" to { "" },
             "My Price" to { purchasePrice?.let { "$$it" } ?: "" },
-            "Last Updated" to { DATE_FORMAT_DECKBOX.format(dateAdded.atOffset(ZoneOffset.UTC)) },
+            "Last Updated" to { DATE_FORMAT_DECKBOX.format(dateAdded.toJavaInstant().atOffset(ZoneOffset.UTC)) },
         ),
     )
 

@@ -6,7 +6,6 @@
     <module name="CaCo.cli.jvmMain" />
     <option name="PROGRAM_PARAMETERS" value="masterdata update --bulk-data=default-cards" />
     <shortenClasspath name="NONE" />
-    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>

@@ -1,7 +1,6 @@
 /* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.binderlabels
 
-import at.woolph.caco.datamodel.sets.IScryfallCardSet
 import at.woolph.caco.datamodel.sets.MultiSetBlock
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.ScryfallCardSets
@@ -26,27 +25,10 @@ import at.woolph.utils.pdf.loadFontPlanewalkerBold
 import at.woolph.utils.pdf.loadPlantinItalic
 import kotlinx.io.files.Path
 import org.apache.pdfbox.pdmodel.common.PDRectangle
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.greater
 import java.awt.Color
-
-fun fetchCardSets(codes: Iterable<String>): List<ScryfallCardSet> = transaction {
-  codes.map { code ->
-    ScryfallCardSet.findByCode(code)
-        ?: throw IllegalArgumentException("no set with code $code found")
-  }
-}
-
-fun fetchCardSetsNullable(codes: Iterable<String?>): List<ScryfallCardSet?> = transaction {
-  codes.map {
-    it?.let { code ->
-      ScryfallCardSet.findByCode(code)
-          ?: throw IllegalArgumentException("no set with code $code found")
-    }
-  }
-}
-
-fun fetchCardSetsNullable(vararg codes: String?) = fetchCardSetsNullable(codes.asIterable())
 
 fun determineBinderLabels(thresholdTooMuchPages: Int, thresholdTooFewPages: Int): Sequence<MapLabelItem> =
     sequence {
@@ -59,7 +41,7 @@ fun determineBinderLabels(thresholdTooMuchPages: Int, thresholdTooFewPages: Int)
         .forEach { rootBlock ->
           when (rootBlock) {
             is SingleSetBlock -> {
-              suspend fun SequenceScope<MapLabelItem>.yieldSet(currentSet: IScryfallCardSet) {
+              suspend fun SequenceScope<MapLabelItem>.yieldSet(currentSet: ScryfallCardSet) {
                 val (
                   childSetsDefinitelyIncludedInRootSetBinder,
                   childSetsWhichNeedToBeChecked) =
@@ -73,11 +55,11 @@ fun determineBinderLabels(thresholdTooMuchPages: Int, thresholdTooFewPages: Int)
 
                 val setsInBinder = childSetsDefinitelyIncludedInRootSetBinder.toMutableList()
                 childSetsWhichNeedToBeChecked
-                  .sortedByDescending(IScryfallCardSet::binderPages)
+                  .sortedByDescending(ScryfallCardSet::binderPages)
                   .forEach { childSet ->
                     if (
                       currentSet.binderPages +
-                      setsInBinder.sumOf(IScryfallCardSet::totalBinderPages) +
+                      setsInBinder.sumOf(ScryfallCardSet::totalBinderPages) +
                       childSet.binderPages <= thresholdTooMuchPages
                     ) {
                       setsInBinder.add(childSet)
@@ -86,7 +68,7 @@ fun determineBinderLabels(thresholdTooMuchPages: Int, thresholdTooFewPages: Int)
                     }
                   }
                 setsInBinder.addFirst(currentSet)
-                if (setsInBinder.sumOf(IScryfallCardSet::binderPages) > thresholdTooFewPages) {
+                if (setsInBinder.sumOf(ScryfallCardSet::binderPages) > thresholdTooFewPages) {
                   yield(AbstractLabelItem(setsInBinder)) // TODO omit same icons
                 }
               }
@@ -96,7 +78,7 @@ fun determineBinderLabels(thresholdTooMuchPages: Int, thresholdTooFewPages: Int)
 
             is MultiSetBlock -> {
               if (
-                rootBlock.sets.sumOf(IScryfallCardSet::binderPages) <= thresholdTooMuchPages
+                rootBlock.sets.sumOf(ScryfallCardSet::binderPages) <= thresholdTooMuchPages
               ) {
                 yield(MultiSetBlockLabel(rootBlock))
               } else {

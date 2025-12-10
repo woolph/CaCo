@@ -8,11 +8,13 @@ import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.CardVariant
 import at.woolph.caco.datamodel.sets.Finish
-import java.time.Instant
-import java.util.UUID
 import kotlin.toUInt
-import org.jetbrains.exposed.sql.Op
-import org.jetbrains.exposed.sql.count
+import org.jetbrains.exposed.v1.core.Op
+import org.jetbrains.exposed.v1.core.count
+import org.jetbrains.exposed.v1.jdbc.select
+import kotlin.time.Clock
+import kotlin.time.Instant
+import kotlin.uuid.Uuid
 
 data class CardCollectionItemId(
     val card: Card,
@@ -21,16 +23,16 @@ data class CardCollectionItemId(
     val condition: CardCondition,
     val variantType: CardVariant.Type? = null,
 ) {
-  val actualScryfallId: UUID =
+  val actualScryfallId: Uuid =
       card.getActualScryfallId(variantType).getOrNull()
           ?: throw IllegalArgumentException("$card does not exist in $variantType")
 }
 
 data class CardCollectionItem(
-    val quantity: UInt,
-    val cardCollectionItemId: CardCollectionItemId,
-    val dateAdded: Instant = Instant.now(),
-    val purchasePrice: Double? = null,
+  val quantity: UInt,
+  val cardCollectionItemId: CardCollectionItemId,
+  val dateAdded: Instant = Clock.System.now(),
+  val purchasePrice: Double? = null,
 ) {
   fun addToCollection() {
     repeat(quantity.toInt()) {

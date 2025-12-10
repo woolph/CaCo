@@ -23,6 +23,7 @@ kotlin {
     )
     optIn.addAll(
       "kotlin.uuid.ExperimentalUuidApi",
+      "kotlin.time.ExperimentalTime",
     )
   }
 
@@ -34,9 +35,14 @@ kotlin {
       implementation("io.ktor:ktor-client-cio")
       implementation("io.ktor:ktor-client-content-negotiation")
       implementation("io.ktor:ktor-serialization-kotlinx-json")
-      api("org.jetbrains.kotlinx:kotlinx-io-core:0.8.0")
+      api("org.jetbrains.kotlinx:kotlinx-io-core:0.8.2")
 
       implementation("co.touchlab:kermit:2.0.8")
+
+      api(project.dependencies.platform("org.jetbrains.exposed:exposed-bom:1.0.0-rc-4"))
+      api("org.jetbrains.exposed:exposed-dao")
+      implementation("org.jetbrains.exposed:exposed-kotlin-datetime")
+      implementation("org.jetbrains.exposed:exposed-json")
     }
 
     commonTest.dependencies {
@@ -52,10 +58,7 @@ kotlin {
       api(project.dependencies.platform("org.jetbrains.kotlinx:kotlinx-coroutines-bom:1.10.2"))
       api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
 
-      api(project.dependencies.platform("org.jetbrains.exposed:exposed-bom:0.61.0"))
-      api("org.jetbrains.exposed:exposed-dao")
-      implementation("org.jetbrains.exposed:exposed-java-time")
-      runtimeOnly("org.jetbrains.exposed:exposed-jdbc")
+      implementation("org.jetbrains.exposed:exposed-jdbc")
       runtimeOnly("com.h2database:h2:2.3.232")
 
       //    implementation("org.jsoup:jsoup:1.18.3")

@@ -30,7 +30,7 @@ import javafx.scene.control.ToggleButton
 import javafx.scene.input.KeyCode
 import javafx.scene.layout.Priority
 import javafx.stage.FileChooser
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import tornadofx.FileChooserMode
 import tornadofx.View
 import tornadofx.action
