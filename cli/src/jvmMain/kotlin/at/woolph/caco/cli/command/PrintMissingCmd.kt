@@ -14,8 +14,8 @@ class PrintMissingCmd : SuspendingTransactionCliktCommand(name = "missing-cmd") 
     ScryfallCardSet.find { ScryfallCardSets.type eq SetType.COMMANDER }
         .filter { it.code !in blacklist }
         .flatMap {
-          it.cards.filter { card ->
-            !card.token &&
+          it.cardPrints.filter { card ->
+            !card.card.token &&
                 !card.promo &&
                 !card.extendedArt &&
                 card.possessions.count() < 1 &&
@@ -23,7 +23,7 @@ class PrintMissingCmd : SuspendingTransactionCliktCommand(name = "missing-cmd") 
           }
         }
         .groupBy {
-          when (it.layout) {
+          when (it.card.layout) {
             LayoutType.SCHEME -> CardTypes.SCHEME
             LayoutType.PLANAR -> CardTypes.PLANAR
             else -> CardTypes.NORMAL
@@ -32,7 +32,7 @@ class PrintMissingCmd : SuspendingTransactionCliktCommand(name = "missing-cmd") 
         .forEach { (type, cards) ->
           println("$type:")
           cards.sorted().forEach { card ->
-            println("  ${card.set.code} #${card.collectorNumber} ${card.mergedName} (${card.type})")
+            println("  ${card.set.code} #${card.collectorNumber} ${card.mergedName} (${card.card.type})")
           }
         }
   }

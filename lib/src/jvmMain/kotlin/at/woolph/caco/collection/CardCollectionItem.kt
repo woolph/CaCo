@@ -6,7 +6,8 @@ import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.collection.CardPossession
 import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.datamodel.sets.Card
-import at.woolph.caco.datamodel.sets.CardVariant
+import at.woolph.caco.datamodel.sets.CardPrint
+import at.woolph.caco.datamodel.sets.CardPrintVariant
 import at.woolph.caco.datamodel.sets.Finish
 import kotlin.toUInt
 import org.jetbrains.exposed.v1.core.Op
@@ -17,15 +18,15 @@ import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
 data class CardCollectionItemId(
-    val card: Card,
-    val finish: Finish,
-    val language: CardLanguage,
-    val condition: CardCondition,
-    val variantType: CardVariant.Type? = null,
+  val cardPrint: CardPrint,
+  val finish: Finish,
+  val language: CardLanguage,
+  val condition: CardCondition,
+  val variantType: CardPrintVariant.Type? = null,
 ) {
   val actualScryfallId: Uuid =
-      card.getActualScryfallId(variantType).getOrNull()
-          ?: throw IllegalArgumentException("$card does not exist in $variantType")
+      cardPrint.getActualScryfallId(variantType).getOrNull()
+          ?: throw IllegalArgumentException("$cardPrint does not exist in $variantType")
 }
 
 data class CardCollectionItem(
@@ -37,7 +38,7 @@ data class CardCollectionItem(
   fun addToCollection() {
     repeat(quantity.toInt()) {
       CardPossession.new {
-        this.card = cardCollectionItemId.card
+        this.cardPrint = cardCollectionItemId.cardPrint
         this.language = cardCollectionItemId.language
         this.condition = cardCollectionItemId.condition
         this.finish = cardCollectionItemId.finish
@@ -54,7 +55,7 @@ data class CardCollectionItem(
     fun getFromDatabase(whereClause: Op<Boolean> = Op.TRUE): List<CardCollectionItem> =
         CardPossessions.select(
                 CardPossessions.id.count(),
-                CardPossessions.card,
+                CardPossessions.cardPrint,
                 CardPossessions.finish,
                 CardPossessions.language,
                 CardPossessions.condition,
@@ -64,7 +65,7 @@ data class CardCollectionItem(
             )
             .where(whereClause)
             .groupBy(
-                CardPossessions.card,
+                CardPossessions.cardPrint,
                 CardPossessions.finish,
                 CardPossessions.language,
                 CardPossessions.condition,
@@ -77,7 +78,7 @@ data class CardCollectionItem(
                   quantity = record[CardPossessions.id.count()].toUInt(),
                   cardCollectionItemId =
                       CardCollectionItemId(
-                          Card[record[CardPossessions.card]],
+                          cardPrint = CardPrint[record[CardPossessions.cardPrint]],
                           finish = record[CardPossessions.finish],
                           language = record[CardPossessions.language],
                           condition = record[CardPossessions.condition],
@@ -95,7 +96,7 @@ fun Iterable<CardPossession>.asCardCollectionItems(): Iterable<CardCollectionIte
     groupBy {
           Triple(
               CardCollectionItemId(
-                  card = it.card,
+                  cardPrint = it.cardPrint,
                   finish = it.finish,
                   language = it.language,
                   condition = it.condition,

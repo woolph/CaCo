@@ -5,7 +5,9 @@ import arrow.core.Either
 import arrow.core.flatMap
 import at.woolph.utils.currency.CurrencyValue
 import at.woolph.caco.datamodel.sets.Card
-import at.woolph.caco.datamodel.sets.CardVariant
+import at.woolph.caco.datamodel.sets.CardPrint
+import at.woolph.caco.datamodel.sets.CardPrints
+import at.woolph.caco.datamodel.sets.CardPrintVariant
 import at.woolph.caco.datamodel.sets.Cards
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.ScryfallCardSets
@@ -147,37 +149,46 @@ suspend fun downloadBulkData(type: String, block: suspend (InputStream) -> Unit)
 @OptIn(ExperimentalSerializationApi::class)
 context(log: Logger)
 suspend fun updateMasterDataFromBulkData(bulkDataInputStream: InputStream) {
-  val variant = mutableListOf<Pair<ScryfallCard, CardVariant.Type>>()
+  val variant = mutableListOf<Pair<ScryfallCard, CardPrintVariant.Type>>()
 
   suspendTransaction {
     jsonSerializer
       .decodeToSequence<ScryfallCard>(bulkDataInputStream)
       .asFlow()
       .filter(ScryfallCard::isImportWorthy)
-      .collect {
+      .collect { scryfallCard ->
         try {
-          when (val cardVariant = it.variant) {
-            null -> Card.newOrUpdate(it.id, it::update)
-            else -> variant.add(it to cardVariant)
+          when (val cardPrintVariant = scryfallCard.variant) {
+            null -> {
+              val oracleId = scryfallCard.oracle_id ?: scryfallCard.card_faces?.firstNotNullOf { it.oracle_id }
+              ?: throw IllegalStateException("no orcacle_id for scryfall_id ${scryfallCard.id}")
+
+              val card = Card.newOrUpdate(oracleId, scryfallCard::update)
+              CardPrint.newOrUpdate(scryfallCard.id) {
+                scryfallCard.update(it)
+                it.card = card
+              }
+            }
+
+            else -> variant.add(scryfallCard to cardPrintVariant)
           }
         } catch (t: ScryfallCard.SetNotInDatabaseException) {
-          if (t.setType != "memorabilia" || it.set in ScryfallSet.memorabiliaWhiteList) {
-            log.e("error while importing card ${it.name}: ${t.message}")
+          if (t.setType != "memorabilia" || scryfallCard.set in ScryfallSet.memorabiliaWhiteList) {
+            log.e(t) { "error while importing card ${scryfallCard.name}" }
           } else {
-            log.d("not importing card ${it.name} cause set is not to be imported")
+            log.d("not importing card ${scryfallCard.name} cause set ${scryfallCard.set} is not to be imported")
           }
         } catch (t: Throwable) {
-          log.e("error while importing card ${it.name}: ${t.message}")
+          log.e(t) { "error while importing card ${scryfallCard.name}" }
         }
       }
   }
-
   suspendTransaction {
     variant.forEach { (scryfallCard, variantType) ->
       determineOriginalCardFor(scryfallCard, variantType)
         .onRight { originalCard ->
           try {
-            CardVariant.newOrUpdate(scryfallCard.id) {
+            CardPrintVariant.newOrUpdate(scryfallCard.id) {
               it.baseVariantCard = originalCard
               it.variantType = variantType
             }
@@ -194,20 +205,20 @@ suspend fun updateMasterDataFromBulkData(bulkDataInputStream: InputStream) {
 
 internal fun determineOriginalCardFor(
   it: ScryfallCard,
-  variantType: CardVariant.Type,
+  variantType: CardPrintVariant.Type,
 ) =
   when (variantType) {
-    CardVariant.Type.TheList -> {
+    CardPrintVariant.Type.TheList -> {
       val (setCode, collectorNumber) = it.collector_number.split("-", limit = 2)
       getOriginalCard(setCode.lowercase(), collectorNumber)
     }
-    CardVariant.Type.PrereleaseStamped -> {
+    CardPrintVariant.Type.PrereleaseStamped -> {
       val collectorNumber =
         it.collector_number.replace(PRERELEASE_STAMPED_REPLACEMENT_PATTERN, "")
       val setCode = it.set.assumedSetCode(collectorNumber)
       getOriginalCard(setCode, collectorNumber)
     }
-    CardVariant.Type.PromopackStamped -> {
+    CardPrintVariant.Type.PromopackStamped -> {
       val collectorNumber =
         it.collector_number.replace(PROMOPACK_STAMPED_REPLACEMENT_PATTERN, "")
       val setCode = it.set.assumedSetCode(collectorNumber)
@@ -221,8 +232,8 @@ internal fun getOriginalCard(
 ) =
   getSetByCode(setCode).flatMap { set ->
     Either.catch {
-      Card.find {
-        Cards.set eq set.id and (Cards.collectorNumber eq collectorNumber)
+      CardPrint.find {
+        CardPrints.set eq set.id and (CardPrints.collectorNumber eq collectorNumber)
       }
         .single()
     }
@@ -259,17 +270,17 @@ suspend fun updateMasterDataPrice(bulkDataInputStream: InputStream) {
     .filter(ScryfallCard::isImportWorthy)
     .collect { scryfallCard ->
       try {
-        Card.findByIdAndUpdate(scryfallCard.id) { card ->
-          scryfallCard.update(card)
-          card.cardmarketUri = scryfallCard.purchase_uris["cardmarket"]
+        CardPrint.findByIdAndUpdate(scryfallCard.id) { cardPrint ->
+          scryfallCard.update(cardPrint)
+          cardPrint.cardmarketUri = scryfallCard.purchase_uris["cardmarket"]
 
-          card.priceNormal = scryfallCard.prices["eur"]?.toDouble()?.let { CurrencyValue.eur(it) }
-          card.priceFoil = scryfallCard.prices["eur_foil"]?.toDouble()?.let { CurrencyValue.eur(it) }
-          //        card.priceEtched = scryfallCard.prices["usd_etched"]?.toDouble()?.let {
+          cardPrint.priceNormal = scryfallCard.prices["eur"]?.toDouble()?.let { CurrencyValue.eur(it) }
+          cardPrint.priceFoil = scryfallCard.prices["eur_foil"]?.toDouble()?.let { CurrencyValue.eur(it) }
+          //        cardPrint.priceEtched = scryfallCard.prices["usd_etched"]?.toDouble()?.let {
           // CurrencyValue.usd(it).exchangeTo(Currencies.EUR) }
         }
       } catch (t: Throwable) {
-        log.e("error while updating price for card ${scryfallCard.name}: ${t.message}")
+        log.e("error while updating price for cardPrint ${scryfallCard.name}: ${t.message}")
       }
     }
 }

@@ -2,9 +2,6 @@
 package at.woolph.caco.datamodel.sets
 
 import at.woolph.utils.Uri
-import at.woolph.utils.exposed.UuidEntity
-import at.woolph.utils.exposed.UuidEntityClass
-import at.woolph.utils.exposed.ktUuid
 import at.woolph.utils.compareToNullable
 import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.SortOrder
@@ -13,12 +10,14 @@ import org.jetbrains.exposed.v1.datetime.date
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.dao.id.IdTable
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.dao.UuidEntity
+import org.jetbrains.exposed.v1.dao.UuidEntityClass
 import org.jetbrains.exposed.v1.jdbc.SizedIterable
 import org.jetbrains.exposed.v1.jdbc.emptySized
 import kotlin.uuid.Uuid
 
 object ScryfallCardSets : IdTable<Uuid>() {
-  override val id = ktUuid("id").entityId()
+  override val id = uuid("id").entityId()
   override val primaryKey = PrimaryKey(id)
 
   val code = varchar("setCode", length = 10).uniqueIndex()
@@ -119,7 +118,7 @@ class ScryfallCardSet(id: EntityID<Uuid>) :  UuidEntity(id), Comparable<Scryfall
   var releaseDate by ScryfallCardSets.releaseDate
   var icon by ScryfallCardSets.icon.transform({ it?.toString() }, { it?.let { Uri(it) } })
 
-  val cards by Card referrersOn Cards.set
+  val cardPrints by CardPrint referrersOn CardPrints.set
 
   val childSets: SizedIterable<ScryfallCardSet>
     get() = findByParentSetCode(code)
@@ -148,8 +147,8 @@ class ScryfallCardSet(id: EntityID<Uuid>) :  UuidEntity(id), Comparable<Scryfall
       )
     }
 
-  val cardsOfSelfAndNonRootChildSets: Sequence<Card>
-    get() = selfAndNonRootChildSets.flatMap { it.cards.asSequence() }
+  val cardsOfSelfAndNonRootChildSets: Sequence<CardPrint>
+    get() = selfAndNonRootChildSets.flatMap { it.cardPrints.asSequence() }
 
   val isRootSet: Boolean
     get() =

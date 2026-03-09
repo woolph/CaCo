@@ -5,7 +5,8 @@ import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.datamodel.decks.Builds
 import at.woolph.caco.datamodel.decks.DeckArchetypes
 import at.woolph.caco.datamodel.decks.DeckCards
-import at.woolph.caco.datamodel.sets.CardVariants
+import at.woolph.caco.datamodel.sets.CardPrints
+import at.woolph.caco.datamodel.sets.CardPrintVariants
 import at.woolph.caco.datamodel.sets.Cards
 import at.woolph.caco.datamodel.sets.ScryfallCardSets
 import org.jetbrains.exposed.v1.jdbc.Database
@@ -21,7 +22,8 @@ actual fun initDatabase(homeDirectory: HomeDirectory) {
     SchemaUtils.createMissingTablesAndColumns(
       ScryfallCardSets,
       Cards,
-      CardVariants,
+      CardPrints,
+      CardPrintVariants,
       CardPossessions,
       DeckArchetypes,
       Builds,

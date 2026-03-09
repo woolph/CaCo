@@ -9,6 +9,7 @@ import io.kotest.matchers.shouldBe
 import java.util.*
 import kotlin.test.Test
 import kotlinx.coroutines.runBlocking
+import kotlin.uuid.Uuid
 
 class ScryfallImportTests {
   @Test
@@ -22,7 +23,7 @@ class ScryfallImportTests {
         )
 
     decodedScryfallSet.objectType shouldBe "set"
-    decodedScryfallSet.id shouldBe UUID.fromString("4e47a6cd-cdeb-4b0f-8f24-cfe1a0127cb3")
+    decodedScryfallSet.id shouldBe Uuid.parse("4e47a6cd-cdeb-4b0f-8f24-cfe1a0127cb3")
   }
 
   @Test

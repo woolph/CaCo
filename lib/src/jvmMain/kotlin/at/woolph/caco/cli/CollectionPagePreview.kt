@@ -26,7 +26,7 @@ class CollectionPagePreview(
 ) {
   suspend fun printLabel(setCode: String, file: Path) = coroutineScope {
     val cardList =
-      transaction { (ScryfallCardSet.findByCode(setCode)?.cards ?: emptyList())
+      transaction { (ScryfallCardSet.findByCode(setCode)?.cardPrints ?: emptyList())
         .sortedBy { it.collectorNumber }
       }
 

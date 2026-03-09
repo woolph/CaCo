@@ -213,7 +213,7 @@ fun Raise<Throwable>.mapDeckbox(
         quantity = count.toUInt(),
         cardCollectionItemId =
             CardCollectionItemId(
-                card = card,
+                cardPrint = card,
                 finish = finish,
                 language = language,
                 condition = condition,
@@ -225,9 +225,9 @@ fun Raise<Throwable>.mapDeckbox(
                                   "Card can't be promopack stamped and prerelease stamped at the same time!"
                               )
                           )
-                      markPlaneswalkerSymbol -> CardVariant.Type.TheList
-                      stampPlaneswalkerSymbol -> CardVariant.Type.PromopackStamped
-                      stampPrereleaseDate -> CardVariant.Type.PrereleaseStamped
+                      markPlaneswalkerSymbol -> CardPrintVariant.Type.TheList
+                      stampPlaneswalkerSymbol -> CardPrintVariant.Type.PromopackStamped
+                      stampPrereleaseDate -> CardPrintVariant.Type.PrereleaseStamped
                       else -> null
                     },
             ),
@@ -421,19 +421,19 @@ fun Raise<Throwable>.getCard(
     rarity: Rarity?,
     manaCost: String?,
     promo: Boolean,
-): Card {
-  fun cardByNumber(setCode: String, promo: Boolean? = null): Card? =
-      (Cards innerJoin ScryfallCardSets)
-          .select(Cards.id)
-          .where { ScryfallCardSets.code.eq(setCode) and (Cards.collectorNumber.eq(cardNumber)) }
-          .mapNotNull { Card.findById(it[Cards.id]) }
-          .singleOrNull { it.name == cardName && (promo == null || it.promo == promo) }
+): CardPrint {
+  fun cardByNumber(setCode: String, promo: Boolean? = null): CardPrint? =
+      (CardPrints innerJoin ScryfallCardSets)
+          .select(CardPrints.id)
+          .where { ScryfallCardSets.code.eq(setCode) and (CardPrints.collectorNumber.eq(cardNumber)) }
+          .mapNotNull { CardPrint.findById(it[CardPrints.id]) }
+          .singleOrNull { it.card.name == cardName && (promo == null || it.promo == promo) }
 
-  fun cardByName(setCode: String, promo: Boolean = false): Card? =
-      (Cards innerJoin ScryfallCardSets)
-          .select(Cards.id)
+  fun cardByName(setCode: String, promo: Boolean = false): CardPrint? =
+      (Cards innerJoin ScryfallCardSets innerJoin CardPrints)
+          .select(CardPrints.id)
           .where { ScryfallCardSets.code.eq(setCode) and (Cards.name.eq(cardName)) }
-          .mapNotNull { Card.findById(it[Cards.id]) }
+          .mapNotNull { CardPrint.findById(it[CardPrints.id]) }
           .singleOrNull { it.promo == promo }
 
   return cardByNumber(setCode)

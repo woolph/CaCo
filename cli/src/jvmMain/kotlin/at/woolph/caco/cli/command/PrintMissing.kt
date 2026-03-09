@@ -11,14 +11,14 @@ class PrintMissing : SuspendingTransactionCliktCommand(name = "missing") {
 
   override suspend fun runTransaction() {
     val set = ScryfallCardSet.findByCode(setCode) ?: throw IllegalArgumentException("Set $setCode not found")
-    set.cards.filter { card ->
-      !card.token &&
-        !card.promo &&
-        !card.extendedArt &&
-        card.possessions.count() < 1 &&
-        card.promoType.isEmpty()
+    set.cardPrints.filter { cardPrint ->
+      !cardPrint.card.token &&
+        !cardPrint.promo &&
+        !cardPrint.extendedArt &&
+        cardPrint.possessions.count() < 1 &&
+        cardPrint.promoType.isEmpty()
     }.groupBy {
-      when (it.layout) {
+      when (it.card.layout) {
         LayoutType.SCHEME -> CardTypes.SCHEME
         LayoutType.PLANAR -> CardTypes.PLANAR
         else -> CardTypes.NORMAL

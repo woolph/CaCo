@@ -3,7 +3,7 @@ package at.woolph.caco.collection
 
 import at.woolph.caco.datamodel.collection.CardCondition
 import at.woolph.caco.datamodel.collection.CardLanguage
-import at.woolph.caco.datamodel.sets.CardVariant
+import at.woolph.caco.datamodel.sets.CardPrintVariant
 import at.woolph.caco.datamodel.sets.Finish
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.ScryfallCardSets
@@ -23,18 +23,18 @@ fun Iterable<CardCollectionItem>.exportDeckbox(file: Path) =
                   max(
                           0,
                           quantity.toInt() -
-                              (cardCollectionItemId.card.specialDeckRestrictions ?: 1),
+                              (cardCollectionItemId.cardPrint.card.specialDeckRestrictions ?: 1),
                       )
                       .toString()
                 }, // tradelist count (todo recognize other printings in other languages too)
             "Name" to
                 {
-                  cardCollectionItemId.card.name
+                  cardCollectionItemId.cardPrint.name
                 }, // TODO reverse mapping of Emblems, Surgeon General Commander, etc.
             "Edition" to
                 {
-                  (if (cardCollectionItemId.card.set.code == "plst") {
-                        cardCollectionItemId.card.collectorNumber
+                  (if (cardCollectionItemId.cardPrint.set.code == "plst") {
+                        cardCollectionItemId.cardPrint.collectorNumber
                             .split("-", limit = 2)
                             .first()
                             .lowercase()
@@ -44,7 +44,7 @@ fun Iterable<CardCollectionItem>.exportDeckbox(file: Path) =
                                   ?.name ?: "The List"
                             }
                       } else {
-                        cardCollectionItemId.card.set.name
+                        cardCollectionItemId.cardPrint.set.name
                       })
                       .let { setName ->
                         (setNameMapping.asSequence().firstOrNull { it.value == setName }?.key
@@ -52,9 +52,9 @@ fun Iterable<CardCollectionItem>.exportDeckbox(file: Path) =
                             .let { mappedSetName ->
                               when {
                                 cardCollectionItemId.variantType ==
-                                    CardVariant.Type.PrereleaseStamped ->
+                                    CardPrintVariant.Type.PrereleaseStamped ->
                                     "Prerelease Events: $mappedSetName"
-                                cardCollectionItemId.card.token -> "Extras: $mappedSetName"
+                                cardCollectionItemId.cardPrint.card.token -> "Extras: $mappedSetName"
                                 else -> mappedSetName
                               }
                             }
@@ -62,14 +62,14 @@ fun Iterable<CardCollectionItem>.exportDeckbox(file: Path) =
                 },
             "Edition Code" to
                 {
-                  cardCollectionItemId.card.set.code.uppercase()
+                  cardCollectionItemId.cardPrint.set.code.uppercase()
                 }, // FIXME the list cards are exported the wrong way
             "Card Number" to
                 {
-                  if (cardCollectionItemId.card.set.code == "plst") {
-                    cardCollectionItemId.card.collectorNumber.split("-", limit = 2).last()
+                  if (cardCollectionItemId.cardPrint.set.code == "plst") {
+                    cardCollectionItemId.cardPrint.collectorNumber.split("-", limit = 2).last()
                   } else {
-                    cardCollectionItemId.card.collectorNumber
+                    cardCollectionItemId.cardPrint.collectorNumber
                   }
                 },
             "Condition" to { cardCollectionItemId.condition.toDeckboxCondition() },
@@ -78,13 +78,13 @@ fun Iterable<CardCollectionItem>.exportDeckbox(file: Path) =
             "Signed" to { "" },
             "Artist Proof" to
                 {
-                  if (cardCollectionItemId.variantType == CardVariant.Type.TheList) "proof" else ""
+                  if (cardCollectionItemId.variantType == CardPrintVariant.Type.TheList) "proof" else ""
                 },
             "Altered Art" to { "" },
             "Misprint" to { "" },
             "Promo" to
                 {
-                  if (cardCollectionItemId.variantType == CardVariant.Type.PromopackStamped) "promo"
+                  if (cardCollectionItemId.variantType == CardPrintVariant.Type.PromopackStamped) "promo"
                   else ""
                 },
             "Textless" to { "" },

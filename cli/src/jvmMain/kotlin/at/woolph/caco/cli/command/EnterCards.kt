@@ -11,6 +11,7 @@ import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.collection.CardPossession
 import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.datamodel.sets.Card
+import at.woolph.caco.datamodel.sets.CardPrint
 import at.woolph.caco.datamodel.sets.Finish
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.lib.clikt.SuspendingTransactionCliktCommand
@@ -83,11 +84,11 @@ class EnterCards : SuspendingTransactionCliktCommand() {
         fun isNeeded() = (count + alreadyCollected) == 0
       }
 
-      fun newPossessionUpdate2(card: Card, finish: Finish) =
+      fun newPossessionUpdate2(card: CardPrint, finish: Finish) =
           PossessionUpdate2(
               0,
               CardPossession.find {
-                    CardPossessions.card.eq(card.id) and CardPossessions.finish.eq(finish)
+                    CardPossessions.cardPrint.eq(card.id) and CardPossessions.finish.eq(finish)
                   }
                   .count {
                     it.language in languagesToBeChecked &&
@@ -95,7 +96,7 @@ class EnterCards : SuspendingTransactionCliktCommand() {
                   },
           )
 
-      val cardPossessionUpdates = mutableMapOf<Pair<Card, Finish>, PossessionUpdate2>()
+      val cardPossessionUpdates = mutableMapOf<Pair<CardPrint, Finish>, PossessionUpdate2>()
 
       lateinit var set: ScryfallCardSet
       lateinit var prevSetNumberAndFinish: Pair<String, Finish>
@@ -113,7 +114,7 @@ class EnterCards : SuspendingTransactionCliktCommand() {
             else -> Finish.Normal
           }
         fun add(setNumber: String, finish: Finish) {
-          val card = set.cards.firstOrNull { it.collectorNumber == setNumber }
+          val card = set.cardPrints.firstOrNull { it.collectorNumber == setNumber }
           if (card != null) {
             echo(
                 "add ${set.code.uppercase()} #${card.collectorNumber} \"${card.name}\" ${if (finish != Finish.Normal) " in \u001B[38:5:0m\u001B[48:5:214mf\u001B[48:5:215mo\u001B[48:5:216mi\u001B[48:5:217ml\u001B[0m" else ""}",
@@ -136,7 +137,7 @@ class EnterCards : SuspendingTransactionCliktCommand() {
         }
 
         fun remove(setNumber: String, finish: Finish) {
-          val card = set.cards.first { it.collectorNumber == setNumber }
+          val card = set.cardPrints.first { it.collectorNumber == setNumber }
           echo(
               "removed #${card.collectorNumber} \"${card.name}\" ${if (finish != Finish.Normal) " in \u001B[38:5:0m\u001B[48:5:214mf\u001B[48:5:215mo\u001B[48:5:216mi\u001B[48:5:217ml\u001B[0m" else ""}",
               trailingNewline = false,

@@ -2,13 +2,14 @@
 package at.woolph.caco.collection
 
 import at.woolph.caco.datamodel.sets.Card
+import at.woolph.caco.datamodel.sets.CardPrint
 import at.woolph.caco.datamodel.sets.Finish
 import kotlin.math.max
 
 data class CollectionSettings(
     val targetCardPossessions: Map<Finish, IntRange>,
 ) {
-  fun possessionTarget(card: Card, finish: Finish): Int =
+  fun possessionTarget(card: CardPrint, finish: Finish): Int =
       if (card.finishes.contains(finish)) {
         val possessionTargetForFinish = targetCardPossessions[finish]?.first ?: 0
         if (finish != Finish.Normal && !card.finishes.contains(Finish.Normal)) {

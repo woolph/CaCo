@@ -23,17 +23,17 @@ import org.slf4j.LoggerFactory
 
 @Serializable
 data class PaginatedData<T : ScryfallBase>(
-    @SerialName("object") val objectType: String,
-    @SerialName("total_cards") override val totalItems: Int? = null,
-    val has_more: Boolean,
-    @Contextual val next_page: String? = null,
-    val data: List<T>,
+  @SerialName("object") val objectType: String,
+  @SerialName("total_cards") override val totalItems: Int? = null,
+  @SerialName("has_more") val hasMore: Boolean,
+  @Contextual @SerialName("next_page") val nextPage: String? = null,
+  val data: List<T>,
 ) : ScryfallBase, Pageable<T> {
   override fun isValid() = objectType == "list"
 
-  override fun hasNext(): Boolean = has_more
+  override fun hasNext(): Boolean = hasMore
 
-  override fun next(): String = next_page!!
+  override fun next(): String = nextPage!!
 
   override fun contents(): Flow<T> = data.asFlow()
 }
@@ -55,7 +55,7 @@ internal inline fun <reified T : ScryfallBase> paginatedDataRequest(
       if (response.status.isSuccess()) {
         val paginatedData = response.body<PaginatedData<T>>()
 
-        currentQuery = if (paginatedData.has_more) paginatedData.next_page else null
+        currentQuery = if (paginatedData.hasMore) paginatedData.nextPage else null
 
         emitAll(
             paginatedData.data.asFlow().filter { it.isValid() }

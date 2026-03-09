@@ -3,23 +3,22 @@ package at.woolph.caco.datamodel.sets
 
 import arrow.core.Either
 import arrow.core.raise.either
-import java.util.UUID
 import kotlin.uuid.Uuid
 
 interface CardRepresentation {
-  val baseVariantCard: Card
-  val variantType: CardVariant.Type?
+  val baseVariantCard: CardPrint
+  val variantType: CardPrintVariant.Type?
 
-  operator fun component1(): Card = baseVariantCard
+  operator fun component1(): CardPrint = baseVariantCard
 
-  operator fun component2(): CardVariant.Type? = variantType
+  operator fun component2(): CardPrintVariant.Type? = variantType
 
   companion object {
-    fun findByScryfallId(id: Uuid): CardRepresentation? =
-        Card.findById(id) ?: CardVariant.findById(id)
+    fun findByScryfallId(scryfallId: Uuid): CardRepresentation? =
+      CardPrint.findById(scryfallId) ?: CardPrintVariant.findById(scryfallId)
   }
 
-  fun getActualScryfallId(variantType: CardVariant.Type?): Either<Throwable, Uuid> = either {
+  fun getActualScryfallId(variantType: CardPrintVariant.Type?): Either<Throwable, Uuid> = either {
     if (variantType == null) return@either baseVariantCard.scryfallId
     return@either baseVariantCard.variants
         .singleOrNull { it.variantType == variantType }

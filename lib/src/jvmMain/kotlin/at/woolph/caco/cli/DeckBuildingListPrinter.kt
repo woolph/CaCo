@@ -3,6 +3,7 @@ package at.woolph.caco.cli
 
 import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.datamodel.initDatabase
+import at.woolph.caco.datamodel.sets.CardPrints
 import at.woolph.caco.datamodel.sets.Cards
 import at.woolph.caco.datamodel.sets.Finish
 import at.woolph.caco.datamodel.sets.ScryfallCardSets
@@ -16,6 +17,7 @@ import at.woolph.utils.pdf.loadHelveticaOblique
 import at.woolph.utils.pdf.loadHelveticaRegular
 import at.woolph.utils.pdf.pdfDocument
 import org.apache.pdfbox.pdmodel.common.PDRectangle
+import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.match
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
@@ -95,21 +97,23 @@ class DeckBuildingListPrinter {
             .filter { it.value > 0 }
             .map { (cardName, amount) ->
               val cardPrice =
-                Cards.select(Cards.price)
+                Cards.innerJoin(CardPrints)
+                  .select(CardPrints.price)
                   .where { (Cards.name match cardName) }
-                  .mapNotNull { it[Cards.price] }
+                  .mapNotNull { it[CardPrints.price] }
                   .minOrNull()
               val cardSets =
                 CardPossessions.innerJoin(Cards)
+                  .innerJoin(CardPrints)
                   .innerJoin(ScryfallCardSets)
                   .select(
                     ScryfallCardSets.code,
-                    Cards.collectorNumber,
+                    CardPrints.collectorNumber,
                     CardPossessions.finish,
                   )
                   .where { (Cards.name match cardName) }
                   .mapNotNull {
-                    "${it[ScryfallCardSets.code].uppercase()} #${it[Cards.collectorNumber].uppercase()}" to
+                    "${it[ScryfallCardSets.code].uppercase()} #${it[CardPrints.collectorNumber].uppercase()}" to
                       it[CardPossessions.finish]
                   }
                   .groupingBy { it.first }

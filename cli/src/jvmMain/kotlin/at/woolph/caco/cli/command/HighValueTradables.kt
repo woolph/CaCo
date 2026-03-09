@@ -20,7 +20,7 @@ class HighValueTradables : SuspendingTransactionCliktCommand() {
     val collectionSettings = DEFAULT_COLLECTION_SETTINGS
     ScryfallCardSet.all()
         .map { set ->
-          val cardsSorted = set.cards.sortedBy { it.collectorNumber }
+          val cardsSorted = set.cardPrints.sortedBy { it.collectorNumber }
 
           set to
               cardsSorted

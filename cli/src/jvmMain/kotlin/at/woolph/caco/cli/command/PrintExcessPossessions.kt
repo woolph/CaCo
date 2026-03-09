@@ -1,160 +1,198 @@
 /* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.cli.command
 
+import arrow.core.split
+import at.woolph.caco.datamodel.collection.CardCondition
 import at.woolph.caco.datamodel.collection.CardLanguage
+import at.woolph.caco.datamodel.collection.CardPossession
+import at.woolph.caco.datamodel.sets.Card
+import at.woolph.caco.datamodel.sets.CardPrint
 import at.woolph.caco.datamodel.sets.Finish
-import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.lib.clikt.SuspendingTransactionCliktCommand
-import at.woolph.lib.clikt.prompt
-import at.woolph.utils.io.asSink
-import at.woolph.utils.pdf.HorizontalAlignment
-import at.woolph.utils.pdf.columns
-import at.woolph.utils.pdf.pdfDocument
-import at.woolph.utils.pdf.drawText
-import at.woolph.utils.pdf.frame
-import at.woolph.utils.pdf.framePagePosition
-import at.woolph.utils.pdf.loadHelveticaBold
-import com.github.ajalt.clikt.core.terminal
-import com.github.ajalt.clikt.parameters.arguments.argument
-import com.github.ajalt.clikt.parameters.arguments.convert
-import com.github.ajalt.clikt.parameters.arguments.multiple
-import com.github.ajalt.clikt.parameters.options.option
-import com.github.ajalt.clikt.parameters.options.required
-import com.github.ajalt.clikt.parameters.types.path
-import com.github.ajalt.mordant.animation.coroutines.animateInCoroutine
-import com.github.ajalt.mordant.widgets.progress.completed
-import com.github.ajalt.mordant.widgets.progress.percentage
-import com.github.ajalt.mordant.widgets.progress.progressBar
-import com.github.ajalt.mordant.widgets.progress.progressBarContextLayout
-import com.github.ajalt.mordant.widgets.progress.text
-import com.github.ajalt.mordant.widgets.progress.timeRemaining
-import java.awt.Color
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
-import org.apache.pdfbox.pdmodel.common.PDRectangle
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import kotlin.io.path.createParentDirectories
+import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
+import kotlin.collections.fold
+import kotlin.io.path.Path
+import kotlin.io.path.bufferedWriter
+import kotlin.math.max
+import kotlin.uuid.Uuid
 
+/**
+ * TODO rewrite so that it performs the following action
+ * run over every card (distinct by oracle-id or english name, because i don't care if the playset consists of cards from different sets)
+ * check if I possess <=4 (or whather custom deck limit the card has) copies, if so skip the card for this report
+ * otherwise for each card variation (set, normal/alternative art/frame, nonfoil/foil) assign 1 card to the collection binder (using language preference to select on) and assign the rest
+ * check if the collection binder assigned amount of cards is <= 4 (or whather custom deck limit the card has) , if so skip the card
+ * otherwise determine the missing amount of cards to fill the collection to the desired possession limit (considering custom deck limits) and select a diverse (maybe different languages this time)
+ *
+ * maybe we can use the same process of selecting each card variation once of the remaining list
+ * in the first run, we do it without a limit
+ * from the second run onwards we do it up to the point, until we have the desired amount of cards in the collection or the remaining is empty
+ * after we have stopped, the remaining list is the excess to be sold
+ *
+ * print the excess to the
+ */
 class PrintExcessPossessions : SuspendingTransactionCliktCommand(name = "excess") {
-  val output by option("--output", "-o").path(canBeDir = false).required()
-  val sets by
-      argument(help = "The set code of the cards to be entered")
-          .convert {
-            transaction {
-              ScryfallCardSet.findByCode(it.lowercase())
-                  ?: throw IllegalArgumentException("No set found for set code $it")
-            }
-          }
-          .multiple()
-          .prompt("Enter the set codes to be printed")
+  val DEFAULT_FOR_DECK_BUILDING = 4 // TODO make configurable through cli arguments
 
   override suspend fun runTransaction() = coroutineScope {
-    pdfDocument(output.createParentDirectories().asSink()) {
-      val sizedFontTitle = loadHelveticaBold().withSize(10f)
-      val sizedFontLine = sizedFontTitle.withSize(6f)
-      val progressBar =
-        progressBarContextLayout<ScryfallCardSet?> {
-          percentage()
-          progressBar()
-          completed()
-          timeRemaining()
-          text { "printing ${this.context?.name}" }
+
+    fun CardPossession.desirability(): Double {
+      return 1.0 * when (finish) {
+        Finish.Normal -> 1.0
+        Finish.Foil -> 0.5
+        Finish.Etched -> 0.6
+      } * when (language) {
+        CardLanguage.ENGLISH -> 1.0
+        CardLanguage.GERMAN -> 0.7
+        else -> 0.1
+      } * when (condition) {
+        CardCondition.NEAR_MINT -> 1.0
+        CardCondition.EXCELLENT -> 0.8
+        CardCondition.GOOD -> 0.6
+        CardCondition.PLAYED -> 0.4
+        CardCondition.POOR -> 0.2
+        CardCondition.UNKNOWN -> 0.7
+      }
+    }
+
+    val result = suspendTransaction {
+      Card.all()
+    }
+        .filter { card -> !card.token && card.type?.contains("Basic") != true }
+        .filter { card -> card.prints.any { it.possessions.count() > 0 } }
+        .map { card ->
+          val neededForDeckBuilding = card.specialDeckRestrictions ?: DEFAULT_FOR_DECK_BUILDING
+
+          val (collectionBinder, remaining) = card.prints.flatMap(CardPrint::possessions)
+            .groupBy { possession -> CollectionId(possession.cardPrint.scryfallId, possession.finish) }
+            .mapValues { it.value.sortedByDescending(CardPossession::desirability) }.takeFirstOfEachKey()
+
+           generateSequence(CollectionSeparation(
+            neededForDeckBuilding,
+            collectionBinder.values,
+            emptyList(),
+            remaining,
+          )) { x ->
+            val (nextToBeAddedToCollectionDuplicates, newRemaining) = x.remaining.takeFirstOfEachKey(x.stillNeeded) // TODO prefer secondary language if primary language already in collection binder
+
+            CollectionSeparation(
+              x.neededForDeckBuilding,
+              x.collectionBinder,
+              x.collectionDuplicates + nextToBeAddedToCollectionDuplicates.values,
+              newRemaining,
+            )
+          }.first { !(it.isMoreNeeded && it.isMoreAvailable) }
+             .let { CollectionExcessReportItem(
+               it.collectionBinder,
+               it.collectionDuplicates,
+               it.remaining.flatMap { (_, value) -> value }
+             ) }
+//            .also { println("${card.name} => $it") }
         }
-          .animateInCoroutine(
-            terminal,
-            context = null,
-            total = sets.size.toLong(),
-            completed = 0,
+
+    Path("./caco-excess-report.yml").bufferedWriter().use { bw ->
+      result.flatMap {
+        val sets = sequenceOf(
+         it.binder,
+          it.duplicates,
+          it.excess,
+        ).flatMap { it.map { it.cardPrint.set } }.toSet()
+
+        sets.associateWith { currentSet ->
+          CollectionExcessReportItem(
+            it.binder.filter { it.cardPrint.set == currentSet },
+            it.duplicates.filter { it.cardPrint.set == currentSet },
+            it.excess.filter { it.cardPrint.set == currentSet },
           )
-
-      launch { progressBar.execute() }
-
-      sets.forEach { set ->
-        progressBar.update { context = set }
-        val maxRows = 85
-        val maxColumns = 3
-
-        val cards = set.cards.sorted().filter { !it.promo }
-        cards.chunked(maxColumns * maxRows).withIndex().forEach { (pageIndex, items) ->
-          page(PDRectangle.A4) {
-            framePagePosition(20f, 20f, 20f, 20f) {
-              drawText(
-                "Inventory ${set.name} Page ${pageIndex + 1}",
-                sizedFontTitle,
-                HorizontalAlignment.CENTER,
-                0f,
-                10f,
-                Color.BLACK,
-              )
-
-              // TODO calc metrics for all sets (so that formatting is the same for all pages)
-              frame(marginTop = sizedFontTitle.height + 20f) {
-                columns(maxColumns, maxRows, 5f, 3.5f, sizedFontLine) {
-                  var i = 0
-                  items.forEach {
-                    val wanted = 4
-                    var totalSum = 0
-                    val wantedFoil = 1
-                    var totalSumFoil = 0
-
-                    val excesses =
-                      CardLanguage.entries
-                        .map { language ->
-                          language to
-                            it.possessions.count {
-                              it.language == language && it.finish == Finish.Normal
-                            }
-                        }
-                        .map { (language, possessions) ->
-                          val excess = (possessions - (wanted - totalSum)).coerceAtLeast(0)
-                          totalSum = (totalSum + possessions).coerceAtMost(wanted)
-                          language to excess
-                        }
-                        .filter { it.second > 0 }
-                    val excessesFoil =
-                      CardLanguage.entries
-                        .map { language ->
-                          language to
-                            it.possessions.count {
-                              it.language == language && it.finish != Finish.Normal
-                            }
-                        }
-                        .map { (language, possessions) ->
-                          val excess =
-                            (possessions - (wantedFoil - totalSumFoil)).coerceAtLeast(0)
-                          totalSumFoil = (totalSumFoil + possessions).coerceAtMost(wantedFoil)
-                          language to excess
-                        }
-                        .filter { it.second > 0 }
-
-                    this@columns.get(i) {
-                      val color =
-                        when {
-                          excesses.isEmpty() -> Color.LIGHT_GRAY
-                          (it.priceNormal?.value ?: 0.0) > 1.0 -> Color.CYAN
-                          (it.priceNormal?.value ?: 0.0) > 0.2 -> Color.MAGENTA
-                          else -> Color.BLACK
-                        }
-                      drawText(
-                        "${
-                          it.collectorNumber.replace(
-                            '\u2605',
-                            '*'
-                          )
-                        } ${it.name} ${it.priceNormal?.toString() ?: "-"} " +
-                          "${excesses.joinToString { "${it.second}x ${it.first}" }}  Foil ${excessesFoil.joinToString { "${it.second}x ${it.first}" }} ",
-                        color,
-                      )
-                    }
-                    i++
-                  }
-                }
-              }
-            }
+        }.entries
+      }.groupingBy { it.key }.fold(CollectionExcessReportItem.EMPTY) { aggregate, item ->
+        aggregate + item.value
+      }
+        .filter { (_, collectionExcessReport) -> collectionExcessReport.excess.isNotEmpty()}
+        .forEach { (set, collectionExcessReport) ->
+        bw.write("${set.code}:\n")
+        bw.write("  name: \"${set.name}\"\n")
+        bw.write("  collection:\n")
+//          if (collectionExcessReport.binder.isEmpty()) {
+//            bw.write("    binder:\n")
+//            collectionExcessReport.binder.sortedBy { it.cardPrint.collectorNumber }.forEach {
+//              bw.write("    - \"${it.toFancyString()}\"\n")
+//            }
+//          }
+        if(collectionExcessReport.duplicates.isNotEmpty()) {
+          bw.write("    duplicates:\n")
+          collectionExcessReport.duplicates.sortedBy { it.cardPrint.collectorNumber }.forEach {
+            bw.write("    - \"${it.toFancyString()}\"\n")
           }
         }
-        progressBar.update { completed += 1 }
+        bw.write("    excess:\n")
+        collectionExcessReport.excess.sortedBy { it.cardPrint.collectorNumber }.forEach {
+          bw.write("    - \"${it.toFancyString()}\"\n")
+        }
       }
     }
   }
+}
+
+fun CardPossession.toFancyString() = "${cardPrint.collectorNumber}${when(finish) {
+  Finish.Normal -> ""
+  Finish.Foil -> "★"
+  Finish.Etched -> "*"
+}} ${cardPrint.mergedName}"
+
+data class CollectionId(
+  val scryfallId: Uuid,
+  val finish: Finish,
+)
+
+data class CollectionExcessReportItem(
+  val binder: Collection<CardPossession>,
+  val duplicates: Collection<CardPossession>,
+  val excess: Collection<CardPossession>,
+) {
+  operator fun plus(other: CollectionExcessReportItem): CollectionExcessReportItem =
+    CollectionExcessReportItem(
+      binder.plus(other.binder),
+      duplicates.plus(other.duplicates),
+      excess.plus(other.excess),
+    )
+
+  companion object {
+    val EMPTY = CollectionExcessReportItem(
+      binder = emptyList(),
+      duplicates = emptyList(),
+      excess = emptyList(),
+    )
+  }
+}
+
+data class CollectionSeparation(
+  val neededForDeckBuilding: Int,
+  val collectionBinder: Collection<CardPossession>,
+  val collectionDuplicates: Collection<CardPossession>,
+  val remaining: Map<CollectionId, Collection<CardPossession>>,
+) {
+  val stillNeeded: Int = max(0, neededForDeckBuilding - collectionBinder.size - collectionDuplicates.size)
+  val isMoreNeeded: Boolean = stillNeeded > 0
+  val isMoreAvailable: Boolean = remaining.isNotEmpty() && remaining.any { it.value.isNotEmpty() }
+}
+
+fun <K, I> Map<K, Collection<I>>.takeFirstOfEachKey(atMost: Int = Int.MAX_VALUE): Pair<Map<K, I>, Map<K,Collection<I>>> {
+  val firsts = mutableMapOf<K, I>()
+  val remaining = mutableMapOf<K,Collection<I>>()
+
+  forEach { (k, list) ->
+    if (firsts.size < atMost) {
+      list.split()?.let { (remains, firstElement) ->
+        firsts[k] = firstElement
+        if (remains.isNotEmpty())
+          remaining[k] = remains
+      }
+    } else {
+      remaining[k] = list
+    }
+  }
+
+  return firsts.toMap() to remaining.toMap()
 }

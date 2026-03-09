@@ -7,6 +7,7 @@ import at.woolph.caco.datamodel.MtgColor
 import at.woolph.caco.datamodel.decks.Format
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.Cards
+import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.match
 import kotlin.collections.filterNot
 import kotlin.math.round
@@ -125,7 +126,7 @@ fun generateManabase(
   val (filteredBasicLands, filteredNonBasicLands) = getLands()
     .filter { it.card.isLegalIn(deckFormat) }
     .filter { selectionCriterion.commanderColorIdentity.contains(it) }
-    .filter { (it.card.priceNormal?.value ?: 1000.0) <= selectionCriterion.maxPricePerCard }
+    .filter { (it.card.lowestPrice?.value ?: 1000.0) <= selectionCriterion.maxPricePerCard }
     .partition { it.isBasic }
 
   val mutableFilteredNonBasicLands = filteredNonBasicLands.toMutableList()
@@ -141,7 +142,7 @@ fun generateManabase(
               selectionCriterion,
               pipDistribution,
               selectedLands.meanProduction(suggestedLandCount),
-          ) / (it.card.priceNormal?.value ?: 1000.0)
+          ) / (it.card.lowestPrice?.value ?: 1000.0)
         }
     selectedLands.add(pickedLand)
     mutableFilteredNonBasicLands.remove(pickedLand)

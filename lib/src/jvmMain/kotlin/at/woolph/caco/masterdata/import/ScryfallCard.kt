@@ -5,7 +5,8 @@ import at.woolph.caco.datamodel.MtgColor
 import at.woolph.caco.datamodel.decks.Format
 import at.woolph.utils.currency.CurrencyValue
 import at.woolph.caco.datamodel.sets.Card
-import at.woolph.caco.datamodel.sets.CardVariant
+import at.woolph.caco.datamodel.sets.CardPrint
+import at.woolph.caco.datamodel.sets.CardPrintVariant
 import at.woolph.caco.datamodel.sets.Finish
 import at.woolph.caco.datamodel.sets.LayoutType
 import at.woolph.caco.datamodel.sets.Legality
@@ -38,7 +39,7 @@ data class ScryfallCardFace(
   val cmc: Double? = null,
   val mana_cost: String,
   val type_line: String? = null,
-  @Contextual val oracle_id: UUID? = null,
+  @Contextual val oracle_id: Uuid? = null,
   val oracle_text: String,
   val layout: LayoutType? = null,
   val printed_name: String? = null,
@@ -159,11 +160,11 @@ data class ScryfallCard(
 ) : ScryfallBase {
   override fun isValid() = objectType == "card"
 
-  val variant: CardVariant.Type? =
+  val variant: CardPrintVariant.Type? =
       when {
-        isTheListVersion -> CardVariant.Type.TheList
-        isPrereleaseStampedVersion -> CardVariant.Type.PrereleaseStamped
-        isPromopackStampedVersion -> CardVariant.Type.PromopackStamped
+        isTheListVersion -> CardPrintVariant.Type.TheList
+        isPrereleaseStampedVersion -> CardPrintVariant.Type.PrereleaseStamped
+        isPromopackStampedVersion -> CardPrintVariant.Type.PromopackStamped
         else -> null
       }
   val isTheListVersion: Boolean
@@ -192,26 +193,11 @@ data class ScryfallCard(
         val isPromo = promo
         val isToken = set_type == "token"
 
+        it.name = name
         it.gameChanger = game_changer
         it.edhrecRank = edhrec_rank
-        it.set =
-            ScryfallCardSet.findById(set_id)
-                ?: throw SetNotInDatabaseException(set, set_name, set_type)
-        it.collectorNumber = collector_number
-        it.name = name
-        it.flavorName = flavor_name
         it.layout = layout
-        it.arenaId = arena_id
-        it.rarity = rarity.parseRarity()
-        it.promo = isPromo
         it.token = isToken
-        it.image = image_uris?.get("png") ?: card_faces?.get(0)?.image_uris?.get("png")
-        it.cardmarketUri = purchase_uris["cardmarket"]
-
-        it.extra = !booster
-        it.finishes = finishes
-        it.fullArt = full_art
-        it.extendedArt = frame_effects.contains("extendedart")
 
         it.colorIdentity = color_identity.toColorIdentity()
         it.producedMana = produced_mana?.toColor()
@@ -224,11 +210,7 @@ data class ScryfallCard(
                   yieldAll(card_faces?.asSequence()?.map { it.oracle_text } ?: emptySequence())
                 }
                 .joinToString("\n")
-        it.priceNormal = prices["usd"]?.toDouble()?.let(CurrencyValue::usd)
-        it.priceFoil = prices["usd_foil"]?.toDouble()?.let(CurrencyValue::usd)
-        it.priceEtched = prices["usd_etched"]?.toDouble()?.let(CurrencyValue::usd)
         it.type = type_line ?: card_faces?.mapNotNull { it.type_line }?.joinToString(" // ")
-        it.promoType = promo_types
         it.legalities = legalities
 
         val patternSpecialDeckRestrictions =
@@ -267,6 +249,34 @@ data class ScryfallCard(
                         }
                   }
                 }
+      }
+
+  fun update(card: CardPrint) =
+      card.also {
+        val isPromo = promo
+        val isToken = set_type == "token"
+
+        it.set =
+            ScryfallCardSet.findById(set_id)
+                ?: throw SetNotInDatabaseException(set, set_name, set_type)
+        it.collectorNumber = collector_number
+        it.flavorName = flavor_name
+        it.arenaId = arena_id
+        it.rarity = rarity.parseRarity()
+        it.promo = isPromo
+        it.image = image_uris?.get("png") ?: card_faces?.get(0)?.image_uris?.get("png")
+        it.cardmarketUri = purchase_uris["cardmarket"]
+
+        it.extra = !booster
+        it.finishes = finishes
+        it.fullArt = full_art
+        it.extendedArt = frame_effects.contains("extendedart")
+
+
+        it.priceNormal = prices["usd"]?.toDouble()?.let(CurrencyValue::usd)
+        it.priceFoil = prices["usd_foil"]?.toDouble()?.let(CurrencyValue::usd)
+        it.priceEtched = prices["usd_etched"]?.toDouble()?.let(CurrencyValue::usd)
+        it.promoType = promo_types
       }
 
   fun determinePrintedName(): String? = printed_name ?: card_faces?.let { "${it[0]} // ${it[1]}" }

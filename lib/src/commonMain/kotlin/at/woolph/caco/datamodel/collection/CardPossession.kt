@@ -1,9 +1,9 @@
 /* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.datamodel.collection
 
-import at.woolph.caco.datamodel.sets.Card
-import at.woolph.caco.datamodel.sets.CardVariant
-import at.woolph.caco.datamodel.sets.Cards
+import at.woolph.caco.datamodel.sets.CardPrint
+import at.woolph.caco.datamodel.sets.CardPrints
+import at.woolph.caco.datamodel.sets.CardPrintVariant
 import at.woolph.caco.datamodel.sets.Finish
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.dao.IntEntity
@@ -14,12 +14,12 @@ import org.jetbrains.exposed.v1.datetime.CurrentTimestamp
 import org.jetbrains.exposed.v1.datetime.timestamp
 
 object CardPossessions : IntIdTable() {
-  val card = reference("card", Cards).index()
+  val cardPrint = reference("cardPrint", CardPrints).index()
   val dateOfAddition = timestamp("dateOfAddition").index().defaultExpression(CurrentTimestamp)
   val language = enumeration<CardLanguage>("language").default(CardLanguage.UNKNOWN).index()
   val condition = enumeration<CardCondition>("condition").default(CardCondition.UNKNOWN).index()
   val finish = enumeration<Finish>("finish").default(Finish.Normal).index()
-  val variantType = enumeration<CardVariant.Type>("variantType").nullable().index()
+  val variantType = enumeration<CardPrintVariant.Type>("variantType").nullable().index()
 
   val purchasePrice = double("purchasePrice").nullable()
   /**  */
@@ -33,10 +33,10 @@ object CardPossessions : IntIdTable() {
 
 class CardPossession(id: EntityID<Int>) : IntEntity(id) {
   companion object : IntEntityClass<CardPossession>(CardPossessions) {
-    fun find(card: Card) = find { CardPossessions.card eq card.id }
+    fun find(cardPrint: CardPrint) = find { CardPossessions.cardPrint eq cardPrint.id }
   }
 
-  var card by Card referencedOn CardPossessions.card
+  var cardPrint by CardPrint referencedOn CardPossessions.cardPrint
   var dateOfAddition by CardPossessions.dateOfAddition
   var language by CardPossessions.language
   var condition by CardPossessions.condition
@@ -45,4 +45,6 @@ class CardPossession(id: EntityID<Int>) : IntEntity(id) {
   var tradeLock by CardPossessions.tradeLock
   var location by CardPossessions.location
   var purchasePrice by CardPossessions.purchasePrice
+
+  override fun toString(): String = "$cardPrint $finish $language $condition $variantType"
 }

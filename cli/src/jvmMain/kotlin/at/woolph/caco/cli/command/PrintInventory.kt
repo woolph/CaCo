@@ -75,7 +75,7 @@ class PrintInventory : SuspendingTransactionCliktCommand(name = "inventory") {
         val maxRows = 85
         val maxColumns = 5
 
-        val cards = set.cards.sorted().filter { !it.promo }
+        val cards = set.cardPrints.sorted().filter { !it.promo }
         cards.chunked(maxColumns * maxRows).withIndex().forEach { (pageIndex, items) ->
           page(PDRectangle.A4) {
             framePagePosition(20f, 20f, 20f, 20f) {

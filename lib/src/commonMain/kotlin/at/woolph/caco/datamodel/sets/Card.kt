@@ -3,46 +3,25 @@ package at.woolph.caco.datamodel.sets
 
 import at.woolph.caco.datamodel.Color
 import at.woolph.caco.datamodel.ColorIdentity
-import at.woolph.utils.currency.CurrencyValue
-import at.woolph.caco.datamodel.collection.CardPossession
-import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.datamodel.decks.Format
-import at.woolph.utils.compareToNullable
-import at.woolph.utils.exposed.UuidEntity
-import at.woolph.utils.exposed.UuidEntityClass
-import at.woolph.utils.exposed.ktUuid
+import at.woolph.utils.currency.CurrencyValue
 import at.woolph.utils.ktor.jsonSerializer
-import java.net.URI
-import java.util.*
-import org.jetbrains.exposed.v1.dao.*
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.dao.id.IdTable
+import org.jetbrains.exposed.v1.dao.UuidEntity
+import org.jetbrains.exposed.v1.dao.UuidEntityClass
 import org.jetbrains.exposed.v1.json.json
-import kotlin.collections.fold
-import kotlin.text.get
 import kotlin.uuid.Uuid
 
-object Cards : IdTable<Uuid>() { // TODO maybe split into card & cardprint (card only contains basic information, and cardprint is an actual representation)
-  override val id = ktUuid("scryfallId").entityId()
+object Cards : IdTable<Uuid>() {
+  override val id = uuid("oracleId").entityId()
   override val primaryKey = PrimaryKey(id)
 
+  val name = varchar("name", length = 256).index() // name is not unique for tokens
   val layout = enumeration<LayoutType>("layout")
-  val set = reference("set", ScryfallCardSets).index()
-  val collectorNumber = varchar("number", length = 10).index()
-  val name = varchar("name", length = 256).index()
-  val flavorName = varchar("flavorName", length = 256).nullable()
   val nameDE = varchar("nameDE", length = 256).index().nullable()
-  val arenaId = integer("arenaId").nullable().index()
-  val rarity = enumeration("rarity", Rarity::class).index()
-  val promo = bool("promo").default(false).index()
   val token = bool("token").default(false).index()
-  val image = varchar("imageURI", length = 512).nullable()
-  val cardmarketUri = varchar("cardmarketUri", length = 512).nullable()
 
-  val extra = bool("extra").default(false)
-  val finishes = integer("finishes").default(1)
-  val fullArt = bool("fullArt").default(false)
-  val extendedArt = bool("extendedArt").default(false)
   val specialDeckRestrictions = integer("specialDeckRestrictions").nullable()
 
   val manaCost = varchar("manaCost", length = 256).nullable()
@@ -52,87 +31,25 @@ object Cards : IdTable<Uuid>() { // TODO maybe split into card & cardprint (card
   val colorIdentity = integer("colorIdentity")
   val producedMana = integer("producedMana").nullable()
 
-  val price = double("price").nullable()
-  val priceFoil = double("priceFoil").nullable()
-  val priceEtched = double("priceEtched").nullable()
   val gameChanger = bool("gameChanger").index()
   val edhrecRank = integer("edhrecRank").nullable()
-  val promoType = array<String>("promoType").default(emptyList())
 
   val legalities = json<Map<Format, Legality>>("legality", jsonSerializer).nullable()
 }
 
-class Card(id: EntityID<Uuid>) : UuidEntity(id), Comparable<Card>, CardRepresentation {
+class Card(id: EntityID<Uuid>) : UuidEntity(id), Comparable<Card> {
   companion object : UuidEntityClass<Card>(Cards) {
     val CARD_DRAW_PATTERN = Regex("draws? (|a |two |three )cards?", RegexOption.IGNORE_CASE)
-
-    private fun compareCollectorNumberNullable(
-        collectorNumber: String,
-        otherCollectorNumber: String,
-    ): Int? {
-      val (prefix, number, suffix) = splitCollectorNumber(collectorNumber)
-      val (otherPrefix, otherNumber, otherSuffix) = splitCollectorNumber(otherCollectorNumber)
-      return prefix.compareToNullable(otherPrefix)
-          ?: number.compareToNullable(otherNumber)
-          ?: suffix.compareToNullable(otherSuffix)
-    }
-
-    private fun splitCollectorNumber(collectorNumber: String): Triple<String?, Int, String?> {
-      val match = COLLECTION_NUMBER_PATTERN.find(collectorNumber) ?: return Triple(null, 0, null)
-      val prefix = match.groups["prefix"]?.value
-      val number = match.groups["number"]!!.value.toInt()
-      val suffix = match.groups["suffix"]?.value
-      return Triple(prefix, number, suffix)
-    }
-
-    internal val COLLECTION_NUMBER_PATTERN =
-        Regex("^(?<prefix>\\w+-)?(?<number>\\d+)(?<suffix>.+)?$")
   }
 
-  val scryfallId: Uuid
-    get() = id.value
-
-  val variants by CardVariant referrersOn CardVariants
-
-  var set by ScryfallCardSet referencedOn Cards.set
-  var collectorNumber by Cards.collectorNumber
-  val mergedName: String
-    get() = flavorName?.let { "$it ($name)" } ?: name
+  val lowestPrice: CurrencyValue? get() = prints.mapNotNull { it.lowestPrice }.minOrNull()
+  val prints by CardPrint referrersOn CardPrints
 
   var name by Cards.name
-  var flavorName by Cards.flavorName
   var nameDE by Cards.nameDE
-  var arenaId by Cards.arenaId
-  var rarity by Cards.rarity
-  var promo by Cards.promo
   var token by Cards.token
   var layout by Cards.layout
-  var image by Cards.image.transform({ it?.toString() }, { it?.let { URI(it) } })
-  var thumbnail by
-      Cards.image.transform(
-          { it?.toString()?.replace(".jpg", ".png")?.replace("/small/front", "/png/front") },
-          {
-            it?.replace(".png", ".jpg")
-                ?.replace("/png/front", "/small/front")
-                ?.replace("c1.scryfall.com/file/scryfall-cards/", "cards.scryfall.io/") // old url
-                ?.let { URI(it) }
-          },
-      )
-  var cardmarketUri by Cards.cardmarketUri.transform({ it?.toString() }, { it?.let { URI(it) } })
 
-  var extra by Cards.extra
-  var finishes: Set<Finish> by
-      Cards.finishes.transform(
-          { it.fold(0) { acc, finish -> acc or (1 shl finish.ordinal) } },
-          {
-            Finish.entries
-                .asSequence()
-                .filter { finish -> (it and (1 shl finish.ordinal)) != 0 }
-                .toSet()
-          },
-      )
-  var fullArt by Cards.fullArt
-  var extendedArt by Cards.extendedArt
   var specialDeckRestrictions by Cards.specialDeckRestrictions
 
   var manaCost by Cards.manaCost
@@ -144,22 +61,8 @@ class Card(id: EntityID<Uuid>) : UuidEntity(id), Comparable<Card>, CardRepresent
   fun isLegalIn(format: Format): Boolean =
       legalities?.get(format)?.isAllowedToBePlayed == true
 
-  var priceNormal: CurrencyValue? by
-      Cards.price.transform({ it?.value }, { it?.let { CurrencyValue.usd(it) } })
-  var priceFoil: CurrencyValue? by
-      Cards.priceFoil.transform({ it?.value }, { it?.let { CurrencyValue.usd(it) } })
-  var priceEtched: CurrencyValue? by Cards.priceEtched.transform({ it?.value }, { it?.let { CurrencyValue.usd(it) } })
-
-  fun prices(finish: Finish): CurrencyValue? =
-      when (finish) {
-        Finish.Normal -> priceNormal
-        Finish.Foil -> priceFoil
-        Finish.Etched -> priceEtched
-      }
-
   var gameChanger by Cards.gameChanger
   var edhrecRank by Cards.edhrecRank
-  var promoType: Set<String> by Cards.promoType.transform({ it.toList() }, { it.toSet() })
 
   var colorIdentity by
       Cards.colorIdentity.transform(ColorIdentity::encodeAsInteger, ColorIdentity::decodeFromInteger)
@@ -169,8 +72,6 @@ class Card(id: EntityID<Uuid>) : UuidEntity(id), Comparable<Card>, CardRepresent
       { it?.encodeAsInteger() },
       { it?.let(Color::decodeFromInteger) },
     )
-
-  val possessions by CardPossession referrersOn CardPossessions
 
   val isCreature: Boolean
     get() = type?.contains("Creature") == true
@@ -236,15 +137,7 @@ class Card(id: EntityID<Uuid>) : UuidEntity(id), Comparable<Card>, CardRepresent
       keywords.none { oracleText.contains(it, ignoreCase = true) }
 
   override fun compareTo(other: Card): Int =
-      set.compareToNullable(other.set)
-          ?: compareCollectorNumberNullable(collectorNumber, other.collectorNumber)
-          ?: 0
+    name.compareTo(other.name)
 
-  override fun toString(): String = "[${set.code}-$collectorNumber] $name"
-
-  override val baseVariantCard: Card
-    get() = this
-
-  override val variantType: CardVariant.Type?
-    get() = null
+  override fun toString(): String = name
 }

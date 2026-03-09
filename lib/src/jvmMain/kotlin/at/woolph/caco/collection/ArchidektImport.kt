@@ -12,17 +12,12 @@ import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atTime
 import kotlinx.datetime.toInstant
-import kotlinx.datetime.toLocalDateTime
 import kotlinx.io.files.Path
 import kotlin.time.Instant
-import java.time.LocalDate
-import java.time.ZoneOffset
-import java.util.*
 import java.util.function.Predicate
 import kotlin.text.toDoubleOrNull
 import kotlin.text.toInt
 import kotlin.time.Clock
-import kotlin.time.toKotlinInstant
 import kotlin.uuid.Uuid
 
 fun importArchidekt(
@@ -68,18 +63,18 @@ fun Raise<Throwable>.mapArchitect(csvRecord: CsvRecord): CardCollectionItem {
       }
   val purchasePrice = csvRecord["Purchase Price"]?.toDoubleOrNull()
   val scryfallId = Either.catch { Uuid.parse(csvRecord["Scryfall ID"]!!) }.bind()
-  val (card, cardVariantType) =
+  val (cardPrint, cardPrintVariantType) =
       CardRepresentation.findByScryfallId(scryfallId)
           ?: raise(Exception("card with id $scryfallId not found"))
   return CardCollectionItem(
       quantity = quantity.toUInt(),
       cardCollectionItemId =
           CardCollectionItemId(
-              card = card,
+              cardPrint = cardPrint,
               finish = finish,
               language = language,
               condition = condition,
-              variantType = cardVariantType,
+              variantType = cardPrintVariantType,
           ),
       dateAdded = dateAdded,
       purchasePrice = purchasePrice,

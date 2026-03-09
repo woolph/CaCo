@@ -142,7 +142,7 @@ i++
     button("Export Collection") {
       action(coroutineScope) {
         // TODO progress dialog
-        set?.item?.cards?.flatMap { CardPossession.find(it) }?.asCardCollectionItems()?.let { items ->
+        set?.item?.cardPrints?.flatMap { CardPossession.find(it) }?.asCardCollectionItems()?.let { items ->
           chooseFile(
             "Choose File to Export to",
             arrayOf(FileChooser.ExtensionFilter("CSV", "*.csv")),

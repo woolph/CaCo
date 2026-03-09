@@ -22,9 +22,9 @@ class PrintMissingStats : SuspendingTransactionCliktCommand(name = "missing-stat
         ScryfallCardSet.all()
             .filter { !it.digitalOnly && it.cardCount > 50 }
             .map {
-              val overallCardCount = it.cards.count { !it.token }
+              val overallCardCount = it.cardPrints.count { !it.card.token }
               val missingCardsForCollection =
-                  it.cards.filter { card -> !card.token && card.possessions.count() < 1 }
+                  it.cardPrints.filter { card -> !card.card.token && card.possessions.count() < 1 }
               val count = missingCardsForCollection.count()
               val costs = missingCardsForCollection.sumOf { it.priceNormal?.value ?: 10.0 }
               it to MissingStats(count, overallCardCount, CurrencyValue(costs, Currencies.USD))

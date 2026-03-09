@@ -17,7 +17,7 @@ fun main() {
     .forEach { (landCard,_,doesTapForManaImmediately)  ->
       val colors = landCard.colorIdentity.toString()
       val production = landCard.producedMana.toString()
-      println("${landCard.name} - $colors - $production - doesTapForManaImmediately: $doesTapForManaImmediately - ${landCard.priceNormal}")
+      println("${landCard.name} - $colors - $production - doesTapForManaImmediately: $doesTapForManaImmediately - ${landCard.lowestPrice}")
     }
 }
 

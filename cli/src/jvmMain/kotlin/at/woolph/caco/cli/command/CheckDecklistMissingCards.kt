@@ -63,8 +63,8 @@ class CheckDecklistMissingCards : SuspendingCliktCommand(name = "check-deck") {
       deckList.deckZones.filter { it.key.isPartOfDeck } .flatMap { (deckZone, cardList) ->
         cardList.mapNotNull { (cardName, amount) ->
           val cards = Card.find { Cards.name match cardName }
-          val lowestPrice = cards.mapNotNull { card -> Finish.entries.mapNotNull { card.prices(it) }.minOrNull() }.minOrNull()
-          val possessionAmount = cards.sumOf { it.possessions.count() }
+          val lowestPrice = cards.mapNotNull { it.lowestPrice }.minOrNull()
+          val possessionAmount = cards.sumOf { it.prints.sumOf { it.possessions.count() } }
           if (possessionAmount < amount) {
             NeededCard(deckZone, cardName, amount - possessionAmount, lowestPrice)
           } else {

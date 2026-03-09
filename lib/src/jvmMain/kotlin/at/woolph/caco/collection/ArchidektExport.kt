@@ -36,11 +36,11 @@ fun Iterable<CardCollectionItem>.exportArchidekt(file: Path) =
             "Scryfall ID" to { cardCollectionItemId.actualScryfallId.toString() },
             "Card name" to
                 {
-                  cardCollectionItemId.card.name
+                  cardCollectionItemId.cardPrint.name
                 }, // is optional but better for human interpretation
             "Set" to
                 {
-                  cardCollectionItemId.card.set.code
+                  cardCollectionItemId.cardPrint.set.code
                 }, // is optional but better for human interpretation
             "Date added" to { LocalDate.from(dateAdded.toJavaInstant().atOffset(ZoneOffset.UTC)).toString() },
             "Purchase Price" to { purchasePrice?.toString() ?: "" },

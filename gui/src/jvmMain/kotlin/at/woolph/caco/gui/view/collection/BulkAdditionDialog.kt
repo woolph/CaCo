@@ -7,7 +7,7 @@ import at.woolph.caco.collection.exportArchidekt
 import at.woolph.caco.datamodel.collection.CardCondition
 import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.sets.Card
-import at.woolph.caco.datamodel.sets.CardVariant
+import at.woolph.caco.datamodel.sets.CardPrintVariant
 import at.woolph.caco.datamodel.sets.Finish
 import at.woolph.caco.datamodel.sets.Foil
 import at.woolph.caco.datamodel.sets.Rarity
@@ -120,7 +120,7 @@ class BulkAdditionDialog(
     fun updateCards() {
         cards.setAll(
             transaction {
-                set.cards.toList().map { CardModel(it) }
+                set.cardPrints.toList().map { CardModel(it) }
             },
         )
     }
@@ -312,7 +312,7 @@ class BulkAdditionDialog(
                                             CardCollectionItem(
                                                 quantity = it,
                                                 CardCollectionItemId(
-                                                    card = cardInfo.item,
+                                                    cardPrint = cardInfo.item,
                                                     finish = Finish.Normal,
                                                     language = languageProperty.value,
                                                     condition = conditionProperty.value,
@@ -325,7 +325,7 @@ class BulkAdditionDialog(
                                             CardCollectionItem(
                                                 quantity = it,
                                                 CardCollectionItemId(
-                                                    card = cardInfo.item,
+                                                    cardPrint = cardInfo.item,
                                                     finish = Finish.Foil,
                                                     language = languageProperty.value,
                                                     condition = conditionProperty.value,
@@ -338,11 +338,11 @@ class BulkAdditionDialog(
                                             CardCollectionItem(
                                                 quantity = it,
                                                 CardCollectionItemId(
-                                                    card = cardInfo.item,
+                                                    cardPrint = cardInfo.item,
                                                     finish = Finish.Foil,
                                                     language = languageProperty.value,
                                                     condition = conditionProperty.value,
-                                                    variantType = CardVariant.Type.PrereleaseStamped,
+                                                    variantType = CardPrintVariant.Type.PrereleaseStamped,
                                                 ),
                                             ),
                                         )

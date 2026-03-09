@@ -39,7 +39,7 @@ kotlin {
 
       implementation("co.touchlab:kermit:2.0.8")
 
-      api(project.dependencies.platform("org.jetbrains.exposed:exposed-bom:1.0.0-rc-4"))
+      api(project.dependencies.platform("org.jetbrains.exposed:exposed-bom:1.1.1"))
       api("org.jetbrains.exposed:exposed-dao")
       implementation("org.jetbrains.exposed:exposed-kotlin-datetime")
       implementation("org.jetbrains.exposed:exposed-json")
