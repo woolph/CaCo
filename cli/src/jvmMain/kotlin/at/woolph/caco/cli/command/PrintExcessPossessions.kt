@@ -1,4 +1,4 @@
-/* Copyright 2025 Wolfgang Mayer */
+/* Copyright 2025-2026 Wolfgang Mayer */
 package at.woolph.caco.cli.command
 
 import arrow.core.split
@@ -9,6 +9,7 @@ import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.CardPrint
 import at.woolph.caco.datamodel.sets.Finish
 import at.woolph.lib.clikt.SuspendingTransactionCliktCommand
+import at.woolph.utils.compareToNullable
 import kotlinx.coroutines.coroutineScope
 import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 import kotlin.collections.fold
@@ -18,7 +19,6 @@ import kotlin.math.max
 import kotlin.uuid.Uuid
 
 /**
- * TODO rewrite so that it performs the following action
  * run over every card (distinct by oracle-id or english name, because i don't care if the playset consists of cards from different sets)
  * check if I possess <=4 (or whather custom deck limit the card has) copies, if so skip the card for this report
  * otherwise for each card variation (set, normal/alternative art/frame, nonfoil/foil) assign 1 card to the collection binder (using language preference to select on) and assign the rest
@@ -34,6 +34,7 @@ import kotlin.uuid.Uuid
  */
 class PrintExcessPossessions : SuspendingTransactionCliktCommand(name = "excess") {
   val DEFAULT_FOR_DECK_BUILDING = 4 // TODO make configurable through cli arguments
+  val printBinderCards: Boolean = false
 
   override suspend fun runTransaction() = coroutineScope {
 
@@ -106,40 +107,55 @@ class PrintExcessPossessions : SuspendingTransactionCliktCommand(name = "excess"
             it.excess.filter { it.cardPrint.set == currentSet },
           )
         }.entries
-      }.groupingBy { it.key }.fold(CollectionExcessReportItem.EMPTY) { aggregate, item ->
-        aggregate + item.value
       }
+        .groupingBy { (set, _) -> set }
+        .fold(CollectionExcessReportItem.EMPTY, CollectionExcessReportItem::merge)
+        .entries
         .filter { (_, collectionExcessReport) -> collectionExcessReport.excess.isNotEmpty()}
+        .sortedByDescending { (set, _) -> set.releaseDate }
         .forEach { (set, collectionExcessReport) ->
-        bw.write("${set.code}:\n")
-        bw.write("  name: \"${set.name}\"\n")
-        bw.write("  collection:\n")
-//          if (collectionExcessReport.binder.isEmpty()) {
-//            bw.write("    binder:\n")
-//            collectionExcessReport.binder.sortedBy { it.cardPrint.collectorNumber }.forEach {
-//              bw.write("    - \"${it.toFancyString()}\"\n")
-//            }
-//          }
-        if(collectionExcessReport.duplicates.isNotEmpty()) {
-          bw.write("    duplicates:\n")
-          collectionExcessReport.duplicates.sortedBy { it.cardPrint.collectorNumber }.forEach {
-            bw.write("    - \"${it.toFancyString()}\"\n")
+          bw.write("${set.code}:\n")
+          bw.write("  name: \"${set.name}\"\n")
+          bw.write("  collection:\n")
+          if (printBinderCards && collectionExcessReport.binder.isNotEmpty()) {
+            bw.write("    binder:\n")
+            collectionExcessReport.binder.sortedAndMerged().forEach {
+              bw.write("    - \"$it\"\n")
+            }
+          }
+          if(collectionExcessReport.duplicates.isNotEmpty()) {
+            bw.write("    duplicates:\n")
+            collectionExcessReport.duplicates.sortedAndMerged().forEach {
+              bw.write("    - \"$it\"\n")
+            }
+          }
+          bw.write("    excess:\n")
+          collectionExcessReport.excess.sortedAndMerged().forEach {
+            bw.write("    - \"$it\"\n")
           }
         }
-        bw.write("    excess:\n")
-        collectionExcessReport.excess.sortedBy { it.cardPrint.collectorNumber }.forEach {
-          bw.write("    - \"${it.toFancyString()}\"\n")
-        }
-      }
     }
   }
 }
 
-fun CardPossession.toFancyString() = "${cardPrint.collectorNumber}${when(finish) {
-  Finish.Normal -> ""
-  Finish.Foil -> "★"
-  Finish.Etched -> "*"
-}} ${cardPrint.mergedName}"
+/** TODO should we consider language and/or condition too?! */
+data class ReportItemId(
+  val cardPrint: CardPrint,
+  val finish: Finish,
+): Comparable<ReportItemId> {
+  override fun compareTo(other: ReportItemId): Int =
+    cardPrint.compareToNullable(other.cardPrint) ?: finish.compareTo(other.finish)
+
+  override fun toString(): String = String.format("%4s%s '%s'", "#${cardPrint.collectorNumber}", when(finish) {
+    Finish.Normal -> " "
+    Finish.Foil -> "★"
+    Finish.Etched -> "☆"
+  },cardPrint.mergedName)
+}
+
+fun Collection<CardPossession>.sortedAndMerged() = groupBy { ReportItemId(it.cardPrint, it.finish) }.entries
+  .sortedBy { it.key }
+  .map { (reportId, possessions) -> String.format("%2dx %s", possessions.size, reportId) }
 
 data class CollectionId(
   val scryfallId: Uuid,
@@ -164,6 +180,9 @@ data class CollectionExcessReportItem(
       duplicates = emptyList(),
       excess = emptyList(),
     )
+
+    fun merge(it: CollectionExcessReportItem, other: Map.Entry<*, CollectionExcessReportItem>): CollectionExcessReportItem =
+      it + other.value
   }
 }
 
