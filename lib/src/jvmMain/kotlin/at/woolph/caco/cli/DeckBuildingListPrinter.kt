@@ -17,7 +17,6 @@ import at.woolph.utils.pdf.loadHelveticaOblique
 import at.woolph.utils.pdf.loadHelveticaRegular
 import at.woolph.utils.pdf.pdfDocument
 import org.apache.pdfbox.pdmodel.common.PDRectangle
-import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.match
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction

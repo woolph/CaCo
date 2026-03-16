@@ -7,7 +7,6 @@ import at.woolph.caco.datamodel.MtgColor
 import at.woolph.caco.datamodel.decks.Format
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.Cards
-import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.match
 import kotlin.collections.filterNot
 import kotlin.math.round
@@ -188,10 +187,10 @@ class SelectionCriterion(
     val fastStartFactor: Double = 1.2,
     val maxPricePerCard: Double = Double.MAX_VALUE,
     val artifactFactor: Double =
-        0.05, // lower because the can be interacted better (set high if you have artifact
+        0.05, // lower because they can be interacted better (set high if you have artifact
     // synergies)
     val enchantmentFactor: Double =
-        0.05, // lower because the can be interacted better (set high if you have enchantment
+        0.05, // lower because they can be interacted better (set high if you have enchantment
     // synergies)
     val snowFactor: Double = 0.05,
     val gateFactor: Double = 0.05,

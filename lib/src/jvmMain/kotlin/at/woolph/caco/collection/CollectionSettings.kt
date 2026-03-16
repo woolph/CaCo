@@ -1,7 +1,6 @@
 /* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.collection
 
-import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.CardPrint
 import at.woolph.caco.datamodel.sets.Finish
 import kotlin.math.max

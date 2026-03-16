@@ -6,7 +6,6 @@ import at.woolph.utils.currency.CurrencyValue
 import at.woolph.caco.datamodel.decks.DeckZone
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.Cards
-import at.woolph.caco.datamodel.sets.Finish
 import com.github.ajalt.clikt.command.SuspendingCliktCommand
 import com.github.ajalt.clikt.core.terminal
 import org.jetbrains.exposed.v1.core.match

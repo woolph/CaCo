@@ -6,7 +6,6 @@ import at.woolph.caco.masterdata.import.ScryfallSet
 import at.woolph.caco.masterdata.import.paginatedDataRequest
 import at.woolph.utils.ktor.jsonSerializer
 import io.kotest.matchers.shouldBe
-import java.util.*
 import kotlin.test.Test
 import kotlinx.coroutines.runBlocking
 import kotlin.uuid.Uuid
@@ -32,13 +31,13 @@ class ScryfallImportTests {
     paginatedDataRequest<ScryfallCard>(
             "https://api.scryfall.com/cards/search?q=set%3A${setCode}&unique=prints&order=set"
         )
-        .collect { println("${it.name}") }
+        .collect { println(it.name) }
   }
 
   @Test
   fun sets() = runBlocking {
     paginatedDataRequest<ScryfallSet>("https://api.scryfall.com/sets").collect {
-      println("${it.name}")
+      println(it.name)
     }
   }
 }

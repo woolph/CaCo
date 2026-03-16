@@ -8,7 +8,6 @@ import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.CardPrint
 import at.woolph.caco.datamodel.sets.CardPrints
 import at.woolph.caco.datamodel.sets.CardPrintVariant
-import at.woolph.caco.datamodel.sets.Cards
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.ScryfallCardSets
 import at.woolph.utils.exposed.newOrUpdate
