@@ -8,8 +8,8 @@ import com.github.ajalt.clikt.command.SuspendingCliktCommand
 import com.github.ajalt.clikt.core.CliktError
 
 abstract class RaiseCliktCommand<T : CliktError>(
-  name: String,
-  val log: Logger,
+    name: String,
+    val log: Logger,
 ) : SuspendingCliktCommand(name) {
   override suspend fun run() {
     either { run() }.onLeft { throw it }

@@ -106,12 +106,13 @@ class EnterCards : SuspendingTransactionCliktCommand() {
 
       while (setCodeNumber.isNotBlank()) {
         fun extractSetNumberAndFinish(encodedSetNumber: String): Pair<String, Finish?> =
-          encodedSetNumber.removeSuffix("*").removeSuffix("#").removeSuffix("/") to when {
-            encodedSetNumber.endsWith("#") -> Finish.Etched
-            encodedSetNumber.endsWith("*") -> Finish.Foil
-            encodedSetNumber.endsWith("/") -> Finish.Normal
-            else -> Finish.Normal
-          }
+            encodedSetNumber.removeSuffix("*").removeSuffix("#").removeSuffix("/") to
+                when {
+                  encodedSetNumber.endsWith("#") -> Finish.Etched
+                  encodedSetNumber.endsWith("*") -> Finish.Foil
+                  encodedSetNumber.endsWith("/") -> Finish.Normal
+                  else -> Finish.Normal
+                }
         fun add(setNumber: String, finish: Finish) {
           val card = set.cardPrints.firstOrNull { it.collectorNumber == setNumber }
           if (card != null) {
@@ -123,8 +124,7 @@ class EnterCards : SuspendingTransactionCliktCommand() {
               ((possessionUpdate ?: newPossessionUpdate2(card, finish)).also {
                     if (it.isNeeded()) {
                       terminal.danger(" \u001b[31mNeeded for collection!\u001b[0m")
-                    }
-                    else {
+                    } else {
                       echo()
                     }
                   })
@@ -162,23 +162,23 @@ class EnterCards : SuspendingTransactionCliktCommand() {
           prevSetNumberAndFinish =
               when (setNumber) {
                 "++" -> {
-                  prevSetNumberAndFinish.first.toIntOrNull()?.let {
-                    "${it+1}" to (finish ?: prevSetNumberAndFinish.second)
-                  }?.also {
-                    add(it.first, it.second)
-                  } ?: prevSetNumberAndFinish.also {
-                    terminal.danger("couldn't increment the setNumber ${prevSetNumberAndFinish.first}")
-                  }
+                  prevSetNumberAndFinish.first
+                      .toIntOrNull()
+                      ?.let { "${it+1}" to (finish ?: prevSetNumberAndFinish.second) }
+                      ?.also { add(it.first, it.second) }
+                      ?: prevSetNumberAndFinish.also {
+                        terminal.danger(
+                            "couldn't increment the setNumber ${prevSetNumberAndFinish.first}"
+                        )
+                      }
                 }
-                "+" -> (prevSetNumberAndFinish.first to (finish ?: prevSetNumberAndFinish.second)).also {
-                  add(it.first, it.second)
-                }
-                "-" -> (prevSetNumberAndFinish.first to (finish ?: prevSetNumberAndFinish.second)).also {
-                  remove(it.first, it.second)
-                }
-                else -> (setNumber to (finish ?: Finish.Normal)).also {
-                  add(it.first, it.second)
-                }
+                "+" ->
+                    (prevSetNumberAndFinish.first to (finish ?: prevSetNumberAndFinish.second))
+                        .also { add(it.first, it.second) }
+                "-" ->
+                    (prevSetNumberAndFinish.first to (finish ?: prevSetNumberAndFinish.second))
+                        .also { remove(it.first, it.second) }
+                else -> (setNumber to (finish ?: Finish.Normal)).also { add(it.first, it.second) }
               }
         } catch (e: Exception) {
           terminal.danger("\u001b[31m${e.message}!\u001b[0m")
@@ -202,8 +202,10 @@ class EnterCards : SuspendingTransactionCliktCommand() {
           }
       val file = Path("./http-requests/import.csv")
       when (format) {
-        CollectionFileFormat.DECKBOX -> cardCollectionItems.exportDeckbox(kotlinx.io.files.Path(file.toString()))
-        CollectionFileFormat.ARCHIDEKT -> cardCollectionItems.exportArchidekt(kotlinx.io.files.Path(file.toString()))
+        CollectionFileFormat.DECKBOX ->
+            cardCollectionItems.exportDeckbox(kotlinx.io.files.Path(file.toString()))
+        CollectionFileFormat.ARCHIDEKT ->
+            cardCollectionItems.exportArchidekt(kotlinx.io.files.Path(file.toString()))
       }
 
       cardCollectionItems.forEach(CardCollectionItem::addToCollection)

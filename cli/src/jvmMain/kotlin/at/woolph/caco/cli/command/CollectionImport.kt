@@ -19,18 +19,16 @@ import com.github.ajalt.clikt.parameters.types.path
 import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.nio.file.attribute.BasicFileAttributes
-import kotlin.time.Instant
-import kotlinx.datetime.LocalDate
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.atTime
-import kotlinx.datetime.toInstant
-import java.time.ZoneOffset
 import java.util.function.Predicate
 import kotlin.io.path.Path
 import kotlin.io.path.isDirectory
 import kotlin.io.path.readAttributes
 import kotlin.io.path.useDirectoryEntries
-import org.slf4j.LoggerFactory
+import kotlin.time.Instant
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atTime
+import kotlinx.datetime.toInstant
 
 class CollectionImport :
     RaiseCliktCommand<NoFileFoundError>(
@@ -48,7 +46,7 @@ class CollectionImport :
       }
   val before by
       option(help = "Restrict import to only lines updated before this date").convert {
-        LocalDate.parse(it).atTime(0,0,0, 0).toInstant(TimeZone.UTC)
+        LocalDate.parse(it).atTime(0, 0, 0, 0).toInstant(TimeZone.UTC)
       }
 
   val file by
@@ -95,23 +93,26 @@ class CollectionImport :
   private fun Raise<NoFileFoundError>.getImportFile(
       file: Path,
       globPattern: String,
-  ): kotlinx.io.files.Path = kotlinx.io.files.Path(
-      if (file.isDirectory()) {
-        val pathMatcher = FileSystems.getDefault().getPathMatcher(globPattern)
-        file.useDirectoryEntries { entries ->
-          entries.filter(pathMatcher::matches).maxByOrNull {
-            it.readAttributes<BasicFileAttributes>().lastModifiedTime()
-          }
-              ?: raise(
-                  NoFileFoundError(
-                          file,
-                          "The given file \"$file\" is a directory, therefore it should contain a file matching the pattern \"$globPattern\", but no matching file was found (the given file may also be the file to be imported!).",
-                          "file",
+  ): kotlinx.io.files.Path =
+      kotlinx.io.files.Path(
+          if (file.isDirectory()) {
+                val pathMatcher = FileSystems.getDefault().getPathMatcher(globPattern)
+                file.useDirectoryEntries { entries ->
+                  entries.filter(pathMatcher::matches).maxByOrNull {
+                    it.readAttributes<BasicFileAttributes>().lastModifiedTime()
+                  }
+                      ?: raise(
+                          NoFileFoundError(
+                                  file,
+                                  "The given file \"$file\" is a directory, therefore it should contain a file matching the pattern \"$globPattern\", but no matching file was found (the given file may also be the file to be imported!).",
+                                  "file",
+                              )
+                              .also { it.context = this@CollectionImport.currentContext },
                       )
-                      .also { it.context = this@CollectionImport.currentContext },
-              )
-        }
-      } else {
-        file
-      }.toString())
+                }
+              } else {
+                file
+              }
+              .toString()
+      )
 }

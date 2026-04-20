@@ -6,13 +6,13 @@ import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.lib.clikt.SuspendingTransactionCliktCommand
 import at.woolph.lib.clikt.prompt
 import at.woolph.utils.io.asSink
-import at.woolph.utils.pdf.SizedFont
 import at.woolph.utils.pdf.HorizontalAlignment
+import at.woolph.utils.pdf.SizedFont
 import at.woolph.utils.pdf.columns
-import at.woolph.utils.pdf.pdfDocument
 import at.woolph.utils.pdf.drawText
 import at.woolph.utils.pdf.frame
 import at.woolph.utils.pdf.framePagePosition
+import at.woolph.utils.pdf.pdfDocument
 import com.github.ajalt.clikt.core.terminal
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.convert
@@ -28,13 +28,13 @@ import com.github.ajalt.mordant.widgets.progress.progressBarContextLayout
 import com.github.ajalt.mordant.widgets.progress.text
 import com.github.ajalt.mordant.widgets.progress.timeRemaining
 import java.awt.Color
+import kotlin.io.path.createParentDirectories
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.font.PDType1Font
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import kotlin.io.path.createParentDirectories
 
 class PrintInventory : SuspendingTransactionCliktCommand(name = "inventory") {
   val output by option("--output", "-o").path(canBeDir = false).required()
@@ -54,19 +54,19 @@ class PrintInventory : SuspendingTransactionCliktCommand(name = "inventory") {
       val sizedFontTitle = SizedFont(PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 10f)
       val sizedFontLine = SizedFont(PDType1Font(Standard14Fonts.FontName.HELVETICA), 6.0f)
       val progressBar =
-        progressBarContextLayout<ScryfallCardSet?> {
-          percentage()
-          progressBar()
-          completed()
-          timeRemaining()
-          text { "printing ${this.context?.name}" }
-        }
-          .animateInCoroutine(
-            terminal,
-            context = null,
-            total = sets.size.toLong(),
-            completed = 0,
-          )
+          progressBarContextLayout<ScryfallCardSet?> {
+                percentage()
+                progressBar()
+                completed()
+                timeRemaining()
+                text { "printing ${this.context?.name}" }
+              }
+              .animateInCoroutine(
+                  terminal,
+                  context = null,
+                  total = sets.size.toLong(),
+                  completed = 0,
+              )
 
       launch { progressBar.execute() }
 
@@ -80,12 +80,12 @@ class PrintInventory : SuspendingTransactionCliktCommand(name = "inventory") {
           page(PDRectangle.A4) {
             framePagePosition(20f, 20f, 20f, 20f) {
               drawText(
-                "Inventory ${set.name} Page ${pageIndex + 1}",
-                sizedFontTitle,
-                HorizontalAlignment.CENTER,
-                0f,
-                10f,
-                Color.BLACK,
+                  "Inventory ${set.name} Page ${pageIndex + 1}",
+                  sizedFontTitle,
+                  HorizontalAlignment.CENTER,
+                  0f,
+                  10f,
+                  Color.BLACK,
               )
 
               // TODO calc metrics for all sets (so that formatting is the same for all pages)
@@ -97,9 +97,9 @@ class PrintInventory : SuspendingTransactionCliktCommand(name = "inventory") {
                     val ownedCountDE = it.possessions.count { it.language == CardLanguage.GERMAN }
                     this@columns.get(i) {
                       drawTextWithRects(
-                        "${it.rarity} ${it.collectorNumber} ${it.name}",
-                        ownedCountEN,
-                        ownedCountDE,
+                          "${it.rarity} ${it.collectorNumber} ${it.name}",
+                          ownedCountEN,
+                          ownedCountDE,
                       )
                     }
                     i++

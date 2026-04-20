@@ -8,7 +8,7 @@ data class CurrencyValue(
   override fun compareTo(other: CurrencyValue): Int = value.compareTo(other.value)
 
   override fun toString() =
-      String.format("%.${currency.defaultFractionDigits}f%s", value, currency.symbol)
+      String.format("%s\u202f%.${currency.defaultFractionDigits}f", currency.symbol, value)
 
   operator fun unaryMinus() = copy(value = -value)
   operator fun unaryPlus() = this
@@ -39,3 +39,5 @@ data class CurrencyValue(
     fun usd(value: Double): CurrencyValue = CurrencyValue(value, Currencies.USD)
   }
 }
+
+fun Collection<CurrencyValue>.sum(): CurrencyValue = reduceOrNull { acc, value -> acc + value } ?: CurrencyValue.usd(0.0)

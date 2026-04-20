@@ -1,11 +1,11 @@
 /* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.cli.command
 
+import at.woolph.caco.datamodel.sets.ScryfallCardSet
+import at.woolph.lib.clikt.SuspendingTransactionCliktCommand
 import at.woolph.utils.currency.Currencies
 import at.woolph.utils.currency.CurrencyValue
 import at.woolph.utils.currency.Percentage
-import at.woolph.caco.datamodel.sets.ScryfallCardSet
-import at.woolph.lib.clikt.SuspendingTransactionCliktCommand
 
 class PrintMissingStats : SuspendingTransactionCliktCommand(name = "missing-stats") {
   override suspend fun runTransaction() {

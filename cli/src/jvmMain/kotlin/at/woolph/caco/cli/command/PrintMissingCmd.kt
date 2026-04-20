@@ -32,7 +32,9 @@ class PrintMissingCmd : SuspendingTransactionCliktCommand(name = "missing-cmd") 
         .forEach { (type, cards) ->
           println("$type:")
           cards.sorted().forEach { card ->
-            println("  ${card.set.code} #${card.collectorNumber} ${card.mergedName} (${card.card.type})")
+            println(
+                "  ${card.set.code} #${card.collectorNumber} ${card.mergedName} (${card.card.type})"
+            )
           }
         }
   }

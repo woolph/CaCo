@@ -5,21 +5,20 @@ import arrow.core.Either
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.Finish
 import at.woolph.caco.image.ImageCache
-import javafx.beans.property.Property
-import javafx.scene.image.Image
-import org.slf4j.LoggerFactory
-import tornadofx.ItemViewModel
-import tornadofx.stringBinding
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.text.NumberFormat
+import javafx.beans.property.Property
+import javafx.scene.image.Image
 import javax.imageio.ImageIO
+import org.slf4j.LoggerFactory
+import tornadofx.ItemViewModel
+import tornadofx.stringBinding
 
 open class CardModel(
-  card: Card,
-) : ItemViewModel<Card>(card),
-  Comparable<CardModel> {
+    card: Card,
+) : ItemViewModel<Card>(card), Comparable<CardModel> {
   val id = bind(Card::id)
   val set = bind(Card::set)
   val collectorNumber = bind(Card::collectorNumber)
@@ -43,45 +42,46 @@ open class CardModel(
   val foilAvailable = itemProperty.map { it.finishes.contains(Finish.Foil) }
   val fullArt = bind(Card::fullArt)
   val extendedArt = bind(Card::extendedArt)
-  val specialDeckRestrictions: Property<Int?> = bind(Card::specialDeckRestrictions, defaultValue = null)
+  val specialDeckRestrictions: Property<Int?> =
+      bind(Card::specialDeckRestrictions, defaultValue = null)
 
   val names: Sequence<String>
     get() = sequenceOf(name, nameDE).mapNotNull { it.value }
 
   suspend fun getCachedImage(): Image? =
-    ImageCache.getImage(image.value.toString()) {
-      try {
-        image.value.toURL().readBytes()
-      } catch (t: Throwable) {
-        LOG.warn("unable to load ${image.value}", t)
-        null
-      }
-    }
-
-  suspend fun cacheImage() =
-    ImageCache.getImageByteArray(image.value.toString()) {
-      Either.catch {
-        LOG.info("precache image ${image.value}")
-        val imageContent = image.value.toURL().readBytes()
-
-        val scaleDown = true
-        if (scaleDown) {
-          val baos = ByteArrayOutputStream()
-          baos.use {
-            val bufferedImage = ImageIO.read(ByteArrayInputStream(imageContent))
-            val resizedImage = BufferedImage(224, 312, BufferedImage.TYPE_INT_RGB)
-            val graphics2D = resizedImage.createGraphics()
-            graphics2D.drawImage(bufferedImage, 0, 0, 224, 312, null)
-            graphics2D.dispose()
-            ImageIO.write(resizedImage, "png", baos)
-            baos.flush()
-          }
-          baos.toByteArray()
-        } else {
-          imageContent
+      ImageCache.getImage(image.value.toString()) {
+        try {
+          image.value.toURL().readBytes()
+        } catch (t: Throwable) {
+          LOG.warn("unable to load ${image.value}", t)
+          null
         }
       }
-    }
+
+  suspend fun cacheImage() =
+      ImageCache.getImageByteArray(image.value.toString()) {
+        Either.catch {
+          LOG.info("precache image ${image.value}")
+          val imageContent = image.value.toURL().readBytes()
+
+          val scaleDown = true
+          if (scaleDown) {
+            val baos = ByteArrayOutputStream()
+            baos.use {
+              val bufferedImage = ImageIO.read(ByteArrayInputStream(imageContent))
+              val resizedImage = BufferedImage(224, 312, BufferedImage.TYPE_INT_RGB)
+              val graphics2D = resizedImage.createGraphics()
+              graphics2D.drawImage(bufferedImage, 0, 0, 224, 312, null)
+              graphics2D.dispose()
+              ImageIO.write(resizedImage, "png", baos)
+              baos.flush()
+            }
+            baos.toByteArray()
+          } else {
+            imageContent
+          }
+        }
+      }
 
   override fun compareTo(other: CardModel): Int = item.compareTo(other.item)
 

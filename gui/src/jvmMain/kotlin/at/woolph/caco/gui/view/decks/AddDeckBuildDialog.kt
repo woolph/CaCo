@@ -28,81 +28,82 @@ class AddDeckBuildDialog(
     val owner: View,
     initialArchetype: DeckArchetype? = null,
 ) : Dialog<Triple<DeckArchetype, String, String>?>() {
-    val messages get() = owner.messages
-    val resources get() = owner.resources
+  val messages
+    get() = owner.messages
 
-    val name = SimpleStringProperty("")
-    val comment = SimpleStringProperty("")
+  val resources
+    get() = owner.resources
 
-    val deckArchetype = SimpleObjectProperty<DeckArchetype?>()
+  val name = SimpleStringProperty("")
+  val comment = SimpleStringProperty("")
 
-    val deckArchetypes = FXCollections.observableArrayList<DeckArchetype>()
+  val deckArchetype = SimpleObjectProperty<DeckArchetype?>()
 
-    fun updateDeckArchetypess() {
-        deckArchetypes.setAll(
-            transaction {
-                DeckArchetype.all().toList().observable().sorted { t1, t2 ->
-                    t1.format.ordinal.compareTo(t2.format.ordinal)
-                }
-            },
-        )
-    }
+  val deckArchetypes = FXCollections.observableArrayList<DeckArchetype>()
 
-    init {
-        initOwner(owner.primaryStage)
+  fun updateDeckArchetypess() {
+    deckArchetypes.setAll(
+        transaction {
+          DeckArchetype.all().toList().observable().sorted { t1, t2 ->
+            t1.format.ordinal.compareTo(t2.format.ordinal)
+          }
+        },
+    )
+  }
 
-        updateDeckArchetypess()
+  init {
+    initOwner(owner.primaryStage)
 
-        println(initialArchetype.toString())
+    updateDeckArchetypess()
 
-        deckArchetype.set(deckArchetypes.find { it == initialArchetype })
+    println(initialArchetype.toString())
 
-        isResizable = true
-        title = "Adding a Deck"
-        headerText = "Add a Deck"
+    deckArchetype.set(deckArchetypes.find { it == initialArchetype })
 
-        dialogPane.apply {
-            content =
-                BorderPane().apply {
-                    center {
-                        form {
-                            fieldset {
-                                field("Archetype") {
-                                    combobox(deckArchetype, deckArchetypes) {
-                                        cellFormat(FX.defaultScope) {
-										/*graphic = item?.format?.let {
-											ImageView(resources.image("${it.name}.png")).apply {
-												fitHeight = 24.0
-												fitWidth = 24.0
-											}
-										}*/
-                                            text = item?.let { "[${it.format.shortName}] ${it.name}" }
-                                        }
-                                    }
-                                }
-                                field("Name") {
-                                    textfield(name) {
-                                        hgrow = Priority.ALWAYS
-                                        runLater { requestFocus() }
-                                    }
-                                }
-                                field("Comment") {
-                                    textarea(comment)
-                                }
-                            }
-                        }
+    isResizable = true
+    title = "Adding a Deck"
+    headerText = "Add a Deck"
+
+    dialogPane.apply {
+      content =
+          BorderPane().apply {
+            center {
+              form {
+                fieldset {
+                  field("Archetype") {
+                    combobox(deckArchetype, deckArchetypes) {
+                      cellFormat(FX.defaultScope) {
+                        /*graphic = item?.format?.let {
+                        	ImageView(resources.image("${it.name}.png")).apply {
+                        		fitHeight = 24.0
+                        		fitWidth = 24.0
+                        	}
+                        }*/
+                        text = item?.let { "[${it.format.shortName}] ${it.name}" }
+                      }
                     }
+                  }
+                  field("Name") {
+                    textfield(name) {
+                      hgrow = Priority.ALWAYS
+                      runLater { requestFocus() }
+                    }
+                  }
+                  field("Comment") { textarea(comment) }
                 }
-
-            buttonTypes.setAll(ButtonType.APPLY, ButtonType.CANCEL)
-        }
-
-        setResultConverter { button ->
-            // TODO data validation check
-            when (button) {
-                ButtonType.APPLY -> Triple(deckArchetype.value!!, name.value, comment.value)
-                else -> null
+              }
             }
-        }
+          }
+
+      buttonTypes.setAll(ButtonType.APPLY, ButtonType.CANCEL)
     }
+
+    setResultConverter { button ->
+      // TODO data validation check
+      when (button) {
+        ButtonType.APPLY -> Triple(deckArchetype.value!!, name.value, comment.value)
+        else -> null
+      }
+    }
+  }
 }

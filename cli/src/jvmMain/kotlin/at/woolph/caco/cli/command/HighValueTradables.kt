@@ -2,10 +2,10 @@
 package at.woolph.caco.cli.command
 
 import at.woolph.caco.collection.DEFAULT_COLLECTION_SETTINGS
-import at.woolph.utils.currency.CurrencyValue
 import at.woolph.caco.datamodel.sets.Finish
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.lib.clikt.SuspendingTransactionCliktCommand
+import at.woolph.utils.currency.CurrencyValue
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.double
@@ -86,10 +86,10 @@ class HighValueTradables : SuspendingTransactionCliktCommand() {
   }
 
   data class ExcessPossionItem(
-    val excess: Int,
-    val cardName: String,
-    val setName: String,
-    val cardPrice: CurrencyValue,
+      val excess: Int,
+      val cardName: String,
+      val setName: String,
+      val cardPrice: CurrencyValue,
   ) {
     override fun toString() = "$excess $cardName ($setName) $cardPrice"
   }

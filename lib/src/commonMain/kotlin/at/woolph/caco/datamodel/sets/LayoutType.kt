@@ -26,6 +26,7 @@ enum class LayoutType(
   LEVELER,
   PROTOTYPE,
   SAGA,
+  PREPARE,
   MELD(isDoubleFaced = true),
   MODAL_DFC(isDoubleFaced = true),
   SCHEME(isAdditionalGamePiece = true),

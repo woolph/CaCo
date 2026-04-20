@@ -1,9 +1,9 @@
 /* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.gui
 
+import at.woolph.caco.gui.libs.ProgressIndicator
 import at.woolph.caco.gui.view.collection.PaperCollectionView
 import at.woolph.caco.gui.view.decks.DecksView
-import at.woolph.caco.gui.libs.ProgressIndicator
 import at.woolph.libs.ktfx.view
 import javafx.collections.FXCollections
 import javafx.collections.ObservableList
@@ -18,47 +18,41 @@ import tornadofx.tab
 import tornadofx.tabpane
 
 class MyView : View() {
-    override val root: Parent
+  override val root: Parent
 
-    init {
-        logger.trace("init MyView")
-        title = "CaCo"
+  init {
+    logger.trace("init MyView")
+    title = "CaCo"
 
-        root =
-            borderpane {
-                center =
-                    tabpane {
-                        side = Side.LEFT
-                        tab("Collection Paper") {
-                            isClosable = false
-                            view<PaperCollectionView>()
-                        }
+    root = borderpane {
+      center = tabpane {
+        side = Side.LEFT
+        tab("Collection Paper") {
+          isClosable = false
+          view<PaperCollectionView>()
+        }
 
-// 			tab("Collection Arena") {
-// 				isClosable = false
-// 				view(ArenaCollectionView::class)
-// 			}
+        // 			tab("Collection Arena") {
+        // 				isClosable = false
+        // 				view(ArenaCollectionView::class)
+        // 			}
 
-                        tab("Decks") {
-                            isClosable = false
-                            view<DecksView>()
-                        }
-                    }
-                bottom =
-                    progressbar {
-                        doubleBinding(progressIndicators) {
-                            progressIndicators
-                                .firstOrNull()
-                                ?.progress
-                                ?.value
-                                ?.toDouble() ?: 0.0
-                        }
-                    }
-            }
+        tab("Decks") {
+          isClosable = false
+          view<DecksView>()
+        }
+      }
+      bottom = progressbar {
+        doubleBinding(progressIndicators) {
+          progressIndicators.firstOrNull()?.progress?.value?.toDouble() ?: 0.0
+        }
+      }
     }
+  }
 
-    companion object {
-        val logger = LoggerFactory.getLogger(this::class.java.declaringClass)
-        val progressIndicators: ObservableList<ProgressIndicator> = FXCollections.observableList(mutableListOf())
-    }
+  companion object {
+    val logger = LoggerFactory.getLogger(this::class.java.declaringClass)
+    val progressIndicators: ObservableList<ProgressIndicator> =
+        FXCollections.observableList(mutableListOf())
+  }
 }

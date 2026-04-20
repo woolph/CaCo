@@ -1,10 +1,10 @@
-///* Copyright 2025 Wolfgang Mayer */
-//package at.woolph.caco.gui
+/// * Copyright 2025 Wolfgang Mayer */
+// package at.woolph.caco.gui
 //
-//import tornadofx.*
-//import javafx.scene.text.FontWeight
+// import tornadofx.*
+// import javafx.scene.text.FontWeight
 //
-//class Styles : Stylesheet() {
+// class Styles : Stylesheet() {
 //	companion object {
 //		// Define our styles
 //
@@ -41,4 +41,4 @@
 //			}
 //		}
 //	}
-//}
+// }

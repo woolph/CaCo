@@ -3,7 +3,7 @@
     <option name="ALTERNATIVE_JRE_PATH" value="21" />
     <option name="MAIN_CLASS_NAME" value="at.woolph.caco.cli.MainKt" />
     <module name="CaCo.cli.jvmMain" />
-    <option name="PROGRAM_PARAMETERS" value="collection enter-cards --language=EN" />
+    <option name="PROGRAM_PARAMETERS" value="collection enter-cards --language=DE" />
     <shortenClasspath name="NONE" />
     <method v="2">
       <option name="Make" enabled="true" />

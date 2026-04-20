@@ -20,15 +20,18 @@ class PrintCollectionBinderLabels : SuspendingTransactionCliktCommand(name = "bi
           .prompt("Enter the set codes to be imported/updated")
 
   override suspend fun runTransaction() {
-    val labels = determineBinderLabels(
-      thresholdTooMuchPages = 45, // TODO parameterize and fine tune defaults the max card count per page, so that the labels are not too small
-      thresholdTooFewPages = 7,
-    )
+    val labels =
+        determineBinderLabels(
+            thresholdTooMuchPages =
+                45, // TODO parameterize and fine tune defaults the max card count per page, so that
+            // the labels are not too small
+            thresholdTooFewPages = 7,
+        )
 
     printBinderLabel(
         file = output.toKotlinxPath(),
         labels = labels.toList(),
         labelsPerPage = 5, // TODO parameterize
-      )
+    )
   }
 }

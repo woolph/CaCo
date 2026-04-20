@@ -1,44 +1,36 @@
 /* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.gui
 
-import tornadofx.*
 import javafx.scene.text.FontWeight
+import tornadofx.*
 
 class Styles : Stylesheet() {
-	companion object {
-		// Define our styles
+  companion object {
+    // Define our styles
 
-		// colors // TODO determine color
-		val mythic = c("copper")
-		val rare = c("gold")
-		val uncommon = c("silver")
-		val common = c("black")
+    // colors // TODO determine color
+    val mythic = c("copper")
+    val rare = c("gold")
+    val uncommon = c("silver")
+    val common = c("black")
 
-		// css classes
-		val cardDetailsView by cssclass()
-		val setDetailsView by cssclass()
-		val cardPossessionView by cssclass()
-		val sumRow by cssclass()
-	}
+    // css classes
+    val cardDetailsView by cssclass()
+    val setDetailsView by cssclass()
+    val cardPossessionView by cssclass()
+    val sumRow by cssclass()
+  }
 
-	init {
-		cardDetailsView {
-			label {
-				fontSize = 16.px
-				fontWeight = FontWeight.BOLD
-			}
-		}
+  init {
+    cardDetailsView {
+      label {
+        fontSize = 16.px
+        fontWeight = FontWeight.BOLD
+      }
+    }
 
-		cardPossessionView {
-			label {
-				fontSize = 14.px
-			}
-		}
+    cardPossessionView { label { fontSize = 14.px } }
 
-		cardPossessionView {
-			sumRow {
-				fontWeight = FontWeight.BOLD
-			}
-		}
-	}
+    cardPossessionView { sumRow { fontWeight = FontWeight.BOLD } }
+  }
 }

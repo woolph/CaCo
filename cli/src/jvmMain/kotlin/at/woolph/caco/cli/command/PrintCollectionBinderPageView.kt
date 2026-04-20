@@ -20,9 +20,9 @@ import com.github.ajalt.mordant.widgets.progress.progressBar
 import com.github.ajalt.mordant.widgets.progress.progressBarContextLayout
 import com.github.ajalt.mordant.widgets.progress.text
 import com.github.ajalt.mordant.widgets.progress.timeRemaining
+import kotlin.io.path.createDirectories
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlin.io.path.createDirectories
 
 class PrintCollectionBinderPageView : SuspendingCliktCommand(name = "page-preview") {
   val output by option("--output", "-o").path(canBeDir = true, canBeFile = false).required()
@@ -33,14 +33,14 @@ class PrintCollectionBinderPageView : SuspendingCliktCommand(name = "page-previe
 
   override suspend fun run(): Unit = coroutineScope {
     val progress =
-      progressBarContextLayout<String> {
-        percentage()
-        progressBar()
-        completed(style = terminal.theme.success)
-        timeRemaining(style = TextColors.magenta)
-        text { context }
-      }
-        .animateInCoroutine(terminal, context = "fetching cards")
+        progressBarContextLayout<String> {
+              percentage()
+              progressBar()
+              completed(style = terminal.theme.success)
+              timeRemaining(style = TextColors.magenta)
+              text { context }
+            }
+            .animateInCoroutine(terminal, context = "fetching cards")
 
     launch { progress.execute() }
 
