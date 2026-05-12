@@ -24,13 +24,11 @@ internal constructor(
   var currentPagePosition = startingPagePosition
     private set
 
-  @PdfDsl
   fun page(format: PDRectangle = defaultPageFormat, block: Page.() -> Unit): Page =
       Page(this, getAndAlternateCurrentPagePosition(), PDPage(format))
           .use { it.apply(block) }
           .also { document.addPage(it.pdPage) }
 
-  @PdfDsl
   fun emptyPage(format: PDRectangle = defaultPageFormat) =
       Page(this, getAndAlternateCurrentPagePosition(), PDPage(format)).also {
         document.addPage(it.pdPage)
@@ -73,7 +71,6 @@ internal constructor(
   //
 }
 
-@PdfDsl
 actual fun pdfDocument(
     sink: Sink,
     startingPagePosition: PagePosition,

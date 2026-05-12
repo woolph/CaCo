@@ -26,6 +26,7 @@ import kotlin.math.max
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.coroutineScope
 import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
+import kotlin.time.Clock
 
 /**
  * run over every card (distinct by oracle-id or english name, because i don't care if the playset
@@ -154,6 +155,43 @@ class PrintExcessPossessions : SuspendingTransactionCliktCommand(name = "excess"
               .filter { it >= CurrencyValue.usd(highValueExcessThreshold) }
               .count()
         }
+    Path("./caco-excess-report.md").bufferedWriter().use { bw ->
+      bw.write("# Collection Excess Report\n")
+      bw.write("## Meta Data:\n")
+      bw.write("time: ${Clock.System.now()}\n")
+      bw.write(String.format("bulk-weight: %.3f\u202fkg%n", bulkWeightInKilogram))
+      bw.write("tradable-value: $tradableValue\n")
+      bw.write("tradable-count: $tradableCount\n")
+      bw.write("## Sets:\n")
+      result2.forEach { (set, collectionExcessReport) ->
+        bw.write("### [${set.code}] ${set.name}\n")
+        if (printBinderCards || printDuplicateCards) bw.write("  collection:\n")
+        if (printBinderCards && collectionExcessReport.binder.isNotEmpty()) {
+          bw.write("    binder:\n")
+          collectionExcessReport.binder.sortedAndMerged().forEach { bw.write("    - \"$it\"\n") }
+        }
+        if (printDuplicateCards && collectionExcessReport.duplicates.isNotEmpty()) {
+          bw.write("    duplicates:\n")
+          collectionExcessReport.duplicates.sortedAndMerged().forEach {
+            bw.write("    - \"$it\"\n")
+          }
+        }
+        bw.write("  excess:\n")
+        val (highValueExcess, lowValueExcess) =
+            collectionExcessReport.excess.partition {
+              (it.price?.value ?: Double.MAX_VALUE) >= highValueExcessThreshold
+            }
+        if (highValueExcess.isNotEmpty()) {
+          bw.write("    tradables:\n")
+          highValueExcess.sortedAndMerged().forEach { bw.write("    - \"$it\"\n") }
+        }
+        if (lowValueExcess.isNotEmpty()) {
+          bw.write("    bulk:\n")
+          lowValueExcess.sortedAndMerged().forEach { bw.write("    - \"$it\"\n") }
+        }
+      }
+    }
+
     Path("./caco-excess-report.yml").bufferedWriter().use { bw ->
       bw.write(String.format("bulk-weight: %.3f\u202fkg%n", bulkWeightInKilogram))
       bw.write("tradable-value: $tradableValue\n")

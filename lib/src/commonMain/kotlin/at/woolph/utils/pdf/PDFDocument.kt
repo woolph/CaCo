@@ -8,7 +8,6 @@ expect class PDFDocument {
   fun loadFont(resource: String): Font
 }
 
-@PdfDsl
 expect fun pdfDocument(
     sink: Sink,
     startingPagePosition: PagePosition = PagePosition.RIGHT,

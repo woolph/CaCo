@@ -16,8 +16,11 @@ kotlin {
   compilerOptions {
     languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_3)
     freeCompilerArgs.addAll(
-        "-Xwhen-guards",
-        "-Xexpect-actual-classes",
+      "-Xjsr305=strict",
+      "-Xcontext-parameters",
+      "-Xcontext-sensitive-resolution",
+      "-Xallow-reified-type-in-catch",
+      "-Xexpect-actual-classes",
     )
     optIn.addAll(
         "kotlin.uuid.ExperimentalUuidApi",
@@ -78,8 +81,6 @@ kotlin {
       implementation("io.kotest:kotest-property:6.0.3")
       implementation(libs.kotlin.testJunit)
     }
-
-    all { languageSettings.enableLanguageFeature("ContextParameters") }
   }
 }
 

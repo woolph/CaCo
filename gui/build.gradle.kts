@@ -10,13 +10,19 @@ version = "0.3.0"
 repositories { mavenCentral() }
 
 kotlin {
-  jvm { mainRun { mainClass = "at.woolph.caco.gui.MainKt" } }
+  jvm {
+    @OptIn(org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi::class)
+    mainRun { mainClass = "at.woolph.caco.gui.MainKt" }
+  }
 
   compilerOptions {
     languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_3)
     freeCompilerArgs.addAll(
-        "-Xwhen-guards",
-        "-Xexpect-actual-classes",
+      "-Xjsr305=strict",
+      "-Xcontext-parameters",
+      "-Xcontext-sensitive-resolution",
+      "-Xallow-reified-type-in-catch",
+      "-Xexpect-actual-classes",
     )
     optIn.addAll(
         "kotlin.uuid.ExperimentalUuidApi",

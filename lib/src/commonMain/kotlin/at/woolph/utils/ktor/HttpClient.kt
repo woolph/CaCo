@@ -18,6 +18,7 @@ import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
@@ -38,6 +39,7 @@ suspend fun <R> useHttpClient(
           .use { block(it) }
     }
 
+@OptIn(ExperimentalSerializationApi::class)
 val jsonSerializer = Json {
   decodeEnumsCaseInsensitive = true
   ignoreUnknownKeys = true
