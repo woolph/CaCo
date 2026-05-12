@@ -15,7 +15,7 @@ interface CardRepresentation {
 
   companion object {
     fun findByScryfallId(scryfallId: Uuid): CardRepresentation? =
-      CardPrint.findById(scryfallId) ?: CardPrintVariant.findById(scryfallId)
+        CardPrint.findById(scryfallId) ?: CardPrintVariant.findById(scryfallId)
   }
 
   fun getActualScryfallId(variantType: CardPrintVariant.Type?): Either<Throwable, Uuid> = either {

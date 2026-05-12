@@ -13,8 +13,6 @@ import at.woolph.caco.labels.binder.PromosLabel
 import at.woolph.utils.io.asSink
 import at.woolph.utils.io.createParentDirectories
 import at.woolph.utils.pdf.HorizontalAlignment
-import at.woolph.utils.pdf.pdfDocument
-import at.woolph.utils.pdf.paginatedColumnedContent
 import at.woolph.utils.pdf.drawAsImageCentered
 import at.woolph.utils.pdf.drawBackground
 import at.woolph.utils.pdf.drawBorder
@@ -23,73 +21,73 @@ import at.woolph.utils.pdf.frame
 import at.woolph.utils.pdf.loadFont72Black
 import at.woolph.utils.pdf.loadFontPlanewalkerBold
 import at.woolph.utils.pdf.loadPlantinItalic
+import at.woolph.utils.pdf.paginatedColumnedContent
+import at.woolph.utils.pdf.pdfDocument
+import java.awt.Color
 import kotlinx.io.files.Path
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greater
-import java.awt.Color
 
-fun determineBinderLabels(thresholdTooMuchPages: Int, thresholdTooFewPages: Int): Sequence<MapLabelItem> =
-    sequence {
-      // TODO I would like to habe some reassignments of parent stuff (pltc is child of ltr, but
-      // I'd like it to be a child of ltc, H1R should be MH1 child, H2R of MH2, GK1 of
-      ScryfallCardSet.rootSetsGroupedByBlocks {
+fun determineBinderLabels(
+    thresholdTooMuchPages: Int,
+    thresholdTooFewPages: Int,
+): Sequence<MapLabelItem> = sequence {
+  // TODO I would like to habe some reassignments of parent stuff (pltc is child of ltr, but
+  // I'd like it to be a child of ltc, H1R should be MH1 child, H2R of MH2, GK1 of
+  ScryfallCardSet.rootSetsGroupedByBlocks {
         (ScryfallCardSets.digitalOnly eq false).and(ScryfallCardSets.cardCount greater 12)
       }
-        .filterNot { it is SingleSetBlock && it.set.code in setOf("sld", "30a", "unk") }
-        .forEach { rootBlock ->
-          when (rootBlock) {
-            is SingleSetBlock -> {
-              suspend fun SequenceScope<MapLabelItem>.yieldSet(currentSet: ScryfallCardSet) {
-                val (
-                  childSetsDefinitelyIncludedInRootSetBinder,
-                  childSetsWhichNeedToBeChecked) =
+      .filterNot { it is SingleSetBlock && it.set.code in setOf("sld", "30a", "unk") }
+      .forEach { rootBlock ->
+        when (rootBlock) {
+          is SingleSetBlock -> {
+            suspend fun SequenceScope<MapLabelItem>.yieldSet(currentSet: ScryfallCardSet) {
+              val (childSetsDefinitelyIncludedInRootSetBinder, childSetsWhichNeedToBeChecked) =
                   currentSet.childSets
-                    .filterNot {
-                      it.code.endsWith(currentSet.code) &&
-                        it.code[0] in setOf('p', 't', 'f', 'm', 'w', 'o', 's', 'r') ||
-                        it.code.matches(Regex("pss\\d"))
-                    }
-                    .partition { it.binderPages <= thresholdTooFewPages }
+                      .filterNot {
+                        it.code.endsWith(currentSet.code) &&
+                            it.code[0] in setOf('p', 't', 'f', 'm', 'w', 'o', 's', 'r') ||
+                            it.code.matches(Regex("pss\\d"))
+                      }
+                      .partition { it.binderPages <= thresholdTooFewPages }
 
-                val setsInBinder = childSetsDefinitelyIncludedInRootSetBinder.toMutableList()
-                childSetsWhichNeedToBeChecked
+              val setsInBinder = childSetsDefinitelyIncludedInRootSetBinder.toMutableList()
+              childSetsWhichNeedToBeChecked
                   .sortedByDescending(ScryfallCardSet::binderPages)
                   .forEach { childSet ->
                     if (
-                      currentSet.binderPages +
-                      setsInBinder.sumOf(ScryfallCardSet::totalBinderPages) +
-                      childSet.binderPages <= thresholdTooMuchPages
+                        currentSet.binderPages +
+                            setsInBinder.sumOf(ScryfallCardSet::totalBinderPages) +
+                            childSet.binderPages <= thresholdTooMuchPages
                     ) {
                       setsInBinder.add(childSet)
                     } else {
                       yieldSet(childSet)
                     }
                   }
-                setsInBinder.addFirst(currentSet)
-                if (setsInBinder.sumOf(ScryfallCardSet::binderPages) > thresholdTooFewPages) {
-                  yield(AbstractLabelItem(setsInBinder)) // TODO omit same icons
-                }
+              setsInBinder.addFirst(currentSet)
+              if (setsInBinder.sumOf(ScryfallCardSet::binderPages) > thresholdTooFewPages) {
+                yield(AbstractLabelItem(setsInBinder)) // TODO omit same icons
               }
-
-              yieldSet(rootBlock.set)
             }
 
-            is MultiSetBlock -> {
-              if (
-                rootBlock.sets.sumOf(ScryfallCardSet::binderPages) <= thresholdTooMuchPages
-              ) {
-                yield(MultiSetBlockLabel(rootBlock))
-              } else {
-                rootBlock.sets.forEach { yield(AbstractLabelItem(listOf(it))) }
-              }
+            yieldSet(rootBlock.set)
+          }
+
+          is MultiSetBlock -> {
+            if (rootBlock.sets.sumOf(ScryfallCardSet::binderPages) <= thresholdTooMuchPages) {
+              yield(MultiSetBlockLabel(rootBlock))
+            } else {
+              rootBlock.sets.forEach { yield(AbstractLabelItem(listOf(it))) }
             }
           }
         }
-      yield(PromosLabel)
-      yield(GenericLabel("misc", "Miscellaneous"))
-    }
+      }
+  yield(PromosLabel)
+  yield(GenericLabel("misc", "Miscellaneous"))
+}
 
 fun printBinderLabel(file: Path, labels: List<MapLabelItem>, labelsPerPage: Int) {
   pdfDocument(file.createParentDirectories().asSink()) {
@@ -127,20 +125,20 @@ fun printBinderLabel(file: Path, labels: List<MapLabelItem>, labelsPerPage: Int)
     val subCodeYPos = codeYPos + sizedFontCodeCommanderSubset.totalHeight
 
     val setDivHeight =
-      desiredHeight +
-        sizedFontCode.totalHeight +
-        sizedFontCodeCommanderSubset.totalHeight +
-        defaultGapSize
+        desiredHeight +
+            sizedFontCode.totalHeight +
+            sizedFontCodeCommanderSubset.totalHeight +
+            defaultGapSize
     val setDivYPos = maximumHeight - setDivHeight
 
     val maxTitleWidth =
-      pageFormat.height -
-        magicLogoYPosition -
-        mtgLogoHeight -
-        defaultGapSize -
-        setDivHeight -
-        2 * margin -
-        2 * defaultGapSize
+        pageFormat.height -
+            magicLogoYPosition -
+            mtgLogoHeight -
+            defaultGapSize -
+            setDivHeight -
+            2 * margin -
+            2 * defaultGapSize
 
     val titleYPosition = setDivYPos - 3 * defaultGapSize
     val subTitleYPosition = titleYPosition - 30f
@@ -152,55 +150,55 @@ fun printBinderLabel(file: Path, labels: List<MapLabelItem>, labelsPerPage: Int)
 
         frame(margin, margin, margin, margin) {
           drawAsImageCentered(
-            mtgLogo,
-            mtgLogoWidth,
-            mtgLogoHeight,
-            0f,
-            magicLogoYPosition,
+              mtgLogo,
+              mtgLogoWidth,
+              mtgLogoHeight,
+              0f,
+              magicLogoYPosition,
           )
 
           sizedFontTitle.adjustedTextToFitWidth(
-            set.title,
-            maxTitleWidth,
+              set.title,
+              maxTitleWidth,
           ) { title, font ->
-              val titleXPosition = (maximumWidth + font.height) * 0.5f
+            val titleXPosition = (maximumWidth + font.height) * 0.5f
 
-              sizedFontSubTitle.adjustedTextToFitWidth(
+            sizedFontSubTitle.adjustedTextToFitWidth(
                 set.subTitle,
                 maxTitleWidth,
-              ) { subTitle, subTitleFont ->
-                  val subTitleXPosition = titleXPosition + subTitleFont.height + defaultGapSize
-                  drawText(
-                    subTitle,
-                    subTitleFont,
-                    subTitleFontColor,
-                    subTitleXPosition,
-                    subTitleYPosition,
-                    90.0,
-                  )
-                }
-
-              drawText(title, font, fontColor, titleXPosition, titleYPosition, 90.0)
+            ) { subTitle, subTitleFont ->
+              val subTitleXPosition = titleXPosition + subTitleFont.height + defaultGapSize
+              drawText(
+                  subTitle,
+                  subTitleFont,
+                  subTitleFontColor,
+                  subTitleXPosition,
+                  subTitleYPosition,
+                  90.0,
+              )
             }
+
+            drawText(title, font, fontColor, titleXPosition, titleYPosition, 90.0)
+          }
 
           frame(0f, setDivYPos, 0f, 0f) {
             drawText(
-              set.code.uppercase(),
-              sizedFontCode,
-              HorizontalAlignment.CENTER,
-              0f,
-              codeYPos,
-              fontColor,
+                set.code.uppercase(),
+                sizedFontCode,
+                HorizontalAlignment.CENTER,
+                0f,
+                codeYPos,
+                fontColor,
             )
 
             set.subCode?.let { subCode ->
               drawText(
-                subCode.uppercase(),
-                sizedFontCodeCommanderSubset,
-                HorizontalAlignment.CENTER,
-                0f,
-                subCodeYPos,
-                subTitleFontColor,
+                  subCode.uppercase(),
+                  sizedFontCodeCommanderSubset,
+                  HorizontalAlignment.CENTER,
+                  0f,
+                  subCodeYPos,
+                  subTitleFontColor,
               )
             }
 
@@ -209,23 +207,22 @@ fun printBinderLabel(file: Path, labels: List<MapLabelItem>, labelsPerPage: Int)
             val xOffsetIcons = 27f
             val yOffsetIcons = mainIconYPos + desiredHeight - 15f
 
-
             set.subIconRight?.let {
               drawAsImageCentered(
-                createFromByteArray(it, "subIconRight(${set.title})"),
-                maximumWidthSub,
-                desiredHeightSub,
-                xOffsetIcons,
-                yOffsetIcons,
+                  createFromByteArray(it, "subIconRight(${set.title})"),
+                  maximumWidthSub,
+                  desiredHeightSub,
+                  xOffsetIcons,
+                  yOffsetIcons,
               )
             }
             set.subIconLeft?.let {
               drawAsImageCentered(
-                createFromByteArray(it, "subIconLeft(${set.title})"),
-                maximumWidthSub,
-                desiredHeightSub,
-                -xOffsetIcons,
-                yOffsetIcons,
+                  createFromByteArray(it, "subIconLeft(${set.title})"),
+                  maximumWidthSub,
+                  desiredHeightSub,
+                  -xOffsetIcons,
+                  yOffsetIcons,
               )
             }
 
@@ -234,30 +231,30 @@ fun printBinderLabel(file: Path, labels: List<MapLabelItem>, labelsPerPage: Int)
 
             set.subIconRight2?.let {
               drawAsImageCentered(
-                createFromByteArray(it, "subIconRight2(${set.title})"),
-                maximumWidthSub,
-                desiredHeightSub,
-                xOffsetIcons2,
-                yOffsetIcons2,
+                  createFromByteArray(it, "subIconRight2(${set.title})"),
+                  maximumWidthSub,
+                  desiredHeightSub,
+                  xOffsetIcons2,
+                  yOffsetIcons2,
               )
             }
             set.subIconLeft2?.let {
               drawAsImageCentered(
-                createFromByteArray(it, "subIconLeft2(${set.title})"),
-                maximumWidthSub,
-                desiredHeightSub,
-                -xOffsetIcons2,
-                yOffsetIcons2,
+                  createFromByteArray(it, "subIconLeft2(${set.title})"),
+                  maximumWidthSub,
+                  desiredHeightSub,
+                  -xOffsetIcons2,
+                  yOffsetIcons2,
               )
             }
 
             set.mainIcon?.let {
               drawAsImageCentered(
-                createFromByteArray(it, "mainIcon(${set.title})"),
-                maximumWidth,
-                desiredHeight,
-                0f,
-                mainIconYPos,
+                  createFromByteArray(it, "mainIcon(${set.title})"),
+                  maximumWidth,
+                  desiredHeight,
+                  0f,
+                  mainIconYPos,
               )
             }
           }

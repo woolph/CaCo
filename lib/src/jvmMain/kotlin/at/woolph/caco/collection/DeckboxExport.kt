@@ -7,11 +7,11 @@ import at.woolph.caco.datamodel.sets.CardPrintVariant
 import at.woolph.caco.datamodel.sets.Finish
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.ScryfallCardSets
-import kotlinx.io.files.Path
-import org.jetbrains.exposed.v1.core.eq
 import java.time.ZoneOffset
 import kotlin.math.max
 import kotlin.time.toJavaInstant
+import kotlinx.io.files.Path
+import org.jetbrains.exposed.v1.core.eq
 
 fun Iterable<CardCollectionItem>.exportDeckbox(file: Path) =
     export(
@@ -54,7 +54,8 @@ fun Iterable<CardCollectionItem>.exportDeckbox(file: Path) =
                                 cardCollectionItemId.variantType ==
                                     CardPrintVariant.Type.PrereleaseStamped ->
                                     "Prerelease Events: $mappedSetName"
-                                cardCollectionItemId.cardPrint.card.token -> "Extras: $mappedSetName"
+                                cardCollectionItemId.cardPrint.card.token ->
+                                    "Extras: $mappedSetName"
                                 else -> mappedSetName
                               }
                             }
@@ -78,18 +79,23 @@ fun Iterable<CardCollectionItem>.exportDeckbox(file: Path) =
             "Signed" to { "" },
             "Artist Proof" to
                 {
-                  if (cardCollectionItemId.variantType == CardPrintVariant.Type.TheList) "proof" else ""
+                  if (cardCollectionItemId.variantType == CardPrintVariant.Type.TheList) "proof"
+                  else ""
                 },
             "Altered Art" to { "" },
             "Misprint" to { "" },
             "Promo" to
                 {
-                  if (cardCollectionItemId.variantType == CardPrintVariant.Type.PromopackStamped) "promo"
+                  if (cardCollectionItemId.variantType == CardPrintVariant.Type.PromopackStamped)
+                      "promo"
                   else ""
                 },
             "Textless" to { "" },
             "My Price" to { purchasePrice?.let { "$$it" } ?: "" },
-            "Last Updated" to { DATE_FORMAT_DECKBOX.format(dateAdded.toJavaInstant().atOffset(ZoneOffset.UTC)) },
+            "Last Updated" to
+                {
+                  DATE_FORMAT_DECKBOX.format(dateAdded.toJavaInstant().atOffset(ZoneOffset.UTC))
+                },
         ),
     )
 

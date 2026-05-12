@@ -1,3 +1,4 @@
+/* Copyright 2026 Wolfgang Mayer */
 package at.woolph.utils
 
 interface ProgressTracker<Context, Unit : Number> {

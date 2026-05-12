@@ -11,7 +11,6 @@ import at.woolph.caco.icon.mythicBinderLabelIconRenderer
 import at.woolph.caco.labels.fetchCardSets
 import at.woolph.utils.io.asSink
 import at.woolph.utils.pdf.HorizontalAlignment
-import at.woolph.utils.pdf.pdfDocument
 import at.woolph.utils.pdf.dotsPerMillimeter
 import at.woolph.utils.pdf.drawAsImageCentered
 import at.woolph.utils.pdf.drawAsImageLeft
@@ -20,12 +19,12 @@ import at.woolph.utils.pdf.drawText
 import at.woolph.utils.pdf.frame
 import at.woolph.utils.pdf.loadFont72Black
 import at.woolph.utils.pdf.loadFontPlanewalkerBold
+import at.woolph.utils.pdf.pdfDocument
 import java.awt.Color
 import java.nio.file.Path
+import kotlin.io.path.createParentDirectories
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import kotlin.io.path.createParentDirectories
 
 interface CollectionDivider {
   val title: String
@@ -139,10 +138,10 @@ class PileSeparators {
               rowItems.forEachIndexed { columnIndex, columnItem ->
                 val borderWidth = 2f
                 frame(
-                  columnWidth * columnIndex,
-                  rowHeight * rowIndex,
-                  (columnWidth) * (columns - columnIndex - 1),
-                  (rowHeight) * (rows - rowIndex - 1),
+                    columnWidth * columnIndex,
+                    rowHeight * rowIndex,
+                    (columnWidth) * (columns - columnIndex - 1),
+                    (rowHeight) * (rows - rowIndex - 1),
                 ) {
                   drawBorder(borderWidth, fontColor)
                   frame(margin, margin, margin, margin) {
@@ -150,51 +149,51 @@ class PileSeparators {
                       is BlankCollectionDivider -> {}
                       is OneSymbolCollectionDivider -> {
                         drawText(
-                          columnItem.title,
-                          sizedFontCode2,
-                          HorizontalAlignment.CENTER,
-                          0f,
-                          desiredHeight + sizedFontCode2.height,
-                          fontColor,
+                            columnItem.title,
+                            sizedFontCode2,
+                            HorizontalAlignment.CENTER,
+                            0f,
+                            desiredHeight + sizedFontCode2.height,
+                            fontColor,
                         )
                         drawText(
-                          columnItem.code.uppercase(),
-                          sizedFontCode,
-                          HorizontalAlignment.CENTER,
-                          0f,
-                          sizedFontCode.height,
-                          fontColor,
+                            columnItem.code.uppercase(),
+                            sizedFontCode,
+                            HorizontalAlignment.CENTER,
+                            0f,
+                            sizedFontCode.height,
+                            fontColor,
                         )
-                        columnItem.icon?.let {
-                          createFromByteArray(it)
-                        }?.let {
-                            drawAsImageCentered(it, maximumIconWidth, desiredHeight, -offsetX, 0f)
-                            drawAsImageCentered(it, maximumIconWidth, desiredHeight, +offsetX, 0f)
-                          }
-                        }
+                        columnItem.icon
+                            ?.let { createFromByteArray(it) }
+                            ?.let {
+                              drawAsImageCentered(it, maximumIconWidth, desiredHeight, -offsetX, 0f)
+                              drawAsImageCentered(it, maximumIconWidth, desiredHeight, +offsetX, 0f)
+                            }
+                      }
 
                       is MultipleSymbolCollectionDivider -> {
                         drawText(
-                          columnItem.title,
-                          sizedFontCode2,
-                          HorizontalAlignment.CENTER,
-                          0f,
-                          desiredHeight + sizedFontCode2.height,
-                          fontColor,
+                            columnItem.title,
+                            sizedFontCode2,
+                            HorizontalAlignment.CENTER,
+                            0f,
+                            desiredHeight + sizedFontCode2.height,
+                            fontColor,
                         )
                         val start =
-                          box.width * 0.5f - maximumIconWidth * columnItem.icons.count() * 0.5f
+                            box.width * 0.5f - maximumIconWidth * columnItem.icons.count() * 0.5f
                         columnItem.icons
-                          .map { createFromByteArray(it) }
-                          .forEachIndexed { i, icon ->
-                            drawAsImageLeft(
-                              icon,
-                              maximumIconWidth,
-                              desiredHeight,
-                              start + maximumIconWidth * i,
-                              0f,
-                            )
-                          }
+                            .map { createFromByteArray(it) }
+                            .forEachIndexed { i, icon ->
+                              drawAsImageLeft(
+                                  icon,
+                                  maximumIconWidth,
+                                  desiredHeight,
+                                  start + maximumIconWidth * i,
+                                  0f,
+                              )
+                            }
                       }
                     }
                   }

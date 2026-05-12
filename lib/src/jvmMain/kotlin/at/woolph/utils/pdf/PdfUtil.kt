@@ -72,7 +72,13 @@ class ColumnSpace(val columnManager: ColumnManager, val column: Int, val line: I
           val x = box.lowerLeftX + lineIndent + column * (maxLineWidth + columnGap)
 
           if (more) {
-            drawText(symbolMore, sizedFont, x - textGap - symbolWidth, y - sizedFont.height, Color.BLACK)
+            drawText(
+                symbolMore,
+                sizedFont,
+                x - textGap - symbolWidth,
+                y - sizedFont.height,
+                Color.BLACK,
+            )
           }
           drawText(text, sizedFont, x, y - sizedFont.height, color, maxLineWidth - lineIndent)
         }
@@ -86,12 +92,12 @@ class ColumnSpace(val columnManager: ColumnManager, val column: Int, val line: I
 }
 
 class ColumnManager(
-  val node: Node,
-  val columns: Int,
-  val linesPerColumn: Int,
-  val columnGap: Float,
-  val lineSpacing: Float,
-  val sizedFont: SizedFont,
+    val node: Node,
+    val columns: Int,
+    val linesPerColumn: Int,
+    val columnGap: Float,
+    val lineSpacing: Float,
+    val sizedFont: SizedFont,
 ) {
   val maxLineWidth = (node.box.width - (columns - 1) * columnGap) / columns
   val lineHeight = sizedFont.totalHeight + lineSpacing
@@ -113,14 +119,15 @@ class ColumnManager(
 }
 
 fun Node.columns(
-  columns: Int,
-  linesPerColumn: Int,
-  columnGap: Float,
-  lineSpacing: Float,
-  sizedFont: SizedFont,
-  block: ColumnManager.() -> Unit,
+    columns: Int,
+    linesPerColumn: Int,
+    columnGap: Float,
+    lineSpacing: Float,
+    sizedFont: SizedFont,
+    block: ColumnManager.() -> Unit,
 ): ColumnManager {
-  return ColumnManager(this, columns, linesPerColumn, columnGap, lineSpacing, sizedFont).apply(block)
+  return ColumnManager(this, columns, linesPerColumn, columnGap, lineSpacing, sizedFont)
+      .apply(block)
 }
 
 fun Node.columns(
@@ -138,7 +145,14 @@ fun Node.columns(
               font.fontDescriptor.fontBoundingBox.height
       )
 
-  return ColumnManager(this, columns, linesPerColumn, columnGap, lineSpacing, SizedFont(font, fontSize))
+  return ColumnManager(
+          this,
+          columns,
+          linesPerColumn,
+          columnGap,
+          lineSpacing,
+          SizedFont(font, fontSize),
+      )
       .apply(block)
 }
 
@@ -174,7 +188,14 @@ fun Node.columns(
         )
   }
 
-  return ColumnManager(this, columns, linesPerColumn, columnGap, lineSpacing, SizedFont(font, fontSize))
+  return ColumnManager(
+          this,
+          columns,
+          linesPerColumn,
+          columnGap,
+          lineSpacing,
+          SizedFont(font, fontSize),
+      )
       .apply(block)
 }
 
@@ -233,12 +254,12 @@ fun PDRectangle.inset(
     )
 
 fun Node.drawText(
-  text: String,
-  sizedFont: SizedFont,
-  horizontalAlignment: HorizontalAlignment,
-  shiftX: Float,
-  y: Float,
-  color: Color,
+    text: String,
+    sizedFont: SizedFont,
+    horizontalAlignment: HorizontalAlignment,
+    shiftX: Float,
+    y: Float,
+    color: Color,
 ) {
   val startX =
       when (horizontalAlignment) {
@@ -250,11 +271,11 @@ fun Node.drawText(
 }
 
 fun Node.drawText(
-  text: String,
-  sizedFont: SizedFont,
-  verticalAlignment: VerticalAlignment,
-  x: Float,
-  color: Color,
+    text: String,
+    sizedFont: SizedFont,
+    verticalAlignment: VerticalAlignment,
+    x: Float,
+    color: Color,
 ) {
   val objectHeight = sizedFont.height
   val startY =
@@ -267,10 +288,10 @@ fun Node.drawText(
 }
 
 fun Node.drawText(
-  text: String,
-  sizedFont: SizedFont,
-  horizontalAlignment: HorizontalAlignment,
-  color: Color,
+    text: String,
+    sizedFont: SizedFont,
+    horizontalAlignment: HorizontalAlignment,
+    color: Color,
 ) {
   val startX =
       when (horizontalAlignment) {
@@ -281,7 +302,8 @@ fun Node.drawText(
   drawText(text, sizedFont, startX, color)
 }
 
-fun Node.frame(box: PDRectangle = this.box, block: Node.() -> Unit) = Node(document, contentStream, box, this).apply(block)
+fun Node.frame(box: PDRectangle = this.box, block: Node.() -> Unit) =
+    Node(document, contentStream, box, this).apply(block)
 
 fun Node.frame(
     marginLeft: Float = 0f,
@@ -300,7 +322,17 @@ fun Node.frameRelative(
     height: Float = 0f,
     block: Node.() -> Unit,
 ) =
-  frame(box.withRelativeSize(horizontalAlignment, offsetX, verticalAlignment, offsetY, width, height), block)
+    frame(
+        box.withRelativeSize(
+            horizontalAlignment,
+            offsetX,
+            verticalAlignment,
+            offsetY,
+            width,
+            height,
+        ),
+        block,
+    )
 
 fun Page.framePagePosition(
     marginInner: Float,
@@ -445,7 +477,9 @@ fun <Item> PDFDocument.paginatedColumnedContent(
     page(pageFormat) {
       println("column page #$pageIndex")
       columns.forEachIndexed { i, columnItem ->
-        frame(columnWidth * i, 0f, (columnWidth) * (columnCount - i - 1), 0f) { columnBlock(columnItem) }
+        frame(columnWidth * i, 0f, (columnWidth) * (columnCount - i - 1), 0f) {
+          columnBlock(columnItem)
+        }
       }
     }
   }

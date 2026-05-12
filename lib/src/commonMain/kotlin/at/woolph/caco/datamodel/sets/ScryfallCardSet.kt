@@ -3,18 +3,18 @@ package at.woolph.caco.datamodel.sets
 
 import at.woolph.utils.Uri
 import at.woolph.utils.compareToNullable
+import kotlin.uuid.Uuid
 import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
-import org.jetbrains.exposed.v1.datetime.date
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.dao.id.IdTable
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.dao.UuidEntity
 import org.jetbrains.exposed.v1.dao.UuidEntityClass
+import org.jetbrains.exposed.v1.datetime.date
 import org.jetbrains.exposed.v1.jdbc.SizedIterable
 import org.jetbrains.exposed.v1.jdbc.emptySized
-import kotlin.uuid.Uuid
 
 object ScryfallCardSets : IdTable<Uuid>() {
   override val id = uuid("id").entityId()
@@ -36,10 +36,10 @@ object ScryfallCardSets : IdTable<Uuid>() {
   val icon = varchar("iconUri", length = 256).nullable()
 }
 
-class ScryfallCardSet(id: EntityID<Uuid>) :  UuidEntity(id), Comparable<ScryfallCardSet>{
+class ScryfallCardSet(id: EntityID<Uuid>) : UuidEntity(id), Comparable<ScryfallCardSet> {
   companion object : UuidEntityClass<ScryfallCardSet>(ScryfallCardSets) {
     fun findByCode(code: String?): ScryfallCardSet? =
-      code?.let { find { ScryfallCardSets.code eq it }.firstOrNull() }
+        code?.let { find { ScryfallCardSets.code eq it }.firstOrNull() }
 
     fun findByParentSetCode(code: String?) =
         code?.let { find { ScryfallCardSets.parentSetCode eq it } } ?: emptySized()
@@ -67,11 +67,7 @@ class ScryfallCardSet(id: EntityID<Uuid>) :  UuidEntity(id), Comparable<Scryfall
 
     fun allGroupedByBlocks() = groupedByBlocks(all())
 
-    fun rootSetsGroupedByBlocks() = groupedByBlocks(
-      find(
-        FILTER_NO_PARENT
-      )
-    )
+    fun rootSetsGroupedByBlocks() = groupedByBlocks(find(FILTER_NO_PARENT))
 
     fun rootSetsGroupedByBlocks(op: () -> Op<Boolean>) =
         groupedByBlocks(find(FILTER_NO_PARENT.and(op)))
@@ -141,9 +137,9 @@ class ScryfallCardSet(id: EntityID<Uuid>) :  UuidEntity(id), Comparable<Scryfall
     get() = sequence {
       yield(this@ScryfallCardSet)
       yieldAll(
-        childSets
-          .filterNot(ScryfallCardSet::isRootSet)
-          .flatMap(ScryfallCardSet::selfAndNonRootChildSets)
+          childSets
+              .filterNot(ScryfallCardSet::isRootSet)
+              .flatMap(ScryfallCardSet::selfAndNonRootChildSets)
       )
     }
 
@@ -152,14 +148,14 @@ class ScryfallCardSet(id: EntityID<Uuid>) :  UuidEntity(id), Comparable<Scryfall
 
   val isRootSet: Boolean
     get() =
-      parentSetCode == null ||
-        (parentSet?.type != SetType.COMMANDER && type == SetType.COMMANDER) ||
-        code in childSetsConsideredToBeRootSets
+        parentSetCode == null ||
+            (parentSet?.type != SetType.COMMANDER && type == SetType.COMMANDER) ||
+            code in childSetsConsideredToBeRootSets
 
   override fun compareTo(other: ScryfallCardSet): Int {
     if (uuid == other.uuid) return 0
     return releaseDate.compareToNullable(other.releaseDate)?.let { -it }
-      ?: compareSetCodeNullable(code, other.code)
-      ?: 0
+        ?: compareSetCodeNullable(code, other.code)
+        ?: 0
   }
 }

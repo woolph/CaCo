@@ -8,23 +8,23 @@ import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.sets.CardRepresentation
 import at.woolph.caco.datamodel.sets.Finish
 import at.woolph.utils.csv.CsvRecord
+import java.util.function.Predicate
+import kotlin.text.toDoubleOrNull
+import kotlin.text.toInt
+import kotlin.time.Clock
+import kotlin.time.Instant
+import kotlin.uuid.Uuid
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atTime
 import kotlinx.datetime.toInstant
 import kotlinx.io.files.Path
-import kotlin.time.Instant
-import java.util.function.Predicate
-import kotlin.text.toDoubleOrNull
-import kotlin.text.toInt
-import kotlin.time.Clock
-import kotlin.uuid.Uuid
 
 fun importArchidekt(
-  file: Path,
-  notImportedOutputFile: Path = Path("not-imported.csv"),
-  datePredicate: Predicate<Instant> = Predicate { true },
-  clearBeforeImport: Boolean = false,
+    file: Path,
+    notImportedOutputFile: Path = Path("not-imported.csv"),
+    datePredicate: Predicate<Instant> = Predicate { true },
+    clearBeforeImport: Boolean = false,
 ) =
     import(
         file = file,
@@ -46,8 +46,9 @@ fun importSequenceArchidekt(
 
 fun Raise<Throwable>.mapArchitect(csvRecord: CsvRecord): CardCollectionItem {
   val dateAdded =
-      csvRecord["Date Added"]?.let { kotlinx.datetime.LocalDate.parse(it).atTime(LocalTime(0,0,0)).toInstant(TimeZone.UTC) }
-          ?: Clock.System.now()
+      csvRecord["Date Added"]?.let {
+        kotlinx.datetime.LocalDate.parse(it).atTime(LocalTime(0, 0, 0)).toInstant(TimeZone.UTC)
+      } ?: Clock.System.now()
 
   val quantity = csvRecord["Quantity"]!!.toInt()
   val finish = Finish.parse(csvRecord["Finish"]!!)

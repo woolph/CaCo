@@ -1,10 +1,11 @@
+/* Copyright 2026 Wolfgang Mayer */
 package at.woolph.caco.masterdata.import
 
+import java.net.URI
+import java.util.UUID
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import java.net.URI
-import java.util.UUID
 
 @Serializable
 data class ScryfallRelatedCard(

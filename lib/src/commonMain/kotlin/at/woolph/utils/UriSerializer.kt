@@ -1,3 +1,4 @@
+/* Copyright 2026 Wolfgang Mayer */
 package at.woolph.utils
 
 import kotlinx.serialization.KSerializer
@@ -9,12 +10,11 @@ import kotlinx.serialization.encoding.Encoder
 
 class UriSerializer() : KSerializer<Uri> {
   override val descriptor: SerialDescriptor =
-    PrimitiveSerialDescriptor("at.woolph.utils.UriSerializer", PrimitiveKind.STRING)
+      PrimitiveSerialDescriptor("at.woolph.utils.UriSerializer", PrimitiveKind.STRING)
 
   override fun serialize(encoder: Encoder, value: Uri) {
     encoder.encodeString(value.toString())
   }
 
-  override fun deserialize(decoder: Decoder): Uri =
-    Uri(decoder.decodeString())
+  override fun deserialize(decoder: Decoder): Uri = Uri(decoder.decodeString())
 }

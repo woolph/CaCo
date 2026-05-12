@@ -2,15 +2,15 @@
 package at.woolph.caco.datamodel.collection
 
 import at.woolph.caco.datamodel.sets.CardPrint
-import at.woolph.caco.datamodel.sets.CardPrints
 import at.woolph.caco.datamodel.sets.CardPrintVariant
+import at.woolph.caco.datamodel.sets.CardPrints
 import at.woolph.caco.datamodel.sets.Finish
 import at.woolph.utils.currency.CurrencyValue
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
-import org.jetbrains.exposed.v1.dao.IntEntity
-import org.jetbrains.exposed.v1.dao.IntEntityClass
 import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.dao.IntEntity
+import org.jetbrains.exposed.v1.dao.IntEntityClass
 import org.jetbrains.exposed.v1.datetime.CurrentTimestamp
 import org.jetbrains.exposed.v1.datetime.timestamp
 
@@ -47,14 +47,20 @@ class CardPossession(id: EntityID<Int>) : IntEntity(id) {
   var location by CardPossessions.location
   var purchasePrice by CardPossessions.purchasePrice
 
-  val price: CurrencyValue? get() = cardPrint.prices(finish)?.times(when(condition) {
-    CardCondition.UNKNOWN -> 0.0
-    CardCondition.NEAR_MINT -> 1.0
-    CardCondition.EXCELLENT -> 0.9
-    CardCondition.GOOD -> 0.7
-    CardCondition.PLAYED -> 0.5
-    CardCondition.POOR -> 0.3
-  })
+  val price: CurrencyValue?
+    get() =
+        cardPrint
+            .prices(finish)
+            ?.times(
+                when (condition) {
+                  CardCondition.UNKNOWN -> 0.0
+                  CardCondition.NEAR_MINT -> 1.0
+                  CardCondition.EXCELLENT -> 0.9
+                  CardCondition.GOOD -> 0.7
+                  CardCondition.PLAYED -> 0.5
+                  CardCondition.POOR -> 0.3
+                }
+            )
 
   override fun toString(): String = "$cardPrint $finish $language $condition $variantType"
 }

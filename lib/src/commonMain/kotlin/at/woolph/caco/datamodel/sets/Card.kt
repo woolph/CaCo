@@ -6,12 +6,12 @@ import at.woolph.caco.datamodel.ColorIdentity
 import at.woolph.caco.datamodel.decks.Format
 import at.woolph.utils.currency.CurrencyValue
 import at.woolph.utils.ktor.jsonSerializer
+import kotlin.uuid.Uuid
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.dao.id.IdTable
 import org.jetbrains.exposed.v1.dao.UuidEntity
 import org.jetbrains.exposed.v1.dao.UuidEntityClass
 import org.jetbrains.exposed.v1.json.json
-import kotlin.uuid.Uuid
 
 object Cards : IdTable<Uuid>() {
   override val id = uuid("oracleId").entityId()
@@ -42,7 +42,9 @@ class Card(id: EntityID<Uuid>) : UuidEntity(id), Comparable<Card> {
     val CARD_DRAW_PATTERN = Regex("draws? (|a |two |three )cards?", RegexOption.IGNORE_CASE)
   }
 
-  val lowestPrice: CurrencyValue? get() = prints.mapNotNull { it.lowestPrice }.minOrNull()
+  val lowestPrice: CurrencyValue?
+    get() = prints.mapNotNull { it.lowestPrice }.minOrNull()
+
   val prints by CardPrint referrersOn CardPrints
 
   var name by Cards.name
@@ -58,20 +60,22 @@ class Card(id: EntityID<Uuid>) : UuidEntity(id), Comparable<Card> {
   var oracleText by Cards.oracleText
   var legalities by Cards.legalities
 
-  fun isLegalIn(format: Format): Boolean =
-      legalities?.get(format)?.isAllowedToBePlayed == true
+  fun isLegalIn(format: Format): Boolean = legalities?.get(format)?.isAllowedToBePlayed == true
 
   var gameChanger by Cards.gameChanger
   var edhrecRank by Cards.edhrecRank
 
   var colorIdentity by
-      Cards.colorIdentity.transform(ColorIdentity::encodeAsInteger, ColorIdentity::decodeFromInteger)
+      Cards.colorIdentity.transform(
+          ColorIdentity::encodeAsInteger,
+          ColorIdentity::decodeFromInteger,
+      )
 
   var producedMana: Color? by
-    Cards.producedMana.transform(
-      { it?.encodeAsInteger() },
-      { it?.let(Color::decodeFromInteger) },
-    )
+      Cards.producedMana.transform(
+          { it?.encodeAsInteger() },
+          { it?.let(Color::decodeFromInteger) },
+      )
 
   val isCreature: Boolean
     get() = type?.contains("Creature") == true
@@ -136,8 +140,7 @@ class Card(id: EntityID<Uuid>) : UuidEntity(id), Comparable<Card> {
   private fun oracleTextNone(vararg keywords: String) =
       keywords.none { oracleText.contains(it, ignoreCase = true) }
 
-  override fun compareTo(other: Card): Int =
-    name.compareTo(other.name)
+  override fun compareTo(other: Card): Int = name.compareTo(other.name)
 
   override fun toString(): String = name
 }

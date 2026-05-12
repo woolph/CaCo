@@ -1,10 +1,10 @@
 /* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.decks
 
-import at.woolph.utils.ProgressTracker
 import at.woolph.caco.cli.DeckList
 import at.woolph.caco.datamodel.decks.DeckZone
 import at.woolph.caco.datamodel.decks.Format
+import at.woolph.utils.ProgressTracker
 import java.net.URI
 import java.net.URL
 import kotlinx.coroutines.Dispatchers
@@ -101,20 +101,22 @@ class DeckboxDeckImporter(
           DeckList(
               deckName,
               format,
-              deckZones = mapOf(
-                DeckZone.COMMAND_ZONE to commanders,
-                DeckZone.MAINBOARD to mainboard,
-                DeckZone.MAYBE_MAINBOARD to sideboard,
-              ),
+              deckZones =
+                  mapOf(
+                      DeckZone.COMMAND_ZONE to commanders,
+                      DeckZone.MAINBOARD to mainboard,
+                      DeckZone.MAYBE_MAINBOARD to sideboard,
+                  ),
           )
       else ->
           DeckList(
               deckName,
               format,
-              deckZones = mapOf(
-                DeckZone.COMMAND_ZONE to commanders,
-                DeckZone.SIDEBOARD to sideboard,
-              ),
+              deckZones =
+                  mapOf(
+                      DeckZone.COMMAND_ZONE to commanders,
+                      DeckZone.SIDEBOARD to sideboard,
+                  ),
           )
     }
   }

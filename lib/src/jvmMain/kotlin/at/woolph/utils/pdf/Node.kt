@@ -1,23 +1,30 @@
+/* Copyright 2026 Wolfgang Mayer */
 package at.woolph.utils.pdf
 
+import java.awt.Color
+import java.io.IOException
 import org.apache.pdfbox.pdmodel.PDPageContentStream
 import org.apache.pdfbox.pdmodel.common.PDRectangle
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject
 import org.apache.pdfbox.util.Matrix
-import java.awt.Color
-import java.io.IOException
-
 
 open class Node(
-  val document: PDFDocument,
-  val contentStream: PDPageContentStream,
-  val box: PDRectangle,
-  val parentNode: Node? = null,
+    val document: PDFDocument,
+    val contentStream: PDPageContentStream,
+    val box: PDRectangle,
+    val parentNode: Node? = null,
 ) {
   var currentCursorPosition = box.upperRightY
 }
 
-fun Node.drawText(text: String, sizedFont: SizedFont, color: Color, x: Float, y: Float, rotation: Double) {
+fun Node.drawText(
+    text: String,
+    sizedFont: SizedFont,
+    color: Color,
+    x: Float,
+    y: Float,
+    rotation: Double,
+) {
   try {
     contentStream.apply {
       beginText()
@@ -25,9 +32,9 @@ fun Node.drawText(text: String, sizedFont: SizedFont, color: Color, x: Float, y:
       // we want to position our text on his baseline
 
       setTextMatrix(
-        Matrix.getTranslateInstance(box.lowerLeftX + x, box.upperRightY - y).apply {
-          rotate(Math.toRadians(rotation))
-        }
+          Matrix.getTranslateInstance(box.lowerLeftX + x, box.upperRightY - y).apply {
+            rotate(Math.toRadians(rotation))
+          }
       )
 
       setNonStrokingColor(color)
@@ -64,9 +71,9 @@ fun Node.drawText90(text: String, sizedFont: SizedFont, x: Float, y: Float, colo
       // we want to position our text on his baseline
 
       setTextMatrix(
-        Matrix.getRotateInstance(Math.toRadians(90.0), x, y).apply {
-          //				translate(0f, -box.width)
-        }
+          Matrix.getRotateInstance(Math.toRadians(90.0), x, y).apply {
+            //				translate(0f, -box.width)
+          }
       )
       //			newLineAtOffset(x, y - font.totalHeight)
       setNonStrokingColor(color)
@@ -86,9 +93,9 @@ fun Node.drawText270(text: String, sizedFont: SizedFont, x: Float, y: Float, col
       // we want to position our text on his baseline
 
       setTextMatrix(
-        Matrix.getRotateInstance(Math.toRadians(-90.0), x, y).apply {
-          //				translate(0f, -box.width)
-        }
+          Matrix.getRotateInstance(Math.toRadians(-90.0), x, y).apply {
+            //				translate(0f, -box.width)
+          }
       )
       //			newLineAtOffset(x, y - font.totalHeight)
       setNonStrokingColor(color)
@@ -115,12 +122,19 @@ fun Node.drawText(text: String, sizedFont: SizedFont, x: Float, color: Color) {
   currentCursorPosition -= sizedFont.totalHeight
 }
 
-fun Node.drawText(text: String, sizedFont: SizedFont, x: Float, y: Float, color: Color, maxLineWidth: Float) {
+fun Node.drawText(
+    text: String,
+    sizedFont: SizedFont,
+    x: Float,
+    y: Float,
+    color: Color,
+    maxLineWidth: Float,
+) {
   var printedText = text
   var lineWidth = sizedFont.getWidth(printedText)
   while (lineWidth > maxLineWidth && printedText.length > 4) {
     val tempPrintedText =
-      printedText.removeSuffix("...").trimEnd().dropLastWhile { !it.isWhitespace() }
+        printedText.removeSuffix("...").trimEnd().dropLastWhile { !it.isWhitespace() }
     if (tempPrintedText.isNotEmpty()) printedText = "$tempPrintedText ..."
     else printedText = printedText.removeSuffix("...").dropLast(1) + "..."
     lineWidth = sizedFont.getWidth(printedText)

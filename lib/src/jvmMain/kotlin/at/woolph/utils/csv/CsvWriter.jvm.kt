@@ -1,3 +1,4 @@
+/* Copyright 2026 Wolfgang Mayer */
 package at.woolph.utils.csv
 
 import com.opencsv.CSVWriter
@@ -8,7 +9,7 @@ import kotlinx.io.files.SystemFileSystem
 
 actual class CsvWriter actual constructor(file: Path) : AutoCloseable {
   private val csvWriter =
-    CSVWriter(SystemFileSystem.sink(file).buffered().asOutputStream().bufferedWriter())
+      CSVWriter(SystemFileSystem.sink(file).buffered().asOutputStream().bufferedWriter())
 
   actual fun write(data: Array<String>) {
     csvWriter.writeNext(data, false)
@@ -21,5 +22,4 @@ actual class CsvWriter actual constructor(file: Path) : AutoCloseable {
   actual override fun close() {
     csvWriter.close()
   }
-
 }

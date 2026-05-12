@@ -1,11 +1,12 @@
+/* Copyright 2026 Wolfgang Mayer */
 package at.woolph.utils.pdf
 
 import be.quodlibet.boxable.utils.FontUtils
 import org.apache.pdfbox.pdmodel.font.PDFont
 
 actual class SizedFont(
-  val family: PDFont,
-  actual val size: Float,
+    val family: PDFont,
+    actual val size: Float,
 ) {
   actual fun withSize(size: Float) = SizedFont(family, size)
 
@@ -15,21 +16,22 @@ actual class SizedFont(
 
   actual val totalHeight = FontUtils.getHeight(family, size)
   actual val descent = FontUtils.getDescent(family, size)
-  actual val height = totalHeight + descent // family.fontDescriptor.fontBoundingBox.height / 1000 * size
+  actual val height =
+      totalHeight + descent // family.fontDescriptor.fontBoundingBox.height / 1000 * size
 
   actual fun adjustedTextToFitWidth(
-    originalText: String?,
-    maxWidth: Float,
-    minFontSize: Float,
-    block: (text: String, sizedFont: SizedFont) -> Unit
+      originalText: String?,
+      maxWidth: Float,
+      minFontSize: Float,
+      block: (text: String, sizedFont: SizedFont) -> Unit,
   ) {
     var shortendText = originalText ?: return
     var shrinkedFont = this
     val shrinkFactor = 0.95f
 
     while (
-      shrinkedFont.getWidth(shortendText) > maxWidth &&
-      shrinkedFont.size * shrinkFactor > minFontSize
+        shrinkedFont.getWidth(shortendText) > maxWidth &&
+            shrinkedFont.size * shrinkFactor > minFontSize
     ) {
       shrinkedFont = shrinkedFont.withRelativeSize(shrinkFactor)
     }

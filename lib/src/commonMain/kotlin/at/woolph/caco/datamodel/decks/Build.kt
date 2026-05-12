@@ -24,7 +24,7 @@ object Builds : IntIdTable() {
 }
 
 class Build(
-  id: EntityID<Int>,
+    id: EntityID<Int>,
 ) : IntEntity(id) {
   companion object : IntEntityClass<Build>(Builds)
 
@@ -41,7 +41,8 @@ class Build(
   val archived by Builds.archived
 
   val cards by DeckCard referrersOn DeckCards.build
-  val cardsByZone get() = cards.associateWith { it.deckZone }
+  val cardsByZone
+    get() = cards.associateWith { it.deckZone }
 
   // TODO implement feature to show diff between two builds (to be able to compare)
   // TODO state isReady (indicates that all cards needed are in the collection) => probably

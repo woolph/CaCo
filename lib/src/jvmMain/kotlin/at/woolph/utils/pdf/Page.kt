@@ -1,3 +1,4 @@
+/* Copyright 2026 Wolfgang Mayer */
 package at.woolph.utils.pdf
 
 import org.apache.pdfbox.pdmodel.PDPage

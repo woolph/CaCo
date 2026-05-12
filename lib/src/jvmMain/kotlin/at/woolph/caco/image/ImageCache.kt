@@ -16,21 +16,18 @@ actual object ImageCache {
   }
 
   actual suspend fun getImageByteArray(
-    id: String,
-    imageLoader: suspend () -> Either<Throwable, ByteArray>,
+      id: String,
+      imageLoader: suspend () -> Either<Throwable, ByteArray>,
   ): Either<Throwable, ByteArray> = either {
     withContext(Dispatchers.IO) {
       val cachedFile = folder.resolve(UUID.nameUUIDFromBytes(id.toByteArray()).toString())
       if (cachedFile.exists()) {
         cachedFile.readBytes()
       } else {
-        imageLoader().onRight { image ->
-          cachedFile.writeBytes(image)
-        }.bind()
+        imageLoader().onRight { image -> cachedFile.writeBytes(image) }.bind()
       }
     }
   }
-
 
   //    suspend fun getImage(id: String, imageLoader: suspend () -> ByteArray?): Image? =
   //        getImageByteArray(id, imageLoader)?.let { Image(ByteArrayInputStream(it)) }

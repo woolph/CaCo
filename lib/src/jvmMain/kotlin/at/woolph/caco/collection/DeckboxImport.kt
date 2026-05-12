@@ -8,8 +8,6 @@ import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.sets.*
 import at.woolph.utils.csv.CsvRecord
 import at.woolph.utils.csv.IntentionallySkippedException
-import kotlinx.io.files.Path
-import kotlin.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -22,11 +20,13 @@ import kotlin.text.removePrefix
 import kotlin.text.removeSuffix
 import kotlin.text.startsWith
 import kotlin.text.toInt
+import kotlin.time.Clock
+import kotlin.time.Instant
+import kotlin.time.toKotlinInstant
+import kotlinx.io.files.Path
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import kotlin.time.Clock
-import kotlin.time.toKotlinInstant
 
 fun importSequenceDeckbox(
     file: Path,
@@ -36,10 +36,10 @@ fun importSequenceDeckbox(
 }
 
 fun importDeckbox(
-  file: Path,
-  notImportedOutputFile: Path = Path("not-imported.csv"),
-  datePredicate: Predicate<Instant> = Predicate { true },
-  clearBeforeImport: Boolean = false,
+    file: Path,
+    notImportedOutputFile: Path = Path("not-imported.csv"),
+    datePredicate: Predicate<Instant> = Predicate { true },
+    clearBeforeImport: Boolean = false,
 ) {
   val knownSets = transaction { ScryfallCardSet.all().associate { it.code to it.name } }
   import(
@@ -53,12 +53,13 @@ fun importDeckbox(
 }
 
 fun Raise<Throwable>.mapDeckbox(
-  nextLine: CsvRecord,
-  knownSets: Map<String, String>,
+    nextLine: CsvRecord,
+    knownSets: Map<String, String>,
 ): CardCollectionItem {
   val dateAdded =
-      nextLine["Last Updated"]?.let { DATE_FORMAT_DECKBOX.parse(it, java.time.Instant::from).toKotlinInstant() }
-          ?: Clock.System.now()
+      nextLine["Last Updated"]?.let {
+        DATE_FORMAT_DECKBOX.parse(it, java.time.Instant::from).toKotlinInstant()
+      } ?: Clock.System.now()
 
   val count = nextLine["Count"]!!.toInt()
   val (setCode, setName, isPromo, token, isTheListCard) =
@@ -173,9 +174,9 @@ fun Raise<Throwable>.mapDeckbox(
       }
   if (token && cardName.contains(" // ")) {
     raise(
-      IntentionallySkippedException(
-        "skipping $cardName because it is an Double Sided Token which is not supported"
-      )
+        IntentionallySkippedException(
+            "skipping $cardName because it is an Double Sided Token which is not supported"
+        )
     )
   } else if (cardName.startsWith("Art Card:")) {
     raise(IntentionallySkippedException("skipping $cardName because it is an Art Card"))
@@ -425,7 +426,9 @@ fun Raise<Throwable>.getCard(
   fun cardByNumber(setCode: String, promo: Boolean? = null): CardPrint? =
       (CardPrints innerJoin ScryfallCardSets)
           .select(CardPrints.id)
-          .where { ScryfallCardSets.code.eq(setCode) and (CardPrints.collectorNumber.eq(cardNumber)) }
+          .where {
+            ScryfallCardSets.code.eq(setCode) and (CardPrints.collectorNumber.eq(cardNumber))
+          }
           .mapNotNull { CardPrint.findById(it[CardPrints.id]) }
           .singleOrNull { it.card.name == cardName && (promo == null || it.promo == promo) }
 

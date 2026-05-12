@@ -1,11 +1,11 @@
 /* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.datamodel.sets
 
+import kotlin.uuid.Uuid
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.dao.id.IdTable
 import org.jetbrains.exposed.v1.dao.UuidEntity
 import org.jetbrains.exposed.v1.dao.UuidEntityClass
-import kotlin.uuid.Uuid
 
 object CardPrintVariants : IdTable<Uuid>() {
   override val id = uuid("scryfallId").entityId()

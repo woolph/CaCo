@@ -1,3 +1,4 @@
+/* Copyright 2026 Wolfgang Mayer */
 package at.woolph.caco.datamodel
 
 class ColorIdentity(val colorIdentity: Set<MtgColor>) {
@@ -18,18 +19,17 @@ class ColorIdentity(val colorIdentity: Set<MtgColor>) {
   operator fun plus(colorIdentity: Set<MtgColor>) =
       ColorIdentity(this.colorIdentity + colorIdentity)
 
-  fun encodeAsInteger(): Int = colorIdentity.fold(0) { acc: Int, mtgColor: MtgColor ->
-    (acc or (1 shl mtgColor.ordinal))
-  }
+  fun encodeAsInteger(): Int =
+      colorIdentity.fold(0) { acc: Int, mtgColor: MtgColor -> (acc or (1 shl mtgColor.ordinal)) }
 
   companion object {
     fun decodeFromInteger(value: Int): ColorIdentity =
-      ColorIdentity(
-        MtgColor.entries
-          .asSequence()
-          .filter { mtgColor -> (value and (1 shl mtgColor.ordinal)) != 0 }
-          .toSet()
-      )
+        ColorIdentity(
+            MtgColor.entries
+                .asSequence()
+                .filter { mtgColor -> (value and (1 shl mtgColor.ordinal)) != 0 }
+                .toSet()
+        )
 
     operator fun invoke(string: String) =
         when (val colorCode = string.lowercase()) {

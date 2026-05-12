@@ -8,20 +8,20 @@ import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.datamodel.sets.CardPrint
 import at.woolph.caco.datamodel.sets.CardPrintVariant
 import at.woolph.caco.datamodel.sets.Finish
+import kotlin.time.Clock
+import kotlin.time.Instant
 import kotlin.toUInt
+import kotlin.uuid.Uuid
 import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.count
 import org.jetbrains.exposed.v1.jdbc.select
-import kotlin.time.Clock
-import kotlin.time.Instant
-import kotlin.uuid.Uuid
 
 data class CardCollectionItemId(
-  val cardPrint: CardPrint,
-  val finish: Finish,
-  val language: CardLanguage,
-  val condition: CardCondition,
-  val variantType: CardPrintVariant.Type? = null,
+    val cardPrint: CardPrint,
+    val finish: Finish,
+    val language: CardLanguage,
+    val condition: CardCondition,
+    val variantType: CardPrintVariant.Type? = null,
 ) {
   val actualScryfallId: Uuid =
       cardPrint.getActualScryfallId(variantType).getOrNull()
@@ -29,10 +29,10 @@ data class CardCollectionItemId(
 }
 
 data class CardCollectionItem(
-  val quantity: UInt,
-  val cardCollectionItemId: CardCollectionItemId,
-  val dateAdded: Instant = Clock.System.now(),
-  val purchasePrice: Double? = null,
+    val quantity: UInt,
+    val cardCollectionItemId: CardCollectionItemId,
+    val dateAdded: Instant = Clock.System.now(),
+    val purchasePrice: Double? = null,
 ) {
   fun addToCollection() {
     repeat(quantity.toInt()) {

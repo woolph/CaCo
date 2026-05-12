@@ -10,8 +10,13 @@ import io.ktor.client.request.get
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.*
+import java.net.URI
+import java.time.LocalDate
+import java.time.ZonedDateTime
+import java.util.UUID
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
+import kotlin.uuid.Uuid
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.PrimitiveKind
@@ -20,23 +25,18 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
-import java.net.URI
-import java.time.LocalDate
-import java.time.ZonedDateTime
-import java.util.UUID
-import kotlin.uuid.Uuid
 
 suspend fun <R> useHttpClient(
-  context: CoroutineContext = EmptyCoroutineContext,
-  block: suspend (HttpClient) -> R,
+    context: CoroutineContext = EmptyCoroutineContext,
+    block: suspend (HttpClient) -> R,
 ) =
-  withContext(context) {
-    HttpClient(CIO) {
-      install(ContentNegotiation) { json(jsonSerializer) }
-      install(UserAgent) { agent = "CaCoApp/0.1" }
+    withContext(context) {
+      HttpClient(CIO) {
+            install(ContentNegotiation) { json(jsonSerializer) }
+            install(UserAgent) { agent = "CaCoApp/0.1" }
+          }
+          .use { block(it) }
     }
-      .use { block(it) }
-  }
 
 val jsonSerializer = Json {
   decodeEnumsCaseInsensitive = true
@@ -79,11 +79,11 @@ object URISerializer : KSerializer<URI> {
   override val descriptor = PrimitiveSerialDescriptor("URI", PrimitiveKind.STRING)
 
   override fun deserialize(decoder: Decoder): URI =
-    try {
-      URI.create(decoder.decodeString())
-    } catch (_: Throwable) {
-      URI.create("about://version")
-    }
+      try {
+        URI.create(decoder.decodeString())
+      } catch (_: Throwable) {
+        URI.create("about://version")
+      }
 
   override fun serialize(encoder: Encoder, value: URI) {
     encoder.encodeString(value.toString())

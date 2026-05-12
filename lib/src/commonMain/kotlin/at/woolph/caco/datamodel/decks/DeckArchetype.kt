@@ -2,10 +2,10 @@
 package at.woolph.caco.datamodel.decks
 
 import java.net.URI
-import org.jetbrains.exposed.v1.dao.IntEntity
-import org.jetbrains.exposed.v1.dao.IntEntityClass
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
+import org.jetbrains.exposed.v1.dao.IntEntity
+import org.jetbrains.exposed.v1.dao.IntEntityClass
 
 object DeckArchetypes : IntIdTable() {
   val name = varchar("name", length = 256).index()

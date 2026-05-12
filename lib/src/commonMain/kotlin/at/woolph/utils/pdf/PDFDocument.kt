@@ -1,3 +1,4 @@
+/* Copyright 2026 Wolfgang Mayer */
 package at.woolph.utils.pdf
 
 import kotlinx.io.Sink
@@ -9,8 +10,8 @@ expect class PDFDocument {
 
 @PdfDsl
 expect fun pdfDocument(
-  sink: Sink,
-  startingPagePosition: PagePosition = PagePosition.RIGHT,
-  defaultPageFormat: PDRectangle = PDRectangle.A4,
-  block: PDFDocument.() -> Unit,
+    sink: Sink,
+    startingPagePosition: PagePosition = PagePosition.RIGHT,
+    defaultPageFormat: PDRectangle = PDRectangle.A4,
+    block: PDFDocument.() -> Unit,
 )

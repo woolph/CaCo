@@ -9,30 +9,31 @@ import at.woolph.utils.csv.CsvReader
 import at.woolph.utils.csv.CsvRecord
 import at.woolph.utils.csv.CsvWriter
 import at.woolph.utils.csv.IntentionallySkippedException
+import java.util.function.Predicate
+import kotlin.time.Instant
 import kotlinx.io.files.Path
 import org.jetbrains.exposed.v1.jdbc.deleteAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
-import java.util.function.Predicate
-import kotlin.time.Instant
-import kotlin.time.toJavaInstant
 
 private val log = LoggerFactory.getLogger("at.woolph.caco.collection.ImportCsv")
 
 fun importSequence(
-  file: Path,
-  notImportedOutputFile: Path = Path("not-imported.csv"),
-  datePredicate: Predicate<Instant> = Predicate { true },
-  mapper: arrow.core.raise.Raise<Throwable>.(CsvRecord) -> CardCollectionItem,
+    file: Path,
+    notImportedOutputFile: Path = Path("not-imported.csv"),
+    datePredicate: Predicate<Instant> = Predicate { true },
+    mapper: arrow.core.raise.Raise<Throwable>.(CsvRecord) -> CardCollectionItem,
 ): Sequence<Either<Throwable, CardCollectionItem>> = sequence {
   println("importing collection export file $file")
   CsvWriter(notImportedOutputFile).use { writer ->
-
     CsvReader(file).use { reader ->
-      writer.write(buildList {
-        addAll(reader.header.keys)
-        add("Error")
-      }.toTypedArray())
+      writer.write(
+          buildList {
+                addAll(reader.header.keys)
+                add("Error")
+              }
+              .toTypedArray()
+      )
 
       yieldAll(
           generateSequence { reader.readNext() }
@@ -60,11 +61,11 @@ fun importSequence(
 }
 
 fun import(
-  file: Path,
-  notImportedOutputFile: Path = Path("not-imported.csv"),
-  datePredicate: Predicate<Instant> = Predicate { true },
-  clearBeforeImport: Boolean = false,
-  mapper: arrow.core.raise.Raise<Throwable>.(CsvRecord) -> CardCollectionItem,
+    file: Path,
+    notImportedOutputFile: Path = Path("not-imported.csv"),
+    datePredicate: Predicate<Instant> = Predicate { true },
+    clearBeforeImport: Boolean = false,
+    mapper: arrow.core.raise.Raise<Throwable>.(CsvRecord) -> CardCollectionItem,
 ) {
   println("importing collection export file $file")
   transaction {

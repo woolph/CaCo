@@ -1,3 +1,4 @@
+/* Copyright 2026 Wolfgang Mayer */
 package at.woolph.utils.currency
 
 internal actual val _USD: Currency = Currency(java.util.Currency.getInstance("USD"))

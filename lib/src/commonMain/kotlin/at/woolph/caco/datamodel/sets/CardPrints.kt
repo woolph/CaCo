@@ -1,3 +1,4 @@
+/* Copyright 2026 Wolfgang Mayer */
 package at.woolph.caco.datamodel.sets
 
 import at.woolph.caco.datamodel.collection.CardPossession
@@ -5,14 +6,14 @@ import at.woolph.caco.datamodel.collection.CardPossessions
 import at.woolph.caco.datamodel.decks.Format
 import at.woolph.utils.compareToNullable
 import at.woolph.utils.currency.CurrencyValue
+import java.net.URI
+import kotlin.uuid.Uuid
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.dao.id.IdTable
 import org.jetbrains.exposed.v1.dao.UuidEntity
 import org.jetbrains.exposed.v1.dao.UuidEntityClass
-import java.net.URI
-import kotlin.uuid.Uuid
 
-object CardPrints: IdTable<Uuid>() {
+object CardPrints : IdTable<Uuid>() {
   override val id = uuid("scryfallId").entityId()
   override val primaryKey = PrimaryKey(id)
 
@@ -37,20 +38,19 @@ object CardPrints: IdTable<Uuid>() {
   val priceEtched = double("priceEtched").nullable()
 }
 
-
 class CardPrint(id: EntityID<Uuid>) : UuidEntity(id), Comparable<CardPrint>, CardRepresentation {
   companion object : UuidEntityClass<CardPrint>(CardPrints) {
     val CARD_DRAW_PATTERN = Regex("draws? (|a |two |three )cards?", RegexOption.IGNORE_CASE)
 
     private fun compareCollectorNumberNullable(
-      collectorNumber: String,
-      otherCollectorNumber: String,
+        collectorNumber: String,
+        otherCollectorNumber: String,
     ): Int? {
       val (prefix, number, suffix) = splitCollectorNumber(collectorNumber)
       val (otherPrefix, otherNumber, otherSuffix) = splitCollectorNumber(otherCollectorNumber)
       return prefix.compareToNullable(otherPrefix)
-        ?: number.compareToNullable(otherNumber)
-        ?: suffix.compareToNullable(otherSuffix)
+          ?: number.compareToNullable(otherNumber)
+          ?: suffix.compareToNullable(otherSuffix)
     }
 
     private fun splitCollectorNumber(collectorNumber: String): Triple<String?, Int, String?> {
@@ -62,7 +62,7 @@ class CardPrint(id: EntityID<Uuid>) : UuidEntity(id), Comparable<CardPrint>, Car
     }
 
     internal val COLLECTION_NUMBER_PATTERN =
-      Regex("^(?<prefix>\\w+-)?(?<number>\\d+)(?<suffix>.+)?$")
+        Regex("^(?<prefix>\\w+-)?(?<number>\\d+)(?<suffix>.+)?$")
   }
 
   val scryfallId: Uuid
@@ -76,54 +76,60 @@ class CardPrint(id: EntityID<Uuid>) : UuidEntity(id), Comparable<CardPrint>, Car
 
   val mergedName: String
     get() = flavorName?.let { "$it ($name)" } ?: name
-  val name: String get() = card.name
-  val nameDE: String? get() = card.nameDE
+
+  val name: String
+    get() = card.name
+
+  val nameDE: String?
+    get() = card.nameDE
+
   var flavorName by CardPrints.flavorName
   var arenaId by CardPrints.arenaId
   var rarity by CardPrints.rarity
   var promo by CardPrints.promo
   var image by CardPrints.image.transform({ it?.toString() }, { it?.let { URI(it) } })
   var thumbnail by
-  CardPrints.image.transform(
-    { it?.toString()?.replace(".jpg", ".png")?.replace("/small/front", "/png/front") },
-    {
-      it?.replace(".png", ".jpg")
-        ?.replace("/png/front", "/small/front")
-        ?.replace("c1.scryfall.com/file/scryfall-cards/", "cards.scryfall.io/") // old url
-        ?.let { URI(it) }
-    },
-  )
-  var cardmarketUri by CardPrints.cardmarketUri.transform({ it?.toString() }, { it?.let { URI(it) } })
+      CardPrints.image.transform(
+          { it?.toString()?.replace(".jpg", ".png")?.replace("/small/front", "/png/front") },
+          {
+            it?.replace(".png", ".jpg")
+                ?.replace("/png/front", "/small/front")
+                ?.replace("c1.scryfall.com/file/scryfall-cards/", "cards.scryfall.io/") // old url
+                ?.let { URI(it) }
+          },
+      )
+  var cardmarketUri by
+      CardPrints.cardmarketUri.transform({ it?.toString() }, { it?.let { URI(it) } })
 
   var extra by CardPrints.extra
   var finishes: Set<Finish> by
-  CardPrints.finishes.transform(
-    { it.fold(0) { acc, finish -> acc or (1 shl finish.ordinal) } },
-    {
-      Finish.entries
-        .asSequence()
-        .filter { finish -> (it and (1 shl finish.ordinal)) != 0 }
-        .toSet()
-    },
-  )
+      CardPrints.finishes.transform(
+          { it.fold(0) { acc, finish -> acc or (1 shl finish.ordinal) } },
+          {
+            Finish.entries
+                .asSequence()
+                .filter { finish -> (it and (1 shl finish.ordinal)) != 0 }
+                .toSet()
+          },
+      )
   var fullArt by CardPrints.fullArt
   var extendedArt by CardPrints.extendedArt
 
-  fun isLegalIn(format: Format): Boolean =
-    card.isLegalIn(format)
+  fun isLegalIn(format: Format): Boolean = card.isLegalIn(format)
 
   var priceNormal: CurrencyValue? by
-  CardPrints.price.transform({ it?.value }, { it?.let { CurrencyValue.usd(it) } })
+      CardPrints.price.transform({ it?.value }, { it?.let { CurrencyValue.usd(it) } })
   var priceFoil: CurrencyValue? by
-  CardPrints.priceFoil.transform({ it?.value }, { it?.let { CurrencyValue.usd(it) } })
-  var priceEtched: CurrencyValue? by CardPrints.priceEtched.transform({ it?.value }, { it?.let { CurrencyValue.usd(it) } })
+      CardPrints.priceFoil.transform({ it?.value }, { it?.let { CurrencyValue.usd(it) } })
+  var priceEtched: CurrencyValue? by
+      CardPrints.priceEtched.transform({ it?.value }, { it?.let { CurrencyValue.usd(it) } })
 
   fun prices(finish: Finish): CurrencyValue? =
-    when (finish) {
-      Finish.Normal -> priceNormal
-      Finish.Foil -> priceFoil
-      Finish.Etched -> priceEtched
-    }
+      when (finish) {
+        Finish.Normal -> priceNormal
+        Finish.Foil -> priceFoil
+        Finish.Etched -> priceEtched
+      }
 
   val lowestPrice: CurrencyValue?
     get() = Finish.entries.mapNotNull { prices(it) }.minOrNull()
@@ -133,9 +139,9 @@ class CardPrint(id: EntityID<Uuid>) : UuidEntity(id), Comparable<CardPrint>, Car
   val possessions by CardPossession referrersOn CardPossessions
 
   override fun compareTo(other: CardPrint): Int =
-    set.compareToNullable(other.set)
-      ?: compareCollectorNumberNullable(collectorNumber, other.collectorNumber)
-      ?: 0
+      set.compareToNullable(other.set)
+          ?: compareCollectorNumberNullable(collectorNumber, other.collectorNumber)
+          ?: 0
 
   override fun toString(): String = "[${set.code}-$collectorNumber] $name"
 

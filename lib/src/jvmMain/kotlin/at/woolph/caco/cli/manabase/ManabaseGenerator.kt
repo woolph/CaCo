@@ -7,12 +7,12 @@ import at.woolph.caco.datamodel.MtgColor
 import at.woolph.caco.datamodel.decks.Format
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.Cards
-import org.jetbrains.exposed.v1.core.match
 import kotlin.collections.filterNot
+import kotlin.math.pow
 import kotlin.math.round
 import kotlin.text.Regex
+import org.jetbrains.exposed.v1.core.match
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import kotlin.math.pow
 
 data class DecklistEntryCard(
     val card: Card,
@@ -70,16 +70,17 @@ fun Collection<DecklistEntryCard>.suggestedLandCount(): Int {
 
 fun Collection<DecklistEntryCard>.pipDistribution(): PipDistribution {
   val pipCount =
-    MtgColor.entries
+      MtgColor.entries
           .map { mtgColor ->
             mtgColor to
                 mapNotNull { it.card.manaCost }
                     .sumOf { manaCost ->
                       Regex(Regex.escape(mtgColor.symbol))
-                        .findAll(manaCost)
-                        .count()
-                        .toDouble().pow(2.0)
-                        .toInt()
+                          .findAll(manaCost)
+                          .count()
+                          .toDouble()
+                          .pow(2.0)
+                          .toInt()
                     }
           }
           .filter { it.second > 0 }
@@ -122,21 +123,22 @@ fun generateManabase(
 
   val neededColors = pipDistribution.pipDistribution.keys
 
-  val (filteredBasicLands, filteredNonBasicLands) = getLands()
-    .filter { it.card.isLegalIn(deckFormat) }
-    .filter { selectionCriterion.commanderColorIdentity.contains(it) }
-    .filter { (it.card.lowestPrice?.value ?: 1000.0) <= selectionCriterion.maxPricePerCard }
-    .partition { it.isBasic }
+  val (filteredBasicLands, filteredNonBasicLands) =
+      getLands()
+          .filter { it.card.isLegalIn(deckFormat) }
+          .filter { selectionCriterion.commanderColorIdentity.contains(it) }
+          .filter { (it.card.lowestPrice?.value ?: 1000.0) <= selectionCriterion.maxPricePerCard }
+          .partition { it.isBasic }
 
   val mutableFilteredNonBasicLands = filteredNonBasicLands.toMutableList()
   val selectedLands = mutableListOf<LandCard>()
 
   while (
       selectedLands.size < suggestedLandCount - selectionCriterion.minBasicLandCount &&
-      filteredNonBasicLands.isNotEmpty()
+          filteredNonBasicLands.isNotEmpty()
   ) {
     val pickedLand =
-      mutableFilteredNonBasicLands.maxBy {
+        mutableFilteredNonBasicLands.maxBy {
           it.desirability(
               selectionCriterion,
               pipDistribution,

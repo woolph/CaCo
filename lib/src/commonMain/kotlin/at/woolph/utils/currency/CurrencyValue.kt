@@ -11,27 +11,26 @@ data class CurrencyValue(
       String.format("%s\u202f%.${currency.defaultFractionDigits}f", currency.symbol, value)
 
   operator fun unaryMinus() = copy(value = -value)
+
   operator fun unaryPlus() = this
 
   operator fun plus(other: CurrencyValue): CurrencyValue =
-    if (currency != other.currency) throw IllegalArgumentException("Currency values can only be added to other currency")
-    else copy(value = value + other.value)
+      if (currency != other.currency)
+          throw IllegalArgumentException("Currency values can only be added to other currency")
+      else copy(value = value + other.value)
 
-  operator fun plus(other: Number): CurrencyValue =
-    copy(value = value + other.toDouble())
+  operator fun plus(other: Number): CurrencyValue = copy(value = value + other.toDouble())
 
   operator fun minus(other: CurrencyValue): CurrencyValue =
-    if (currency != other.currency) throw IllegalArgumentException("Currency values can only be added to other currency")
-    else copy(value = value - other.value)
+      if (currency != other.currency)
+          throw IllegalArgumentException("Currency values can only be added to other currency")
+      else copy(value = value - other.value)
 
-  operator fun minus(other: Number): CurrencyValue =
-    copy(value = value - other.toDouble())
+  operator fun minus(other: Number): CurrencyValue = copy(value = value - other.toDouble())
 
-  operator fun times(other: Number): CurrencyValue =
-    copy(value = value * other.toDouble())
+  operator fun times(other: Number): CurrencyValue = copy(value = value * other.toDouble())
 
-  operator fun div(other: Number): CurrencyValue =
-    copy(value = value / other.toDouble())
+  operator fun div(other: Number): CurrencyValue = copy(value = value / other.toDouble())
 
   companion object {
     fun eur(value: Double): CurrencyValue = CurrencyValue(value, Currencies.EUR)
@@ -40,4 +39,5 @@ data class CurrencyValue(
   }
 }
 
-fun Collection<CurrencyValue>.sum(): CurrencyValue = reduceOrNull { acc, value -> acc + value } ?: CurrencyValue.usd(0.0)
+fun Collection<CurrencyValue>.sum(): CurrencyValue =
+    reduceOrNull { acc, value -> acc + value } ?: CurrencyValue.usd(0.0)

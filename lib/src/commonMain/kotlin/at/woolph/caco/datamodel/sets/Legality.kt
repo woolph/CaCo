@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 enum class Legality(
-  val isAllowedToBePlayed: Boolean,
+    val isAllowedToBePlayed: Boolean,
 ) {
   Legal(true),
   @SerialName("not_legal") NotLegal(false),

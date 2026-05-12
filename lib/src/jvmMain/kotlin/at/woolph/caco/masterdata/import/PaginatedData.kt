@@ -23,11 +23,11 @@ import org.slf4j.LoggerFactory
 
 @Serializable
 data class PaginatedData<T : ScryfallBase>(
-  @SerialName("object") val objectType: String,
-  @SerialName("total_cards") override val totalItems: Int? = null,
-  @SerialName("has_more") val hasMore: Boolean,
-  @Contextual @SerialName("next_page") val nextPage: String? = null,
-  val data: List<T>,
+    @SerialName("object") val objectType: String,
+    @SerialName("total_cards") override val totalItems: Int? = null,
+    @SerialName("has_more") val hasMore: Boolean,
+    @Contextual @SerialName("next_page") val nextPage: String? = null,
+    val data: List<T>,
 ) : ScryfallBase, Pageable<T> {
   override fun isValid() = objectType == "list"
 
@@ -58,8 +58,10 @@ internal inline fun <reified T : ScryfallBase> paginatedDataRequest(
         currentQuery = if (paginatedData.hasMore) paginatedData.nextPage else null
 
         emitAll(
-            paginatedData.data.asFlow().filter { it.isValid() }
-              .onEach { progressIndicator?.advance(1) }
+            paginatedData.data
+                .asFlow()
+                .filter { it.isValid() }
+                .onEach { progressIndicator?.advance(1) }
             //                    .onEach { LOG.trace("emitting $it") }
         )
       } else {

@@ -12,33 +12,37 @@ interface IconRenderer {
 }
 
 expect class IconRendererImpl(
-  svgLoader: SvgLoader,
-  iconResolution: Float = 256f,
+    svgLoader: SvgLoader,
+    iconResolution: Float = 256f,
 ) : IconRenderer
 
 class CachingIconRenderer(
-  val iconRenderer: IconRenderer,
-  val cacheIdSuffix: String = "",
+    val iconRenderer: IconRenderer,
+    val cacheIdSuffix: String = "",
 ) : IconRenderer {
   override suspend fun renderSvg(id: String, uri: Uri): Either<Throwable, ByteArray> =
-    ImageCache.getImageByteArray("$id$cacheIdSuffix") {
-      iconRenderer.renderSvg(id, uri)
-    }
+      ImageCache.getImageByteArray("$id$cacheIdSuffix") { iconRenderer.renderSvg(id, uri) }
 }
 
 val uiIconRenderer = CachingIconRenderer(IconRendererImpl(BasicSvgLoader), "")
-val mythicBinderLabelIconRenderer = CachingIconRenderer(IconRendererImpl(MythicSvgLoader), "-mythic")
+val mythicBinderLabelIconRenderer =
+    CachingIconRenderer(IconRendererImpl(MythicSvgLoader), "-mythic")
 val rareBinderLabelIconRenderer = CachingIconRenderer(IconRendererImpl(RareSvgLoader), "-rare")
-val uncommonBinderLabelIconRenderer = CachingIconRenderer(IconRendererImpl(UncommonSvgLoader), "-uncommon")
-val commonBinderLabelIconRenderer = CachingIconRenderer(IconRendererImpl(CommonSvgLoader), "-common")
+val uncommonBinderLabelIconRenderer =
+    CachingIconRenderer(IconRendererImpl(UncommonSvgLoader), "-uncommon")
+val commonBinderLabelIconRenderer =
+    CachingIconRenderer(IconRendererImpl(CommonSvgLoader), "-common")
 
 fun lazyIcon(
     cacheId: String,
     nullableUri: Uri?,
     iconRenderer: IconRenderer,
 ): Lazy<ByteArray?> =
-    nullableUri?.let { uri -> lazy { runBlocking { iconRenderer.renderSvg(cacheId, uri).fold({null as ByteArray?},{it}) } } }
-        ?: lazyOf(null)
+    nullableUri?.let { uri ->
+      lazy {
+        runBlocking { iconRenderer.renderSvg(cacheId, uri).fold({ null as ByteArray? }, { it }) }
+      }
+    } ?: lazyOf(null)
 
 fun lazySetIcon(
     setCode: String,
@@ -46,16 +50,15 @@ fun lazySetIcon(
 ): Lazy<ByteArray?> =
     lazyIcon("set-code-$setCode", Uri("https://svgs.scryfall.io/sets/$setCode.svg"), iconRenderer)
 
-
 suspend fun IconRenderer.cachedImage(set: ScryfallCardSet): ByteArray? =
-  set.icon?.let {
-    renderSvg("set-icon-${set.code}", it)
-      .onLeft { println("couldn't get icon for $set due to ${it.message}") } // TODO KMP logging
-      .getOrNull()
-  }
+    set.icon?.let {
+      renderSvg("set-icon-${set.code}", it)
+          .onLeft { println("couldn't get icon for $set due to ${it.message}") } // TODO KMP logging
+          .getOrNull()
+    }
 
 fun ScryfallCardSet?.lazySetIcon(iconRenderer: IconRenderer): Lazy<ByteArray?> =
-  this?.let { lazy { runBlocking { iconRenderer.cachedImage(it) } } } ?: lazyOf(null)
+    this?.let { lazy { runBlocking { iconRenderer.cachedImage(it) } } } ?: lazyOf(null)
 
 val ScryfallCardSet?.lazyIconMythic: Lazy<ByteArray?>
   get() = lazySetIcon(mythicBinderLabelIconRenderer)

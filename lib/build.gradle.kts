@@ -8,9 +8,7 @@ group = "at.woolph"
 
 version = "0.3.0"
 
-repositories {
-  mavenCentral()
-}
+repositories { mavenCentral() }
 
 kotlin {
   jvm { testRuns["test"].executionTask.configure { useJUnitPlatform() } }
@@ -18,12 +16,12 @@ kotlin {
   compilerOptions {
     languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_3)
     freeCompilerArgs.addAll(
-      "-Xwhen-guards",
-      "-Xexpect-actual-classes",
+        "-Xwhen-guards",
+        "-Xexpect-actual-classes",
     )
     optIn.addAll(
-      "kotlin.uuid.ExperimentalUuidApi",
-      "kotlin.time.ExperimentalTime",
+        "kotlin.uuid.ExperimentalUuidApi",
+        "kotlin.time.ExperimentalTime",
     )
   }
 
@@ -45,9 +43,7 @@ kotlin {
       implementation("org.jetbrains.exposed:exposed-json")
     }
 
-    commonTest.dependencies {
-      implementation(libs.kotlin.test)
-    }
+    commonTest.dependencies { implementation(libs.kotlin.test) }
 
     jvmMain.dependencies {
       implementation(kotlin("reflect"))
@@ -83,9 +79,7 @@ kotlin {
       implementation(libs.kotlin.testJunit)
     }
 
-    all {
-      languageSettings.enableLanguageFeature("ContextParameters")
-    }
+    all { languageSettings.enableLanguageFeature("ContextParameters") }
   }
 }
 

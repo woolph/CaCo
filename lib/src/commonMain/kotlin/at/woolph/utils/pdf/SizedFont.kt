@@ -1,3 +1,4 @@
+/* Copyright 2026 Wolfgang Mayer */
 package at.woolph.utils.pdf
 
 expect class SizedFont {
@@ -14,9 +15,9 @@ expect class SizedFont {
   val height: Float
 
   fun adjustedTextToFitWidth(
-    originalText: String?,
-    maxWidth: Float,
-    minFontSize: Float = size,
-    block: (text: String, sizedFont: SizedFont) -> Unit
+      originalText: String?,
+      maxWidth: Float,
+      minFontSize: Float = size,
+      block: (text: String, sizedFont: SizedFont) -> Unit,
   )
 }

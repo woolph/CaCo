@@ -21,10 +21,10 @@ enum class CardCondition {
       }
 
   fun isBetterThanOrEqual(other: CardCondition) =
-    when {
-      this == UNKNOWN && other != UNKNOWN -> false
-      else -> ordinal <= other.ordinal
-    }
+      when {
+        this == UNKNOWN && other != UNKNOWN -> false
+        else -> ordinal <= other.ordinal
+      }
 
   companion object {
     fun parse(languageCode: String) =

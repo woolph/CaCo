@@ -1,3 +1,4 @@
+/* Copyright 2026 Wolfgang Mayer */
 package at.woolph.utils.csv
 
 import com.opencsv.CSVReader
@@ -7,19 +8,16 @@ import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 
 actual fun importSequence(
-  file: Path,
-  explicitHeader: Array<String>?,
+    file: Path,
+    explicitHeader: Array<String>?,
 ): Sequence<CsvRecord> = sequence {
-  CSVReader(SystemFileSystem.source(file).buffered().asInputStream().bufferedReader()).use { reader ->
-    val header = (explicitHeader ?: reader
-        .readNext())
-        .withIndex()
-        .associate { it.value to it.index }
+  CSVReader(SystemFileSystem.source(file).buffered().asInputStream().bufferedReader()).use { reader
+    ->
+    val header =
+        (explicitHeader ?: reader.readNext()).withIndex().associate { it.value to it.index }
 
     yieldAll(
-      generateSequence { reader.readNext() }
-        .filter { it.size > 1 }
-        .map { CsvRecord(header, it) }
+        generateSequence { reader.readNext() }.filter { it.size > 1 }.map { CsvRecord(header, it) }
     )
   }
 }

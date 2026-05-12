@@ -122,11 +122,7 @@ internal inline fun <reified P : Pageable<T>, reified T> paginatedDataRequest(
 
         currentQuery = if (paginatedData.hasNext()) paginatedData.next() else null
 
-        emitAll(
-            paginatedData
-                .contents()
-                .onEach { progressIndicator?.advance(1) }
-        )
+        emitAll(paginatedData.contents().onEach { progressIndicator?.advance(1) })
       } else {
         if (!optional)
             throw Exception("request failed with status code ${response.status.description}")

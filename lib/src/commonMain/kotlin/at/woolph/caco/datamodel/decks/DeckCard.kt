@@ -3,10 +3,10 @@ package at.woolph.caco.datamodel.decks
 
 import at.woolph.caco.datamodel.decks.DeckCard.Companion.transform
 import java.util.*
-import org.jetbrains.exposed.v1.dao.IntEntity
-import org.jetbrains.exposed.v1.dao.IntEntityClass
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
+import org.jetbrains.exposed.v1.dao.IntEntity
+import org.jetbrains.exposed.v1.dao.IntEntityClass
 
 object DeckCards : IntIdTable() {
   val build = reference("build", Builds).index()

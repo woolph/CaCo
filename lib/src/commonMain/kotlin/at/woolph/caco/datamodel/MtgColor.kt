@@ -6,8 +6,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 enum class MtgColor(
-  val symbol: String,
-  val basicLandType: String,
+    val symbol: String,
+    val basicLandType: String,
 ) {
   @SerialName("W") White("{W}", "Plains"),
   @SerialName("U") Blue("{U}", "Island"),
@@ -16,7 +16,6 @@ enum class MtgColor(
   @SerialName("G") Green("{G}", "Forest"),
   @SerialName("C") Colorless("{C}", "Wastes"),
   @SerialName("T") Tap("{T}", "n/a"),
-  ;
 }
 
 fun Set<MtgColor>.toColorIdentity() = ColorIdentity(this)

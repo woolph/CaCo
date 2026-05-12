@@ -1,3 +1,4 @@
+/* Copyright 2026 Wolfgang Mayer */
 package at.woolph.caco.labels.binder
 
 import at.woolph.caco.icon.lazySetIcon

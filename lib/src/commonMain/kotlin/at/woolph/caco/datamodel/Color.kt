@@ -1,3 +1,4 @@
+/* Copyright 2026 Wolfgang Mayer */
 package at.woolph.caco.datamodel
 
 class Color(val colors: Set<MtgColor>) {
@@ -14,12 +15,10 @@ class Color(val colors: Set<MtgColor>) {
 
   operator fun plus(colorIdentity: Color) = this + colorIdentity.colors
 
-  operator fun plus(colorIdentity: Set<MtgColor>) =
-      Color(this.colors + colorIdentity)
+  operator fun plus(colorIdentity: Set<MtgColor>) = Color(this.colors + colorIdentity)
 
-  fun encodeAsInteger(): Int = colors.fold(0) { acc: Int, MtgColor: MtgColor ->
-    (acc or (1 shl MtgColor.ordinal))
-  }
+  fun encodeAsInteger(): Int =
+      colors.fold(0) { acc: Int, MtgColor: MtgColor -> (acc or (1 shl MtgColor.ordinal)) }
 
   companion object {
     fun decodeFromInteger(value: Int): Color =
