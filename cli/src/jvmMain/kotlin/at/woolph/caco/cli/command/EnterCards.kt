@@ -29,30 +29,30 @@ import org.jetbrains.exposed.v1.core.eq
 
 class EnterCards : SuspendingTransactionCliktCommand() {
   val format by
-      option("--format", "-f", help = "The format to export the entered cards to")
-          .enum<CollectionFileFormat>()
-          .default(CollectionFileFormat.ARCHIDEKT)
+  option("--format", "-f", help = "The format to export the entered cards to")
+    .enum<CollectionFileFormat>()
+    .default(CollectionFileFormat.ARCHIDEKT)
 
   val condition by
-      option("--condition", "-c", help = "The language of the cards")
-          .convert { CardCondition.parse(it) }
-          .default(CardCondition.NEAR_MINT)
-          .validate { it != CardCondition.UNKNOWN }
+  option("--condition", "-c", help = "The language of the cards")
+    .convert { CardCondition.parse(it) }
+    .default(CardCondition.NEAR_MINT)
+    .validate { it != CardCondition.UNKNOWN }
 
   val language by
-      option("--language", "-l", help = "The language of the cards")
-          .convert { CardLanguage.parse(it) }
-          .prompt("Select the language of the cards")
-          .validate { it != CardLanguage.UNKNOWN }
+  option("--language", "-l", help = "The language of the cards")
+    .convert { CardLanguage.parse(it) }
+    .prompt("Select the language of the cards")
+    .validate { it != CardLanguage.UNKNOWN }
 
   val languageRankList by
-      option(
-              help =
-                  "The language rank list defines which language print you prefer for your collection.",
-              valueSourceKey = "languageRankList",
-          )
-          .convert { it.split(",").map(CardLanguage::parse) }
-          .default(listOf(CardLanguage.ENGLISH))
+  option(
+    help =
+      "The language rank list defines which language print you prefer for your collection.",
+    valueSourceKey = "languageRankList",
+  )
+    .convert { it.split(",").map(CardLanguage::parse) }
+    .default(listOf(CardLanguage.ENGLISH))
 
   override suspend fun runTransaction() {
     /**
@@ -64,122 +64,147 @@ class EnterCards : SuspendingTransactionCliktCommand() {
      * want to replace them anyway if this is the only printing I have)
      */
     val languagesToBeChecked =
-        languageRankList.takeWhile { it != language }.toMutableList().apply { add(language) }
+      languageRankList.takeWhile { it != language }.toMutableList().apply { add(language) }
 
     echo(
-        "language: $language (languages to be considered when checking whether card is needed for collection: $languagesToBeChecked)"
+      "language: $language (languages to be considered when checking whether card is needed for collection: $languagesToBeChecked)"
     )
     echo("condition: $condition")
 
     File("./import.stdin").printWriter().use { stdinPrint ->
       data class PossessionUpdate2(
-          val count: Int = 0,
-          val alreadyCollected: Int,
+        val count: Int = 0,
+        val alreadyCollected: Int,
       ) {
-        fun increment() = PossessionUpdate2(count + 1, alreadyCollected)
+        fun increment(amount: Int) = PossessionUpdate2(count + amount, alreadyCollected)
 
-        fun decrement() = if (count > 0) PossessionUpdate2(count - 1, alreadyCollected) else this
+        fun decrement(amount: Int) = PossessionUpdate2((count - amount).coerceAtLeast(0), alreadyCollected)
 
         fun isNeeded() = (count + alreadyCollected) == 0
       }
 
       fun newPossessionUpdate2(card: CardPrint, finish: Finish) =
-          PossessionUpdate2(
-              0,
-              CardPossession.find {
-                    CardPossessions.cardPrint.eq(card.id) and CardPossessions.finish.eq(finish)
-                  }
-                  .count {
-                    it.language in languagesToBeChecked &&
-                        it.condition.isBetterThanOrEqual(condition)
-                  },
-          )
+        PossessionUpdate2(
+          0,
+          CardPossession.find {
+            CardPossessions.cardPrint.eq(card.id) and CardPossessions.finish.eq(finish)
+          }
+            .count {
+              it.language in languagesToBeChecked &&
+                it.condition.isBetterThanOrEqual(condition)
+            },
+        )
 
       val cardPossessionUpdates = mutableMapOf<Pair<CardPrint, Finish>, PossessionUpdate2>()
 
-      lateinit var set: ScryfallCardSet
-      lateinit var prevSetNumberAndFinish: Pair<String, Finish>
+
+      lateinit var currentSet: ScryfallCardSet
+      lateinit var prevSetNumberAndFinish: Pair<SetNumberList, Finish>
       var setCodeNumber =
-          terminal.prompt("collector number (optional with setCode)")!!.also {
-            stdinPrint.println(it)
-          }
+        terminal.prompt("collector number (optional with setCode)")!!.also {
+          stdinPrint.println(it)
+        }
 
       while (setCodeNumber.isNotBlank()) {
         fun extractSetNumberAndFinish(encodedSetNumber: String): Pair<String, Finish?> =
-            encodedSetNumber.removeSuffix("*").removeSuffix("#").removeSuffix("/") to
-                when {
-                  encodedSetNumber.endsWith("#") -> Finish.Etched
-                  encodedSetNumber.endsWith("*") -> Finish.Foil
-                  encodedSetNumber.endsWith("/") -> Finish.Normal
-                  else -> Finish.Normal
-                }
-        fun add(setNumber: String, finish: Finish) {
-          val card = set.cardPrints.firstOrNull { it.collectorNumber == setNumber }
-          if (card != null) {
-            echo(
-                "add ${set.code.uppercase()} #${card.collectorNumber} \"${card.name}\" ${if (finish != Finish.Normal) " in \u001B[38:5:0m\u001B[48:5:214mf\u001B[48:5:215mo\u001B[48:5:216mi\u001B[48:5:217ml\u001B[0m" else ""}",
-                trailingNewline = false,
-            )
-            cardPossessionUpdates.compute(card to finish) { _, possessionUpdate ->
-              ((possessionUpdate ?: newPossessionUpdate2(card, finish)).also {
-                    if (it.isNeeded()) {
-                      terminal.danger(" \u001b[31mNeeded for collection!\u001b[0m")
-                    } else {
-                      echo()
-                    }
-                  })
-                  .increment()
+          encodedSetNumber.removeSuffix("*").removeSuffix("#").removeSuffix("/") to
+            when {
+              encodedSetNumber.endsWith("#") -> Finish.Etched
+              encodedSetNumber.endsWith("*") -> Finish.Foil
+              encodedSetNumber.endsWith("/") -> Finish.Normal
+              else -> Finish.Normal
             }
-          } else {
-            terminal.danger("\u001b[31madd #${setNumber} not found!\u001b[0m")
+
+
+        fun add(setNumberList: SetNumberList, finish: Finish, amount: Int) {
+          setNumberList.forEach { setNumber ->
+            val card = currentSet.cardPrints.firstOrNull { it.collectorNumber == setNumber }
+            if (card != null) {
+              echo(
+                "add ${currentSet.code.uppercase()} #${card.collectorNumber} \"${card.name}\" ${if (finish != Finish.Normal) " in \u001B[38:5:0m\u001B[48:5:214mf\u001B[48:5:215mo\u001B[48:5:216mi\u001B[48:5:217ml\u001B[0m" else ""}",
+                trailingNewline = false,
+              )
+              cardPossessionUpdates.compute(card to finish) { _, possessionUpdate ->
+                ((possessionUpdate ?: newPossessionUpdate2(card, finish)).also {
+                  if (it.isNeeded()) {
+                    terminal.danger(" \u001b[31mNeeded for collection!\u001b[0m")
+                  } else {
+                    echo()
+                  }
+                })
+                  .increment(amount)
+              }
+            } else {
+              terminal.danger("\u001b[31madd #${setNumber} not found!\u001b[0m")
+            }
           }
         }
 
-        fun remove(setNumber: String, finish: Finish) {
-          val card = set.cardPrints.first { it.collectorNumber == setNumber }
-          echo(
+        fun remove(setNumberList: SetNumberList, finish: Finish, amount: Int) {
+          setNumberList.forEach { setNumber ->
+            val card = currentSet.cardPrints.first { it.collectorNumber == setNumber }
+            echo(
               "removed #${card.collectorNumber} \"${card.name}\" ${if (finish != Finish.Normal) " in \u001B[38:5:0m\u001B[48:5:214mf\u001B[48:5:215mo\u001B[48:5:216mi\u001B[48:5:217ml\u001B[0m" else ""}",
               trailingNewline = false,
-          )
-          cardPossessionUpdates.computeIfPresent(card to finish) { _, possessionUpdate ->
-            possessionUpdate.decrement()
+            )
+            cardPossessionUpdates.computeIfPresent(card to finish) { _, possessionUpdate ->
+              possessionUpdate.decrement(amount)
+            }
+            echo()
           }
-          echo()
         }
 
         try {
-          val tokens = setCodeNumber.split("#", limit = 2)
-          val (setCode, encodedSetNumber) =
-              if (tokens.size == 2) {
-                (ScryfallCardSet.findByCode(tokens[0].lowercase())
-                    ?: throw IllegalArgumentException("unknown set ${tokens[0]}")) to tokens[1]
-              } else {
-                set to setCodeNumber
-              }
-          set = setCode
+          val (nextSet, encodedSetNumberAmount) = setCodeNumber.split("#", limit = 2).let { tokens ->
+            if (tokens.size == 2) {
+              (ScryfallCardSet.findByCode(tokens[0].lowercase())
+                ?: throw IllegalArgumentException("unknown set ${tokens[0]}")) to tokens[1]
+            } else {
+              currentSet to setCodeNumber
+            }
+          }
+          currentSet = nextSet
 
+          val (amount, encodedSetNumber) = encodedSetNumberAmount.split("x", limit = 2).let { tokens ->
+            if (tokens.size == 2) {
+              (tokens[0].toIntOrNull()
+                ?: throw IllegalArgumentException("amount \"${tokens[0]}\" is not a number")) to tokens[1]
+            } else {
+              1 to encodedSetNumberAmount
+            }
+          }
+
+          val rangePattern = Regex("""^\[(?<firstSetNumber>.*),(?<lastSetNumber>.*)]$""")
           val (setNumber, finish) = extractSetNumberAndFinish(encodedSetNumber)
           prevSetNumberAndFinish =
-              when (setNumber) {
-                "++" -> {
-                  prevSetNumberAndFinish.first
-                      .toIntOrNull()
-                      ?.let { "${it+1}" to (finish ?: prevSetNumberAndFinish.second) }
-                      ?.also { add(it.first, it.second) }
-                      ?: prevSetNumberAndFinish.also {
-                        terminal.danger(
-                            "couldn't increment the setNumber ${prevSetNumberAndFinish.first}"
-                        )
-                      }
-                }
-                "+" ->
-                    (prevSetNumberAndFinish.first to (finish ?: prevSetNumberAndFinish.second))
-                        .also { add(it.first, it.second) }
-                "-" ->
-                    (prevSetNumberAndFinish.first to (finish ?: prevSetNumberAndFinish.second))
-                        .also { remove(it.first, it.second) }
-                else -> (setNumber to (finish ?: Finish.Normal)).also { add(it.first, it.second) }
+            when (setNumber) {
+              "++" -> {
+                prevSetNumberAndFinish.first
+                  .nextOrNull()
+                  ?.let { it to (finish ?: prevSetNumberAndFinish.second) }
+                  ?.also { add(it.first, it.second, amount) }
+                  ?: prevSetNumberAndFinish.also {
+                    terminal.danger(
+                      "couldn't increment the setNumber ${prevSetNumberAndFinish.first}"
+                    )
+                  }
               }
+
+              "+" ->
+                (prevSetNumberAndFinish.first to (finish ?: prevSetNumberAndFinish.second))
+                  .also { add(it.first, it.second, amount) }
+
+              "-" ->
+                (prevSetNumberAndFinish.first to (finish ?: prevSetNumberAndFinish.second))
+                  .also { remove(it.first, it.second, amount) }
+
+              else -> {
+                (rangePattern.matchEntire(setNumber)?.let { matchResult ->
+                  SetNumberRange(matchResult.groups["firstSetNumber"]!!.value, matchResult.groups["lastSetNumber"]!!.value) to (finish ?: Finish.Normal)
+                } ?: (SetNumber(setNumber) to (finish ?: Finish.Normal)))
+                  .also { add(it.first, it.second, amount) }
+              }
+            }
         } catch (e: Exception) {
           terminal.danger("\u001b[31m${e.message}!\u001b[0m")
         }
@@ -188,27 +213,79 @@ class EnterCards : SuspendingTransactionCliktCommand() {
 
       // TODO use CardCollectionItem to begin with for entering that stuff
       val cardCollectionItems =
-          cardPossessionUpdates.map { (x, possessionUpdate) ->
-            val (cardInfo, finish) = x
-            CardCollectionItem(
-                possessionUpdate.count.toUInt(),
-                CardCollectionItemId(
-                    cardInfo,
-                    finish = finish,
-                    language = language,
-                    condition = condition,
-                ),
-            )
-          }
+        cardPossessionUpdates.map { (x, possessionUpdate) ->
+          val (cardInfo, finish) = x
+          CardCollectionItem(
+            possessionUpdate.count.toUInt(),
+            CardCollectionItemId(
+              cardInfo,
+              finish = finish,
+              language = language,
+              condition = condition,
+            ),
+          )
+        }
       val file = Path("./http-requests/import.csv")
       when (format) {
         CollectionFileFormat.DECKBOX ->
-            cardCollectionItems.exportDeckbox(kotlinx.io.files.Path(file.toString()))
+          cardCollectionItems.exportDeckbox(kotlinx.io.files.Path(file.toString()))
+
         CollectionFileFormat.ARCHIDEKT ->
-            cardCollectionItems.exportArchidekt(kotlinx.io.files.Path(file.toString()))
+          cardCollectionItems.exportArchidekt(kotlinx.io.files.Path(file.toString()))
       }
 
       cardCollectionItems.forEach(CardCollectionItem::addToCollection)
     }
   }
+}
+
+sealed interface SetNumberList : Iterable<String> {
+  fun nextOrNull(): SetNumberList?
+}
+
+data class SetNumberRange(
+  val firstSetNumber: Int,
+  val lastSetNumber: Int,
+) : SetNumberList {
+  constructor(firstSetNumber: String, lastSetNumber: String) : this(
+    firstSetNumber.toInt(),
+    lastSetNumber.toInt()
+  )// FIXME handle setnumbers with letters correctly?!
+
+  override fun iterator(): Iterator<String> = object : Iterator<String> {
+    val lastSetNumberInt = lastSetNumber
+    var currentSetNumber = firstSetNumber
+
+    override fun next(): String {
+      if (currentSetNumber > lastSetNumberInt) {
+        throw NoSuchElementException()
+      }
+      return (currentSetNumber++).toString()
+    }
+
+    override fun hasNext(): Boolean = currentSetNumber <= lastSetNumberInt
+  }
+
+  override fun nextOrNull() = SetNumber(lastSetNumber + 1)
+}
+
+data class SetNumber(
+  val setNumber: String,
+) : SetNumberList {
+  constructor(number: Int): this(number.toString())
+
+  override fun iterator(): Iterator<String> = object : Iterator<String> {
+    var hasBeenReturned = false
+    override fun next(): String {
+      if (hasBeenReturned) {
+        throw NoSuchElementException()
+      }
+      hasBeenReturned= true
+      return setNumber
+    }
+
+    override fun hasNext(): Boolean = !hasBeenReturned
+  }
+
+  override fun nextOrNull(): SetNumberList? = setNumber.toIntOrNull()?.let { SetNumber(it + 1) }
 }

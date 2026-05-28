@@ -22,6 +22,7 @@ enum class Format(
   Pauper("PPR"),
   Vintage("VTG"),
   Penny("PNY"),
+  @SerialName("tlr") TinyLeadersReborn("TLR"),
   Commander("EDH", zones = setOf(DeckZone.MAINBOARD, DeckZone.COMMAND_ZONE), isSingleton = true),
   Oathbreaker("OBR", zones = setOf(DeckZone.MAINBOARD, DeckZone.COMMAND_ZONE), isSingleton = true),
   StandardBrawl(
