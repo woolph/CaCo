@@ -25,7 +25,27 @@ import kotlin.io.path.bufferedWriter
 import kotlin.math.max
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.coroutineScope
+import kotlinx.html.HTML
+import kotlinx.html.a
+import kotlinx.html.body
+import kotlinx.html.dom.createHTMLDocument
+import kotlinx.html.h1
+import kotlinx.html.h2
+import kotlinx.html.head
+import kotlinx.html.html
+import kotlinx.html.p
+import kotlinx.html.stream.appendHTML
+import kotlinx.html.stream.createHTML
+import kotlinx.html.style
+import kotlinx.html.table
+import kotlinx.html.td
+import kotlinx.html.th
+import kotlinx.html.thead
+import kotlinx.html.title
+import kotlinx.html.tr
+import kotlinx.html.unsafe
 import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
+import java.nio.file.Path
 import kotlin.io.path.createDirectories
 import kotlin.time.Clock
 
@@ -52,6 +72,7 @@ class PrintExcessPossessions : SuspendingTransactionCliktCommand(name = "excess"
     .int()
     .default(4)
     .validate { require(it > 0) { "defaultDeckBuildingCount must be greater than 0" } }
+  val printSetsWithoutPossessions by option(help = "printSetsWithoutPossessions").boolean().default(false)
   val printNonPossessions by option(help = "printNonPossessions").boolean().default(false)
   val printBinderCards by option(help = "printBinderCards").boolean().default(false)
   val printDuplicateCards by option(help = "printDuplicateCards").boolean().default(false)
@@ -160,102 +181,181 @@ class PrintExcessPossessions : SuspendingTransactionCliktCommand(name = "excess"
 
     val sets = ScryfallCardSet.allRootSets().sortedByDescending { it.releaseDate }
 
+    fun Path.writeHtml(block: HTML.() -> Unit) =
+      bufferedWriter().use { writer ->
+        writer.appendHTML().html {
+          block()
+        }
+      }
+
     val directory = Path("./caco-excess-report").createDirectories()
-    directory.resolve("index.md").bufferedWriter().use { bw ->
-      bw.write("# Collection Excess Report\n")
-      bw.write("## Meta Data:\n")
-      bw.write("time: ${Clock.System.now()}<br>\n")
-      bw.write(String.format("bulk-weight: %.3f\u202fkg%n<br>\n", bulkWeightInKilogram))
-      bw.write("tradable-value: $tradableValue<br>\n")
-      bw.write("tradable-count: $tradableCount<br>\n")
-      bw.write("## Sets:\n")
-      bw.write("| Code | Name | Possessions | Excess | Tradables | Bulk |\n")
-      bw.write("|---|---|---|---|---|---|\n")
-      sets.forEach { set ->
-        val filename = "${set.releaseDate}_${set.code}.md"
-        val result3 = result2.filter { (set2, _) ->
-          set2 == set
-        }.map { (_, report) -> report }
-
-        val possessionCount =
-          result3.sumOf {
-            it.excess.count() + it.binder.count() + it.duplicates.count()
+    directory.resolve("index.html").writeHtml {
+        body {
+          h1 {
+            +"Collection Excess Report"
           }
-
-        if (possessionCount > 0) {
-          val bulkCount =
-            result3.sumOf {
-              it.excess
-                .mapNotNull(CardPossession::price)
-                .count { it < CurrencyValue.usd(highValueExcessThreshold) }
+          h2 {
+            +"Meta Data"
+          }
+          p {
+            +"time: ${Clock.System.now()}<br>\n"
+            +String.format("bulk-weight: %.3f\u202fkg%n<br>\n", bulkWeightInKilogram)
+            +"tradable-value: $tradableValue<br>\n"
+            +"tradable-count: $tradableCount<br>\n"
+          }
+          h2 {
+            +"Sets"
+          }
+          table {
+            tr {
+              th { +"Code" }
+              th { +"Name" }
+              th { +"Possessions" }
+              th { +"Excess" }
+              th { +"Tradables" }
+              th { +"Bulk" }
             }
-          val tradableCount =
-            result3.sumOf {
-              it.excess
-                .mapNotNull(CardPossession::price)
-                .count { it >= CurrencyValue.usd(highValueExcessThreshold) }
-            }
 
-          bw.write("| [`${set.code.uppercase()}`]($filename) | [${set.name}]($filename) | $possessionCount | ${tradableCount + bulkCount} | $tradableCount | $bulkCount |\n")
+            sets.forEach { set ->
+              val filename = "${set.releaseDate}_${set.code}.html"
+              val result3 = result2.filter { (set2, _) ->
+                set2 == set
+              }.map { (_, report) -> report }
 
-          directory.resolve("${set.releaseDate}_${set.code}.md").bufferedWriter().use { bw ->
-            bw.write("# [${set.code}] ${set.name}\n")
-            bw.write("| Set | # | Name | Price | Binder | Duplicates | Excess | Other sets containing versions in Binder or Duplicates |\n")
-            bw.write("|---|---|---|---|---|---|---|---|\n")
+              val possessionCount =
+                result3.sumOf {
+                  it.excess.count() + it.binder.count() + it.duplicates.count()
+                }
 
-            set.cardsOfSelfAndNonRootChildSets.sorted().forEach { cardPrint ->
-              val result = result[cardPrint.card]
-              val other = sequenceOf(
-                result?.binder?.filter { it.cardPrint != cardPrint }?.asSequence() ?: emptySequence(),
-                result?.duplicates?.filter { it.cardPrint != cardPrint }?.asSequence() ?: emptySequence(),
-              ).flatten().groupingBy { it.cardPrint.set.code }
-                .eachCount().entries.joinToString(",") { (set, amount) -> "${amount}x $set" }
-
-              data class TempResult(
-                val finish: Finish,
-                val binder: String,
-                val duplicates: String,
-                val excess: String,
-              )
-              cardPrint.finishes.map { finish ->
-                fun Collection<CardPossession>?.toPossessionString() =
-                  this?.filter { it.cardPrint == cardPrint && it.finish == finish }
-                    ?.joinToString(",") { "${it.language}-${it.condition}" } ?: ""
-
-                TempResult(
-                  finish = finish,
-                  binder = result?.binder.toPossessionString(),
-                  duplicates = result?.duplicates.toPossessionString(),
-                  excess = result?.excess.toPossessionString(),
-                )
-              }.filter { (_, binder, duplicates, excess) ->
-                printNonPossessions ||
-                  printBinderCards && binder.isNotEmpty() ||
-                  printDuplicateCards && duplicates.isNotEmpty() ||
-                  excess.isNotEmpty()
-              }.forEachIndexed { index, (finish, binder, duplicates, excess) ->
-                val collectorNumber = "${cardPrint.collectorNumber}${
-                  when (finish) {
-                    Finish.Normal -> " "
-                    Finish.Foil -> "★"
-                    Finish.Etched -> "☆"
+              if (possessionCount > 0) {
+                val bulkCount =
+                  result3.sumOf {
+                    it.excess
+                      .mapNotNull(CardPossession::price)
+                      .count { it < CurrencyValue.usd(highValueExcessThreshold) }
                   }
-                }"
+                val tradableCount =
+                  result3.sumOf {
+                    it.excess
+                      .mapNotNull(CardPossession::price)
+                      .count { it >= CurrencyValue.usd(highValueExcessThreshold) }
+                  }
 
-                val cardName = cardPrint.mergedName.takeIf { index == 0 } ?: "-//-"
-                val other = other.takeIf { index == 0 } ?: ""
-                if ((cardPrint.prices(finish)?.value ?: Double.MAX_VALUE) < highValueExcessThreshold)
-                  bw.write("|${cardPrint.set.code}|$collectorNumber|$cardName|${cardPrint.prices(finish) ?: "n/a"}|$binder|$duplicates|$excess|$other|\n")
-                else
-                  bw.write(
-                    "|${cardPrint.set.code}|$collectorNumber|**$cardName**|**${cardPrint.prices(finish) ?: "n/a"}**|$binder|$duplicates|${
-                      excess.takeIf { it.isNotEmpty() }?.let { "**$it**" } ?: ""
-                    }|$other|\n")
+                tr {
+                  td { a(href = filename) { +set.code.uppercase() } }
+                  td { a(href = filename) { +set.name } }
+                  td { +"$possessionCount" }
+                  td { +"${tradableCount + bulkCount}" }
+                  td { +"$tradableCount" }
+                  td { +"$bulkCount" }
+                }
+
+                directory.resolve(filename).writeHtml {
+                  head {
+                    title { +"[${set.code}] ${set.name}" }
+                    style {
+                      unsafe {
+                        raw(
+                          """
+                          table, th, td {
+                            border: 1px solid black;
+                            border-collapse: collapse;
+                          }
+                          th, td {
+                            padding: 5px;
+                          }
+                          .tradable {
+                            background-color: #a0ffa0;
+                          }
+                          """.trimIndent()
+                        )
+                      }
+                    }
+                  }
+                  body {
+                    h1 { +"[${set.code}] ${set.name}" }
+
+                  table {
+                    tr {
+                      th { +"Set" }
+                      th { +"#" }
+                      th { +"Name" }
+                      th { +"Price" }
+                      th { +"Binder" }
+                      th { +"Duplicates" }
+                      th { +"Excess" }
+                      th { +"Other sets containing versions in Binder or Duplicates" }
+                    }
+
+                    set.cardsOfSelfAndNonRootChildSets.sorted().forEach { cardPrint ->
+                      val result = result[cardPrint.card]
+                      val other = sequenceOf(
+                        result?.binder?.filter { it.cardPrint != cardPrint }?.asSequence() ?: emptySequence(),
+                        result?.duplicates?.filter { it.cardPrint != cardPrint }?.asSequence() ?: emptySequence(),
+                      ).flatten().groupingBy { it.cardPrint.set.code }
+                        .eachCount().entries.joinToString(",") { (set, amount) -> "${amount}x $set" }
+
+                      data class TempResult(
+                        val finish: Finish,
+                        val binder: String,
+                        val duplicates: String,
+                        val excess: String,
+                      )
+                      cardPrint.finishes.map { finish ->
+                        fun Collection<CardPossession>?.toPossessionString() =
+                          this?.filter { it.cardPrint == cardPrint && it.finish == finish }
+                            ?.joinToString(",") { "${it.language}-${it.condition}" } ?: ""
+
+                        TempResult(
+                          finish = finish,
+                          binder = result?.binder.toPossessionString(),
+                          duplicates = result?.duplicates.toPossessionString(),
+                          excess = result?.excess.toPossessionString(),
+                        )
+                      }.filter { (_, binder, duplicates, excess) ->
+                        printNonPossessions ||
+                          printBinderCards && binder.isNotEmpty() ||
+                          printDuplicateCards && duplicates.isNotEmpty() ||
+                          excess.isNotEmpty()
+                      }.forEachIndexed { index, (finish, binder, duplicates, excess) ->
+                        val collectorNumber = "${cardPrint.collectorNumber}${
+                          when (finish) {
+                            Finish.Normal -> " "
+                            Finish.Foil -> "★"
+                            Finish.Etched -> "☆"
+                          }
+                        }"
+
+                        val cardName = cardPrint.mergedName.takeIf { index == 0 } ?: "-//-"
+                        val other = other.takeIf { index == 0 } ?: ""
+                        val isHighValue =  (cardPrint.prices(finish)?.value ?: Double.MAX_VALUE) >= highValueExcessThreshold
+
+                        tr(classes = if (isHighValue) "tradable" else null) {
+                          td { +"${cardPrint.set.code}" }
+                          td { +"$collectorNumber" }
+                          td { +"$cardName" }
+                          td { +"${cardPrint.prices(finish) ?: "n/a"}" }
+                          td { +"$binder" }
+                          td { +"$duplicates" }
+                          td { +"$excess" }
+                          td { +"$other" }
+                        }
+                      }
+                    }
+                  }
+                  }
+                }
+              } else if (printSetsWithoutPossessions) {
+                tr {
+                  td { +set.code.uppercase() }
+                  td { +set.name }
+                  td { +"0" }
+                  td { +"0" }
+                  td { +"0" }
+                  td { +"0" }
+                }
               }
             }
-          }
-        } else {
-          bw.write("| `${set.code.uppercase()}` | ${set.name} | 0 | 0 | 0 | 0 |\n")
         }
       }
     }

@@ -36,6 +36,7 @@ kotlin {
     commonMain.dependencies {
       implementation(projects.lib)
 
+      implementation("org.jetbrains.kotlinx:kotlinx-html:0.12.0")
       implementation("com.github.ajalt.clikt:clikt:5.0.3")
       implementation("com.github.ajalt.mordant:mordant:3.0.2")
       implementation("com.github.ajalt.mordant:mordant-coroutines:3.0.2")
