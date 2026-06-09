@@ -8,7 +8,7 @@ data class CurrencyValue(
   override fun compareTo(other: CurrencyValue): Int = value.compareTo(other.value)
 
   override fun toString() =
-      String.format("%s\u202f%.${currency.defaultFractionDigits}f", currency.symbol, value)
+      String.format("%s %.${currency.defaultFractionDigits}f", currency.symbol, value)
 
   operator fun unaryMinus() = copy(value = -value)
 

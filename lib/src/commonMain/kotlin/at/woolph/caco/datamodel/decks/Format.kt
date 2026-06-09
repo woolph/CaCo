@@ -9,6 +9,8 @@ enum class Format(
     val shortName: String,
     val zones: Set<DeckZone> = setOf(DeckZone.MAINBOARD, DeckZone.SIDEBOARD),
     val isSingleton: Boolean = false,
+    val deckLimit: Int = if(isSingleton) SINGLETON_DECK_LIMIT else NON_SINGLETON_DECK_LIMIT,
+    val restrictedDeckLimit: Int? = null,
 ) {
   Unknown("???", zones = DeckZone.entries.toSet()),
   Standard("STD"),
@@ -20,7 +22,7 @@ enum class Format(
   Modern("MDN"),
   Legacy("LGC"),
   Pauper("PPR"),
-  Vintage("VTG"),
+  Vintage("VTG", restrictedDeckLimit = 1),
   Penny("PNY"),
   @SerialName("tlr") TinyLeadersReborn("TLR"),
   Commander("EDH", zones = setOf(DeckZone.MAINBOARD, DeckZone.COMMAND_ZONE), isSingleton = true),
@@ -44,4 +46,11 @@ enum class Format(
   CanadianHighlander("CHL", zones = setOf(DeckZone.MAINBOARD), isSingleton = true),
   Cube("CUB", zones = setOf(DeckZone.MAINBOARD)),
   BattleBox("BBX", zones = setOf(DeckZone.MAINBOARD)),
+  ;
+
+  companion object {
+    const val SINGLETON_DECK_LIMIT = 1
+    const val NON_SINGLETON_DECK_LIMIT = 4
+
+  }
 }

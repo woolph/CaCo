@@ -5,49 +5,46 @@ import arrow.core.split
 import at.woolph.caco.datamodel.collection.CardCondition
 import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.collection.CardPossession
+import at.woolph.caco.datamodel.decks.Format
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.CardPrint
 import at.woolph.caco.datamodel.sets.Finish
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
+import at.woolph.caco.datamodel.sets.deckLimit
 import at.woolph.lib.clikt.SuspendingTransactionCliktCommand
 import at.woolph.utils.compareToNullable
 import at.woolph.utils.currency.CurrencyValue
 import at.woolph.utils.currency.sum
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
-import com.github.ajalt.clikt.parameters.options.validate
 import com.github.ajalt.clikt.parameters.types.boolean
 import com.github.ajalt.clikt.parameters.types.double
-import com.github.ajalt.clikt.parameters.types.int
-import kotlin.collections.fold
-import kotlin.io.path.Path
-import kotlin.io.path.bufferedWriter
-import kotlin.math.max
-import kotlin.uuid.Uuid
 import kotlinx.coroutines.coroutineScope
 import kotlinx.html.HTML
 import kotlinx.html.a
 import kotlinx.html.body
-import kotlinx.html.dom.createHTMLDocument
+import kotlinx.html.br
 import kotlinx.html.h1
 import kotlinx.html.h2
 import kotlinx.html.head
 import kotlinx.html.html
 import kotlinx.html.p
 import kotlinx.html.stream.appendHTML
-import kotlinx.html.stream.createHTML
 import kotlinx.html.style
 import kotlinx.html.table
 import kotlinx.html.td
 import kotlinx.html.th
-import kotlinx.html.thead
 import kotlinx.html.title
 import kotlinx.html.tr
 import kotlinx.html.unsafe
 import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 import java.nio.file.Path
+import kotlin.io.path.Path
+import kotlin.io.path.bufferedWriter
 import kotlin.io.path.createDirectories
+import kotlin.math.max
 import kotlin.time.Clock
+import kotlin.uuid.Uuid
 
 /**
  * run over every card (distinct by oracle-id or english name, because i don't care if the playset
@@ -67,11 +64,6 @@ import kotlin.time.Clock
  * print the excess to the
  */
 class PrintExcessPossessions : SuspendingTransactionCliktCommand(name = "excess") {
-  val defaultDeckBuildingCount by
-  option(help = "default amount needed for deck building (usually a playset of 4)")
-    .int()
-    .default(4)
-    .validate { require(it > 0) { "defaultDeckBuildingCount must be greater than 0" } }
   val printSetsWithoutPossessions by option(help = "printSetsWithoutPossessions").boolean().default(false)
   val printNonPossessions by option(help = "printNonPossessions").boolean().default(false)
   val printBinderCards by option(help = "printBinderCards").boolean().default(false)
@@ -101,12 +93,23 @@ class PrintExcessPossessions : SuspendingTransactionCliktCommand(name = "excess"
         }
     }
 
+    val formatsConsideredForBuilding = setOf( // TODO make this configurable
+      Format.Commander,
+      Format.PauperCommander,
+      Format.PrEDH,
+      Format.Pauper,
+      Format.Pioneer,
+    )
+
+    fun Card.deckBuildingNeeds(formats: Set<Format>): Int =
+      specialDeckRestrictions ?: formats.mapNotNull { legalities?.deckLimit(it) }.max()
+
     val result =
       suspendTransaction { Card.all() }
         .filter { card -> !card.token && card.type?.contains("Basic") != true }
         .filter { card -> card.prints.any { it.possessions.count() > 0 } }
         .associateWith { card ->
-          val neededForDeckBuilding = card.specialDeckRestrictions ?: defaultDeckBuildingCount
+          val neededForDeckBuilding = card.deckBuildingNeeds(formatsConsideredForBuilding)
 
           val (collectionBinder, remaining) =
             card.prints
@@ -190,6 +193,27 @@ class PrintExcessPossessions : SuspendingTransactionCliktCommand(name = "excess"
 
     val directory = Path("./caco-excess-report").createDirectories()
     directory.resolve("index.html").writeHtml {
+        head {
+          title { +"Collection Excess Report" }
+          style {
+            unsafe {
+              raw(
+                """
+                          table, th, td {
+                            border: 1px solid black;
+                            border-collapse: collapse;
+                          }
+                          th, td {
+                            padding: 5px;
+                          }
+                          .tradable {
+                            background-color: #a0ffa0;
+                          }
+                          """.trimIndent()
+              )
+            }
+          }
+        }
         body {
           h1 {
             +"Collection Excess Report"
@@ -198,10 +222,13 @@ class PrintExcessPossessions : SuspendingTransactionCliktCommand(name = "excess"
             +"Meta Data"
           }
           p {
-            +"time: ${Clock.System.now()}<br>\n"
-            +String.format("bulk-weight: %.3f\u202fkg%n<br>\n", bulkWeightInKilogram)
-            +"tradable-value: $tradableValue<br>\n"
-            +"tradable-count: $tradableCount<br>\n"
+            +"time: ${Clock.System.now()}"
+            br()
+            +String.format("bulk-weight: %.3f kg%n", bulkWeightInKilogram)
+            br()
+            +"tradable-value: $tradableValue"
+            br()
+            +"tradable-count: $tradableCount"
           }
           h2 {
             +"Sets"
@@ -280,6 +307,7 @@ class PrintExcessPossessions : SuspendingTransactionCliktCommand(name = "excess"
                       th { +"Set" }
                       th { +"#" }
                       th { +"Name" }
+                      th { +"Needed" }
                       th { +"Price" }
                       th { +"Binder" }
                       th { +"Duplicates" }
@@ -331,14 +359,15 @@ class PrintExcessPossessions : SuspendingTransactionCliktCommand(name = "excess"
                         val isHighValue =  (cardPrint.prices(finish)?.value ?: Double.MAX_VALUE) >= highValueExcessThreshold
 
                         tr(classes = if (isHighValue) "tradable" else null) {
-                          td { +"${cardPrint.set.code}" }
-                          td { +"$collectorNumber" }
-                          td { +"$cardName" }
+                          td { +cardPrint.set.code }
+                          td { +collectorNumber }
+                          td { +cardName }
+                          td { +"${cardPrint.card.deckBuildingNeeds(formatsConsideredForBuilding)}" }
                           td { +"${cardPrint.prices(finish) ?: "n/a"}" }
-                          td { +"$binder" }
-                          td { +"$duplicates" }
-                          td { +"$excess" }
-                          td { +"$other" }
+                          td { +binder }
+                          td { +duplicates }
+                          td { +excess }
+                          td { +other }
                         }
                       }
                     }
@@ -399,32 +428,6 @@ class PrintExcessPossessions : SuspendingTransactionCliktCommand(name = "excess"
     const val KILOGRAM_PER_CARD = 1.78e-3
   }
 }
-
-fun Collection<CollectionExcessReportItem>.associateCardBasedReportItemWithSet2():
-  Collection<Map.Entry<ScryfallCardSet, CollectionExcessReportItem>> =
-  this.flatMap { collectionExcessReportItem ->
-    val sets =
-      sequenceOf(
-        collectionExcessReportItem.binder,
-        collectionExcessReportItem.duplicates,
-        collectionExcessReportItem.excess,
-      )
-        .flatMap { it.map { it.cardPrint.set } }
-        .toSet()
-
-    sets
-      .associateWith { currentSet ->
-        CollectionExcessReportItem(
-          collectionExcessReportItem.binder.filter { it.cardPrint.set == currentSet },
-          collectionExcessReportItem.duplicates.filter { it.cardPrint.set == currentSet },
-          collectionExcessReportItem.excess.filter { it.cardPrint.set == currentSet },
-        )
-      }
-      .entries
-  }
-    .groupingBy { (set, _) -> set }
-    .fold(CollectionExcessReportItem.EMPTY, CollectionExcessReportItem::merge)
-    .entries
 
 fun Collection<CollectionExcessReportItem>.associateCardBasedReportItemWithSet():
   Collection<Map.Entry<ScryfallCardSet, CollectionExcessReportItem>> =

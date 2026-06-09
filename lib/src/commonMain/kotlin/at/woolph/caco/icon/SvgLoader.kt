@@ -22,7 +22,6 @@ class ModifyingSvgLoader(
   companion object {
     fun gradientModded(
         svgLoader: SvgLoader,
-        strokeColor: String,
         color1: String,
         color2: String,
     ) =
@@ -38,7 +37,7 @@ class ModifyingSvgLoader(
                       "        <stop offset=\"100%\" stop-color=\"$color1\" />\n" +
                       "      </linearGradient>\n" +
                       "  </defs>\n" +
-                      "<path stroke=\"$strokeColor\" stroke-width=\"2%\" style=\"fill:url(#uncommon-gradient)\" ",
+                      "<path style=\"fill:url(#uncommon-gradient)\" ",
               )
             },
         )
@@ -55,8 +54,8 @@ object BasicSvgLoader : SvgLoader {
 }
 
 val MythicSvgLoader =
-    ModifyingSvgLoader.gradientModded(BasicSvgLoader, "black", "#c54326", "#f7971c")
-val RareSvgLoader = ModifyingSvgLoader.gradientModded(BasicSvgLoader, "black", "#8d7431", "#f6db94")
+    ModifyingSvgLoader.gradientModded(BasicSvgLoader, "#c54326", "#f7971c")
+val RareSvgLoader = ModifyingSvgLoader.gradientModded(BasicSvgLoader, "#8d7431", "#f6db94")
 val UncommonSvgLoader =
-    ModifyingSvgLoader.gradientModded(BasicSvgLoader, "black", "#626e77", "#c8e2f2")
+    ModifyingSvgLoader.gradientModded(BasicSvgLoader, "#626e77", "#c8e2f2")
 val CommonSvgLoader = BasicSvgLoader

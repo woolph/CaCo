@@ -51,9 +51,12 @@ fun lazySetIcon(
     lazyIcon("set-code-$setCode", Uri("https://svgs.scryfall.io/sets/$setCode.svg"), iconRenderer)
 
 suspend fun IconRenderer.cachedImage(set: ScryfallCardSet): ByteArray? =
-    set.icon?.let {
-      renderSvg("set-icon-${set.code}", it)
-          .onLeft { println("couldn't get icon for $set due to ${it.message}") } // TODO KMP logging
+    set.icon?.let { icon ->
+      renderSvg("set-icon-${set.code}", icon)
+          .onLeft {
+            println("couldn't get icon for $set due to ${it.message}")
+            it.printStackTrace()
+          } // TODO KMP logging
           .getOrNull()
     }
 

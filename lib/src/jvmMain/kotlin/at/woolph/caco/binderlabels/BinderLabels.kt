@@ -46,12 +46,13 @@ fun determineBinderLabels(
             suspend fun SequenceScope<MapLabelItem>.yieldSet(currentSet: ScryfallCardSet) {
               val (childSetsDefinitelyIncludedInRootSetBinder, childSetsWhichNeedToBeChecked) =
                   currentSet.childSets
-                      .filterNot {
-                        it.code.endsWith(currentSet.code) &&
-                            it.code[0] in setOf('p', 't', 'f', 'm', 'w', 'o', 's', 'r') ||
+                      .filterNot { // do not list promo, token, memorabilia sets explicitly
+                        it.code.matches(Regex("(pt|p|t|f|m|w|o|s|r)\\Q${currentSet.code}\\E")) ||
                             it.code.matches(Regex("pss\\d"))
                       }
-                      .partition { it.binderPages <= thresholdTooFewPages }
+                      .partition {
+                        it.binderPages <= thresholdTooFewPages
+                      }
 
               val setsInBinder = childSetsDefinitelyIncludedInRootSetBinder.toMutableList()
               childSetsWhichNeedToBeChecked

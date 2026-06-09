@@ -13,6 +13,11 @@ import org.jetbrains.exposed.v1.dao.UuidEntity
 import org.jetbrains.exposed.v1.dao.UuidEntityClass
 import org.jetbrains.exposed.v1.json.json
 
+typealias Legalities = Map<Format, Legality>
+
+fun Legalities.deckLimit(format: Format): Int? =
+  get(format)?.deckLimit(format)
+
 object Cards : IdTable<Uuid>() {
   override val id = uuid("oracleId").entityId()
   override val primaryKey = PrimaryKey(id)
@@ -34,7 +39,7 @@ object Cards : IdTable<Uuid>() {
   val gameChanger = bool("gameChanger").index()
   val edhrecRank = integer("edhrecRank").nullable()
 
-  val legalities = json<Map<Format, Legality>>("legality", jsonSerializer).nullable()
+  val legalities = json<Legalities>("legality", jsonSerializer).nullable()
 }
 
 class Card(id: EntityID<Uuid>) : UuidEntity(id), Comparable<Card> {
