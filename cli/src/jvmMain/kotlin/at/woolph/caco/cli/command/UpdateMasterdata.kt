@@ -2,8 +2,10 @@
 package at.woolph.caco.cli.command
 
 import at.woolph.caco.CacoLogger
+import at.woolph.caco.masterdata.import.ScryfallCard
 import at.woolph.caco.masterdata.import.downloadBulkData
 import at.woolph.caco.masterdata.import.importSets
+import at.woolph.caco.masterdata.import.readBulkData
 import at.woolph.caco.masterdata.import.updateMasterDataFromBulkData
 import com.github.ajalt.clikt.command.SuspendingCliktCommand
 import com.github.ajalt.clikt.parameters.groups.default
@@ -12,7 +14,7 @@ import com.github.ajalt.clikt.parameters.groups.single
 import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.path
-import java.io.InputStream
+import kotlinx.coroutines.flow.Flow
 import java.nio.file.Path
 import kotlin.io.path.inputStream
 import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
@@ -32,20 +34,20 @@ class UpdateMasterdata : SuspendingCliktCommand(name = "update") {
           .default(BulkDataApiRequest("default_cards"))
 
   sealed interface BulkDataSource {
-    suspend fun processBulkData(block: suspend (InputStream) -> Unit)
+    suspend fun processBulkData(block: suspend (Flow<ScryfallCard>) -> Unit)
   }
 
   class BulkDataFile(
       val file: Path,
   ) : BulkDataSource {
-    override suspend fun processBulkData(block: suspend (InputStream) -> Unit) =
-        block(file.inputStream())
+    override suspend fun processBulkData(block: suspend (Flow<ScryfallCard>) -> Unit) =
+        readBulkData(file.inputStream(), block)
   }
 
   class BulkDataApiRequest(
       val bulkDataName: String,
   ) : BulkDataSource {
-    override suspend fun processBulkData(block: suspend (InputStream) -> Unit) =
+    override suspend fun processBulkData(block: suspend (Flow<ScryfallCard>) -> Unit) =
         downloadBulkData(bulkDataName, block)
   }
 

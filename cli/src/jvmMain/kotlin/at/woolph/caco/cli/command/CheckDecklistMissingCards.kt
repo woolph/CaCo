@@ -3,6 +3,7 @@ package at.woolph.caco.cli.command
 
 import at.woolph.caco.cli.DeckListBuilder
 import at.woolph.caco.datamodel.decks.DeckZone
+import at.woolph.caco.datamodel.decks.Format
 import at.woolph.caco.datamodel.sets.Card
 import at.woolph.caco.datamodel.sets.Cards
 import at.woolph.utils.currency.CurrencyValue
@@ -20,7 +21,7 @@ class CheckDecklistMissingCards : SuspendingCliktCommand(name = "check-deck") {
         generateSequence { terminal.readLineOrNull(false) }
             .takeWhile { it != "EOF" }
             .filter { it.isNotBlank() }
-            .fold(DeckListBuilder()) { deckListBuilder, line ->
+            .fold(DeckListBuilder().format(Format.Pioneer)) { deckListBuilder, line ->
               when (line) {
                 "About" -> currentDeckZone = null
                 "Deck",

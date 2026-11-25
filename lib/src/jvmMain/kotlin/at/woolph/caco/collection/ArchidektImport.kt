@@ -22,7 +22,7 @@ import kotlinx.io.files.Path
 
 fun importArchidekt(
     file: Path,
-    notImportedOutputFile: Path = Path("not-imported.csv"),
+    notImportedOutputFile: Path = Path("./out/not-imported.csv"),
     datePredicate: Predicate<Instant> = Predicate { true },
     clearBeforeImport: Boolean = false,
 ) =
@@ -36,7 +36,7 @@ fun importArchidekt(
 
 fun importSequenceArchidekt(
     file: Path,
-    notImportedOutputFile: Path = Path("not-imported.csv"),
+    notImportedOutputFile: Path = Path("./out/not-imported.csv"),
 ): Sequence<Either<Throwable, CardCollectionItem>> =
     importSequence(
         file,

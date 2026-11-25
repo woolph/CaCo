@@ -19,6 +19,8 @@ import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.util.GZipEncoder
+import io.ktor.utils.io.jvm.javaio.toInputStream
 import java.io.InputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -137,23 +139,33 @@ suspend fun importSets() {
   // archidekt export!!!!! => add
 }
 
-suspend fun downloadBulkData(type: String, block: suspend (InputStream) -> Unit) {
+@OptIn(ExperimentalSerializationApi::class)
+suspend inline fun <reified T> downloadBulkData(type: String, crossinline block: suspend (Flow<T>) -> Unit) {
   val bulkData = request<ScryfallBulkData>("https://api.scryfall.com/bulk-data/${type}")
 
   withContext(Dispatchers.IO) {
-    bulkData.downloadUri.toURL().openConnection().getInputStream().use { block(it) }
+    useHttpClient { client ->
+      val response = client.get(bulkData.downloadUri.toURL()) {
+        this.accept(ContentType.Application.GZip)
+      }
+      block(jsonSerializer.decodeToSequence<T>(GZipEncoder.decode(response.bodyAsChannel(), this.coroutineContext).toInputStream()).asFlow())
+    }
   }
 }
 
 @OptIn(ExperimentalSerializationApi::class)
+suspend inline fun <reified T> readBulkData(inputStream: InputStream, block: suspend (Flow<T>) -> Unit) {
+  block(jsonSerializer
+    .decodeToSequence<T>(inputStream)
+    .asFlow())
+}
+
 context(log: Logger)
-suspend fun updateMasterDataFromBulkData(bulkDataInputStream: InputStream) {
+suspend fun updateMasterDataFromBulkData(scryfallCards: Flow<ScryfallCard>) {
   val variant = mutableListOf<Pair<ScryfallCard, CardPrintVariant.Type>>()
 
   suspendTransaction {
-    jsonSerializer
-        .decodeToSequence<ScryfallCard>(bulkDataInputStream)
-        .asFlow()
+    scryfallCards
         .filter(ScryfallCard::isImportWorthy)
         .collect { scryfallCard ->
           try {
@@ -269,12 +281,9 @@ fun String.assumedSetCode(assumedCollectorNumber: String) =
       removePrefix("p")
     }
 
-@OptIn(ExperimentalSerializationApi::class)
 context(log: Logger)
-suspend fun updateMasterDataPrice(bulkDataInputStream: InputStream) {
-  jsonSerializer
-      .decodeToSequence<ScryfallCard>(bulkDataInputStream)
-      .asFlow()
+suspend fun updateMasterDataPrice(scryfallCards: Flow<ScryfallCard>) {
+  scryfallCards
       .filter(ScryfallCard::isImportWorthy)
       .collect { scryfallCard ->
         try {

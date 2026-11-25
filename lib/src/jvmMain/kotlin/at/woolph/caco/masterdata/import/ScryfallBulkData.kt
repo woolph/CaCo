@@ -17,10 +17,8 @@ data class ScryfallBulkData(
     @Contextual val uri: URI,
     val name: String,
     val description: String,
-    val size: Long,
-    @SerialName("download_uri") @Contextual val downloadUri: URI,
-    @SerialName("content_type") val contentType: String,
-    @SerialName("content_encoding") val contentEncoding: String,
+    @SerialName("compressed_size") val compressedSize: Long,
+    @SerialName("jsonl_download_uri") @Contextual val downloadUri: URI,
 ) : ScryfallBase {
   override fun isValid() = objectType == "bulk_data"
 }

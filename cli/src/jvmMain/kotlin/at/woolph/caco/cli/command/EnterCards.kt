@@ -71,7 +71,7 @@ class EnterCards : SuspendingTransactionCliktCommand() {
     )
     echo("condition: $condition")
 
-    File("./import.stdin").printWriter().use { stdinPrint ->
+    File("./out/import.stdin").printWriter().use { stdinPrint ->
       data class PossessionUpdate2(
         val count: Int = 0,
         val alreadyCollected: Int,

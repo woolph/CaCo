@@ -37,7 +37,7 @@ fun importSequenceDeckbox(
 
 fun importDeckbox(
     file: Path,
-    notImportedOutputFile: Path = Path("not-imported.csv"),
+    notImportedOutputFile: Path = Path("./out/not-imported.csv"),
     datePredicate: Predicate<Instant> = Predicate { true },
     clearBeforeImport: Boolean = false,
 ) {

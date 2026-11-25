@@ -20,7 +20,7 @@ private val log = LoggerFactory.getLogger("at.woolph.caco.collection.ImportCsv")
 
 fun importSequence(
     file: Path,
-    notImportedOutputFile: Path = Path("not-imported.csv"),
+    notImportedOutputFile: Path = Path("./out/not-imported.csv"),
     datePredicate: Predicate<Instant> = Predicate { true },
     mapper: arrow.core.raise.Raise<Throwable>.(CsvRecord) -> CardCollectionItem,
 ): Sequence<Either<Throwable, CardCollectionItem>> = sequence {
@@ -62,7 +62,7 @@ fun importSequence(
 
 fun import(
     file: Path,
-    notImportedOutputFile: Path = Path("not-imported.csv"),
+    notImportedOutputFile: Path = Path("./out/not-imported.csv"),
     datePredicate: Predicate<Instant> = Predicate { true },
     clearBeforeImport: Boolean = false,
     mapper: arrow.core.raise.Raise<Throwable>.(CsvRecord) -> CardCollectionItem,

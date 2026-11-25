@@ -3,6 +3,10 @@ package at.woolph.caco.cli
 
 import at.woolph.caco.HomeDirectory
 import at.woolph.caco.cli.command.*
+import at.woolph.caco.cli.command.collection.PrintCollectionBinderLabels
+import at.woolph.caco.cli.command.collection.PrintCollectionBinderPageView
+import at.woolph.caco.cli.command.collection.PrintCollectionBoxLabels
+import at.woolph.caco.cli.command.collection.PrintExcessPossessions
 import at.woolph.caco.datamodel.initDatabase
 import at.woolph.lib.clikt.suspendNoOpCliktCommand
 import com.github.ajalt.clikt.command.main
@@ -31,21 +35,22 @@ suspend fun main(args: Array<String>) =
                     CollectionImport(),
                     HighValueTradables(),
                     PrintInventory(),
-                    PrintExcessPossessions(),
+                  PrintExcessPossessions(),
                     PrintDiversificationOpportunities(),
                     PrintPagePositions(),
                     PrintMissingStats(),
                     PrintMissing(),
                     PrintMissingCmd(),
                     EnterCards(),
-                    PrintCollectionBinderLabels(),
+                  PrintCollectionBinderLabels(),
+                  PrintCollectionBoxLabels(),
                 ),
             suspendNoOpCliktCommand(name = "masterdata")
                 .subcommands(
                     UpdateMasterdata(),
                     UpdatesPrices(),
                     UpdateSets(),
-                    PrintCollectionBinderPageView(),
+                  PrintCollectionBinderPageView(),
                 ),
             suspendNoOpCliktCommand(name = "decklists")
                 .subcommands(

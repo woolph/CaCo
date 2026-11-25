@@ -33,4 +33,6 @@ enum class LayoutType(
   PLANAR(isAdditionalGamePiece = true),
   VANGUARD(isAdditionalGamePiece = true),
   ART_SERIES(isMemorabilia = true),
+  /** front card usually found in jumpstart boosters */
+  FRONT_CARD(isMemorabilia = true),
 }

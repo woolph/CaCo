@@ -1,4 +1,4 @@
-/* Copyright 2026 Wolfgang Mayer */
+/* Copyright 2026 Wolffgang Mayer */
 package at.woolph.caco.datamodel.decks
 
 enum class DeckZone(

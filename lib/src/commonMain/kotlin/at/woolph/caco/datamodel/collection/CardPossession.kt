@@ -21,6 +21,7 @@ object CardPossessions : IntIdTable() {
   val condition = enumeration<CardCondition>("condition").default(CardCondition.UNKNOWN).index()
   val finish = enumeration<Finish>("finish").default(Finish.Normal).index()
   val variantType = enumeration<CardPrintVariant.Type>("variantType").nullable().index()
+  val possessionFlag = enumeration<PossessionFlag>("possessionFlag").nullable().index()
 
   val purchasePrice = double("purchasePrice").nullable()
   /**  */
@@ -43,6 +44,7 @@ class CardPossession(id: EntityID<Int>) : IntEntity(id) {
   var condition by CardPossessions.condition
   var finish by CardPossessions.finish
   var variantType by CardPossessions.variantType
+  var possessionFlag by CardPossessions.possessionFlag
   var tradeLock by CardPossessions.tradeLock
   var location by CardPossessions.location
   var purchasePrice by CardPossessions.purchasePrice
@@ -62,5 +64,5 @@ class CardPossession(id: EntityID<Int>) : IntEntity(id) {
                 }
             )
 
-  override fun toString(): String = "$cardPrint $finish $language $condition $variantType"
+  override fun toString(): String = "$cardPrint $finish $language $condition $variantType $possessionFlag"
 }

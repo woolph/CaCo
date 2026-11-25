@@ -1,6 +1,10 @@
 /* Copyright 2025-2026 Wolfgang Mayer */
 package at.woolph.caco.cli.command
 
+import at.woolph.caco.cli.command.collection.CollectionId
+import at.woolph.caco.cli.command.collection.CollectionSeparation
+import at.woolph.caco.cli.command.collection.sortedAndMerged
+import at.woolph.caco.cli.command.collection.takeFirstOfEachKey
 import at.woolph.caco.datamodel.collection.CardCondition
 import at.woolph.caco.datamodel.collection.CardLanguage
 import at.woolph.caco.datamodel.collection.CardPossession
@@ -85,7 +89,7 @@ class PrintDiversificationOpportunities : SuspendingTransactionCliktCommand(name
 
               val cards =
                   card.prints.flatMap(CardPrint::possessions).groupBy { possession ->
-                    CollectionId(possession.cardPrint.scryfallId, possession.finish)
+                      CollectionId(possession.cardPrint.scryfallId, possession.finish)
                   }
 
               val missingPrints = cardPrintings - cards.keys
@@ -100,12 +104,12 @@ class PrintDiversificationOpportunities : SuspendingTransactionCliktCommand(name
                       .takeFirstOfEachKey()
 
               generateSequence(
-                      CollectionSeparation(
-                          neededForDeckBuilding,
-                          collectionBinder.values,
-                          emptyList(),
-                          remaining,
-                      )
+                  CollectionSeparation(
+                      neededForDeckBuilding,
+                      collectionBinder.values,
+                      emptyList(),
+                      remaining,
+                  )
                   ) { x ->
                     val (nextToBeAddedToCollectionDuplicates, newRemaining) =
                         x.remaining.takeFirstOfEachKey(
@@ -113,12 +117,12 @@ class PrintDiversificationOpportunities : SuspendingTransactionCliktCommand(name
                         ) // TODO prefer secondary language if primary language already in
                     // collection binder
 
-                    CollectionSeparation(
-                        x.neededForDeckBuilding,
-                        x.collectionBinder,
-                        x.collectionDuplicates + nextToBeAddedToCollectionDuplicates.values,
-                        newRemaining,
-                    )
+                  CollectionSeparation(
+                      x.neededForDeckBuilding,
+                      x.collectionBinder,
+                      x.collectionDuplicates + nextToBeAddedToCollectionDuplicates.values,
+                      newRemaining,
+                  )
                   }
                   .first { !(it.isMoreNeeded && it.isMoreAvailable) }
                   .let {

@@ -1,14 +1,13 @@
 /* Copyright 2025 Wolfgang Mayer */
 package at.woolph.caco.cli
 
-import at.woolph.caco.binderlabels.*
+import at.woolph.caco.collection.labels.fetchCardSets
 import at.woolph.caco.datamodel.initDatabase
 import at.woolph.caco.datamodel.sets.MultiSetBlock
 import at.woolph.caco.datamodel.sets.ScryfallCardSet
 import at.woolph.caco.datamodel.sets.SingleSetBlock
 import at.woolph.caco.icon.lazySetIcon
 import at.woolph.caco.icon.mythicBinderLabelIconRenderer
-import at.woolph.caco.labels.fetchCardSets
 import at.woolph.utils.io.asSink
 import at.woolph.utils.pdf.HorizontalAlignment
 import at.woolph.utils.pdf.dotsPerMillimeter

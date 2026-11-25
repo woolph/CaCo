@@ -64,7 +64,7 @@ data class ScryfallCardFace(
 @Serializable
 data class ScryfallPreviewInfo(
     val source: String,
-    @Contextual val source_uri: URI,
+    @Contextual val source_uri: URI?,
     @Contextual val previewed_at: LocalDate,
 )
 

@@ -33,6 +33,7 @@ enum class Format(
       isSingleton = true,
   ),
   Brawl("BRL", zones = setOf(DeckZone.MAINBOARD, DeckZone.COMMAND_ZONE), isSingleton = true),
+  @SerialName("competitivebrawl") CompetitiveBrawl("CBRL", zones = setOf(DeckZone.MAINBOARD, DeckZone.COMMAND_ZONE), isSingleton = true),
   Alchemy("ALC"),
   PauperCommander(
       "PCMD",
